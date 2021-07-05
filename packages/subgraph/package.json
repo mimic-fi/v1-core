@@ -1,0 +1,23 @@
+{
+  "name": "@octopus-fi/v1-subgraph",
+  "version": "0.0.1",
+  "license": "GPL-3.0",
+  "scripts": {
+    "lint": "echo 'No linter for now'",
+    "test": "echo 'No tests for now'",
+    "build": "yarn build:mainnet",
+    "build:rpc": "NETWORK=rpc ./scripts/build.sh",
+    "build:ropsten": "NETWORK=ropsten ./scripts/build.sh",
+    "build:rinkeby": "NETWORK=rinkeby ./scripts/build.sh",
+    "build:mainnet": "NETWORK=mainnet ./scripts/build.sh",
+    "deploy:rpc": "NETWORK=rpc ./scripts/deploy.sh",
+    "deploy:ropsten": "NETWORK=ropsten ./scripts/deploy.sh",
+    "deploy:rinkeby": "NETWORK=rinkeby ./scripts/deploy.sh",
+    "deploy:mainnet": "NETWORK=mainnet ./scripts/deploy.sh"
+  },
+  "devDependencies": {
+    "@octopus-fi/v1-contracts": "^0.0.1",
+    "@graphprotocol/graph-cli": "^0.20.1",
+    "@graphprotocol/graph-ts": "^0.20.0"
+  }
+}
