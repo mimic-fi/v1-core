@@ -1,0 +1,92 @@
+specVersion: 0.0.2
+description: Mimic Finance
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: Vault
+    network: {{network}}
+    source:
+      address: '{{vault}}'
+      abi: Vault
+      startBlock: {{startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: Vault
+          file: ./abi/IVault.json
+        - name: Strategy
+          file: ./abi/IStrategy.json
+        - name: Portfolio
+          file: ./abi/IPortfolio.json
+        - name: Agreement
+          file: ./abi/IAgreement.json
+        - name: ERC20
+          file: ./abi/IERC20.json
+      eventHandlers:
+        - event: Deposited(indexed address,address[],uint256[],address)
+          handler: handleDeposit
+        - event: Withdrawn(indexed address,address[],uint256[],address,address)
+          handler: handleWithdraw
+        - event: Joined(indexed address,indexed address,uint256,uint256,address)
+          handler: handleJoin
+        - event: Exited(indexed address,indexed address,uint256,uint256,uint256,uint256,address)
+          handler: handleExit
+        - event: ProtocolFeeChanged(uint256)
+          handler: handleProtocolFeeChange
+        - event: WhitelistedStrategyChanged(indexed address,bool)
+          handler: handleWhitelistedStrategyChange
+      file: ./src/Vault.ts
+  - kind: ethereum/contract
+    name: AgreementFactory
+    network: {{network}}
+    source:
+      address: '{{agreementFactory}}'
+      abi: AgreementFactory
+      startBlock: {{startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - AgreementFactory
+      abis:
+        - name: AgreementFactory
+          file: ./abi/AgreementFactory.json
+        - name: Agreement
+          file: ./abi/IAgreement.json
+        - name: ERC20
+          file: ./abi/IERC20.json
+      eventHandlers:
+        - event: AgreementCreated(indexed address)
+          handler: handleCreate
+      file: ./src/AgreementFactory.ts
+templates:
+  - kind: ethereum/contract
+    name: Agreement
+    network: {{network}}
+    source:
+      abi: Agreement
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - Agreement
+      abis:
+        - name: Agreement
+          file: ./abi/IAgreement.json
+      eventHandlers:
+        - event: WithdrawersSet(address[])
+          handler: handleWithdrawersSet
+        - event: ManagersSet(address[])
+          handler: handleManagersSet
+        - event: FeesConfigSet(uint256,uint256,address)
+          handler: handleFeesConfigSet
+        - event: StrategiesSet(uint256,address[])
+          handler: handleStrategiesSet
+      file: ./src/Agreement.ts

@@ -1,0 +1,85 @@
+type Vault @entity {
+  id: ID!
+  protocolFee: BigInt!
+  accounts: [Account!] @derivedFrom(field: "vault")
+  strategies: [Strategy!] @derivedFrom(field: "vault")
+}
+
+type Strategy @entity {
+  id: ID!
+  vault: Vault!
+  token: ERC20!
+  metadata: String!
+  whitelisted: Boolean!
+  deposited: BigInt!
+  shares: BigInt!
+  lastRate: Rate!
+  rates: [Rate!] @derivedFrom(field: "strategy")
+  accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
+}
+
+type Rate @entity {
+  id: ID!
+  value: BigInt!
+  timestamp: BigInt!
+  strategy: Strategy!
+}
+
+type Account @entity {
+  id: ID!
+  vault: Vault!
+  portfolio: Portfolio @derivedFrom(field: "account")
+  balances: [AccountBalance!] @derivedFrom(field: "account")
+  strategies: [AccountStrategy!] @derivedFrom(field: "account")
+}
+
+type AccountBalance @entity {
+  id: ID!
+  token: ERC20!
+  amount: BigInt!
+  account: Account!
+}
+
+type AccountStrategy @entity {
+  id: ID!
+  shares: BigInt!
+  invested: BigInt!
+  account: Account!
+  strategy: Strategy!
+}
+
+type Portfolio @entity {
+  id: ID!
+  account: Account
+  depositFee: BigInt!
+  performanceFee: BigInt!
+  feeCollector: Bytes!
+  agreement: Agreement @derivedFrom(field: "portfolio")
+}
+
+type Agreement @entity {
+  id: ID!
+  portfolio: Portfolio!
+  withdrawers: [String!]
+  managers: [Manager!]
+  allowedStrategies: AllowedStrategies!
+  customStrategies: [Strategy!]
+}
+
+type Manager @entity {
+  id: ID!
+  agreements: [Agreement!]
+}
+
+enum AllowedStrategies {
+  Any
+  None
+  Whitelisted
+}
+
+type ERC20 @entity {
+  id: ID!
+  name: String!
+  symbol: String!
+  decimals: Int!
+}
