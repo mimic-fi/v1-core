@@ -23,34 +23,34 @@ import "../helpers/FixedPoint.sol";
 contract StrategyMock is IStrategy {
     using FixedPoint for uint256;
 
-    address public token;
-    uint256 internal mockedRate;
+    uint256 public mockedRate;
+
+    address public override getToken;
+    uint256 public override getTotalShares;
 
     constructor(address _token) {
-        token = _token;
+        getToken = _token;
         mockedRate = FixedPoint.ONE;
     }
 
-    function getToken() external override view returns (address) {
-        return token;
-    }
-
-    function getRate() external override view returns (uint256) {
-        return mockedRate;
+    function getTokenBalance() external override view returns (uint256) {
+        return mockedRate.mul(getTotalShares);
     }
 
     function getMetadataURI() external override pure returns (string memory) {
         return "./strategies/metadata.json";
     }
 
-    function onJoin(uint256 amount, bytes memory) external override view returns (uint256) {
-        return amount.mul(mockedRate);
+    function onJoin(uint256 amount, bytes memory) external override returns (uint256 shares) {
+        shares = amount.mul(mockedRate);
+        getTotalShares += shares;
     }
 
     function onExit(uint256 shares, bytes memory) external override returns (address, uint256) {
+        getTotalShares -= shares;
         uint256 amount = shares.div(mockedRate);
-        IERC20(token).approve(msg.sender, amount);
-        return (token, amount);
+        IERC20(getToken).approve(msg.sender, amount);
+        return (getToken, amount);
     }
 
     function mockRate(uint256 newMockedRate) external {

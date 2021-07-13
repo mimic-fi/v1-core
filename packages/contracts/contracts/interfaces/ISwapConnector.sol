@@ -15,6 +15,8 @@
 pragma solidity ^0.8.0;
 
 interface ISwapConnector {
+    event Swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, bytes data);
+
     function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256 amountOut);
 
     function swap(

@@ -15,8 +15,7 @@
 pragma solidity ^0.8.0;
 
 library FixedPoint {
-    uint256 internal constant ONE = 10**18; // 18 decimal places
-    uint256 internal constant POW_PRECISION = ONE / 10**10;
+    uint256 internal constant ONE = 1e18; // 18 decimal places
     uint256 internal constant MAX_UINT256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     function add(uint256 a, uint256 b) internal pure returns (uint256) {

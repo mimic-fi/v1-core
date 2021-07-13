@@ -11,28 +11,28 @@ import "../helpers/FixedPoint.sol";
 contract SwapConnectorMock is ISwapConnector {
     using FixedPoint for uint256;
 
-    uint256 public rate;
+    uint256 public mockedRate;
 
     constructor() {
         // always used as OUT priced based on IN: 2 means 1 IN is equal to 2 OUT
-        rate = FixedPoint.ONE;
+        mockedRate = FixedPoint.ONE;
     }
 
     function getAmountOut(address, address, uint256 amountIn) public view override returns (uint256) {
-        return amountIn.mul(rate);
+        return amountIn.mul(mockedRate);
     }
 
-    function swap(address /* tokenIn */, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory)
+    function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory data)
         external
         override
-        returns (uint256)
+        returns (uint256 amountOut)
     {
-        uint256 amount = amountIn.mul(rate);
-        IERC20(tokenOut).approve(msg.sender, amount);
-        return amount;
+        amountOut = amountIn.mul(mockedRate);
+        IERC20(tokenOut).approve(msg.sender, amountOut);
+        emit Swap(tokenIn, tokenOut, amountIn, amountOut, data);
     }
 
     function mockRate(uint256 newRate) external {
-        rate = newRate;
+        mockedRate = newRate;
     }
 }

@@ -19,7 +19,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IStrategy {
     function getToken() external view returns (address);
 
-    function getRate() external view returns (uint256);
+    function getTokenBalance() external view returns (uint256);
+
+    function getTotalShares() external view returns (uint256);
 
     function getMetadataURI() external view returns (string memory);
 

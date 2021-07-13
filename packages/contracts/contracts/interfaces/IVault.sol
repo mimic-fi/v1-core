@@ -15,13 +15,13 @@
 pragma solidity ^0.8.0;
 
 interface IVault {
-    event Deposited(address indexed account, address[] tokens, uint256[] amounts, address caller);
-    event Withdrawn(address indexed account, address[] tokens, uint256[] amounts, address recipient, address caller);
-    event Joined(address indexed account, address indexed strategy, uint256 amount, uint256 shares, address caller);
-    event Exited(address indexed account, address indexed strategy, uint256 amount, uint256 shares, uint256 protocolFee, uint256 performanceFee, address caller);
-    event ProtocolFeeChanged(uint256 protocolFee);
-    event SwapConnectorChanged(address swapConnector);
-    event WhitelistedStrategyChanged(address indexed strategy, bool whitelisted);
+    event Deposit(address indexed account, address[] tokens, uint256[] amounts, uint256[] depositFees, address caller);
+    event Withdraw(address indexed account, address[] tokens, uint256[] amounts, address recipient, address caller);
+    event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares, address caller);
+    event Exit(address indexed account, address indexed strategy, uint256 amount, uint256 shares, uint256 protocolFee, uint256 performanceFee, address caller);
+    event ProtocolFeeSet(uint256 protocolFee);
+    event SwapConnectorSet(address swapConnector);
+    event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
 
     function protocolFee() external view returns (uint256);
 
