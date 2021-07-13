@@ -5,17 +5,17 @@ set -o errexit
 
 # Vault addresses
 vault_ropsten=0x0000000000000000000000000000000000000001
-vault_rinkeby=0x0000000000000000000000000000000000000001
+vault_rinkeby=0x64f5b5a847e808A5bE0Dc44d8C424DB46885778c
 vault_mainnet=0x0000000000000000000000000000000000000001
 
 # Agreement factory addresses
 agreement_factory_ropsten=0x0000000000000000000000000000000000000002
-agreement_factory_rinkeby=0x0000000000000000000000000000000000000002
+agreement_factory_rinkeby=0x51dA2949391aF90eb1112D68f3041635b625d339
 agreement_factory_mainnet=0x0000000000000000000000000000000000000002
 
 # Deployment block numbers
 start_block_ropsten=
-start_block_rinkeby=
+start_block_rinkeby=8931080
 start_block_mainnet=
 
 # Validate network
