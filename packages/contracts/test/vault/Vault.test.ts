@@ -1422,7 +1422,7 @@ describe('Vault', () => {
         const newConnector = ZERO_ADDRESS
 
         it('reverts', async () => {
-          await expect(vault.setSwapConnector(newConnector, { from })).to.be.revertedWith('SWAP_CONNECTOR_NOT_CONTRACT')
+          await expect(vault.setSwapConnector(newConnector, { from })).to.be.revertedWith('SWAP_CONNECTOR_ZERO_ADDRESS')
         })
       })
     })
@@ -1472,7 +1472,7 @@ describe('Vault', () => {
         const strategy = ZERO_ADDRESS
 
         it('reverts', async () => {
-          await expect(vault.setWhitelistedStrategies([strategy], [true], { from })).to.be.revertedWith('STRATEGY_NOT_CONTRACT')
+          await expect(vault.setWhitelistedStrategies([strategy], [true], { from })).to.be.revertedWith('STRATEGY_ZERO_ADDRESS')
         })
       })
     })

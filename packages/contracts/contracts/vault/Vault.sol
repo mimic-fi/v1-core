@@ -210,7 +210,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     }
 
     function setSwapConnector(address newSwapConnector) public override nonReentrant onlyOwner {
-        require(newSwapConnector.isContract(), "SWAP_CONNECTOR_NOT_CONTRACT");
+        require(newSwapConnector != address(0), "SWAP_CONNECTOR_ZERO_ADDRESS");
         swapConnector = newSwapConnector;
         emit SwapConnectorSet(newSwapConnector);
     }
@@ -225,7 +225,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < strategies.length; i++) {
             address strategy = strategies[i];
-            require(strategy.isContract(), "STRATEGY_NOT_CONTRACT");
+            require(strategy != address(0), "STRATEGY_ZERO_ADDRESS");
             isStrategyWhitelisted[strategy] = whitelisted[i];
             emit WhitelistedStrategySet(strategy, whitelisted[i]);
         }
