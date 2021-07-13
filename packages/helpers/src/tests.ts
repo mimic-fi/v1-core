@@ -1,16 +1,9 @@
-import { task, types } from 'hardhat/config'
-import { TASK_TEST } from 'hardhat/builtin-tasks/task-names'
 import { RunSuperFunction, HardhatRuntimeEnvironment, HttpNetworkConfig, HardhatNetworkConfig } from 'hardhat/types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
-task(TASK_TEST)
-  .addOptionalParam('fork', 'Optional network name to be forked block number to fork in case of running fork tests.')
-  .addOptionalParam('blockNumber', 'Optional block number to fork in case of running fork tests.', undefined, types.int)
-  .setAction(test)
-
-export default async function test(args: any, hre: HardhatRuntimeEnvironment, run: RunSuperFunction<any>): Promise<void> {
+export async function overrideTestTaskForDeployments(args: any, hre: HardhatRuntimeEnvironment, run: RunSuperFunction<any>): Promise<void> {
   if (hre.network.name === 'hardhat' && !args.fork) await runNormalTests(args, hre, run)
   else if (hre.network.name === 'hardhat' && args.fork) await runForkTests(args, hre, run)
   else await runDeployTests(args, hre, run)
