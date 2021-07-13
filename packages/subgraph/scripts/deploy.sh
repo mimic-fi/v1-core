@@ -4,19 +4,12 @@
 set -o errexit
 
 # Run graph build
-yarn build
+yarn build:$NETWORK
 
 # Require $GRAPHKEY to be set
 if [[ -z "${GRAPHKEY}" ]]; then
-  echo "Please set \$GRAPHKEY to your The Graph access token to run this command."
+  echo "Please set \$GRAPHKEY to your The Graph deploy key to run this command."
   exit 1
-fi
-
-# Use custom subgraph name based on target network
-if [[ "$NETWORK" != "mainnet" ]]; then
-  SUBGRAPH_EXT="-${NETWORK}"
-else
-  SUBGRAPH_EXT=""
 fi
 
 # Select IPFS and The Graph nodes
@@ -30,13 +23,13 @@ fi
 
 # Create subgraph if missing
 {
-  graph create octopus-fi/vault${SUBGRAPH_EXT} --node ${GRAPH_NODE}
+  graph create octopus-fi/core-${NETWORK} --node ${GRAPH_NODE}
 } || {
   echo 'Subgraph was already created'
 }
 
 # Deploy subgraph
-graph deploy octopus-fi/vault${SUBGRAPH_EXT} \
+graph deploy octopus-fi/core-${NETWORK} \
   --ipfs ${IPFS_NODE} \
   --node ${GRAPH_NODE} \
   --access-token "$GRAPHKEY"
