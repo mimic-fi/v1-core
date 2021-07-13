@@ -22,14 +22,13 @@ contract SwapConnectorMock is ISwapConnector {
         return amountIn.mul(mockedRate);
     }
 
-    function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory data)
+    function swap(address /* tokenIn */, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory)
         external
         override
         returns (uint256 amountOut)
     {
         amountOut = amountIn.mul(mockedRate);
         IERC20(tokenOut).approve(msg.sender, amountOut);
-        emit Swap(tokenIn, tokenOut, amountIn, amountOut, data);
     }
 
     function mockRate(uint256 newRate) external {

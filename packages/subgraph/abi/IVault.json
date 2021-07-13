@@ -2,6 +2,27 @@
   "contractName": "IVault",
   "abi": [
     {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_protocolFee",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "_swapConnector",
+          "type": "address"
+        },
+        {
+          "internalType": "address[]",
+          "name": "_whitelistedStrategies",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
       "anonymous": false,
       "inputs": [
         {
@@ -24,12 +45,18 @@
         },
         {
           "indexed": false,
+          "internalType": "uint256[]",
+          "name": "depositFees",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": false,
           "internalType": "address",
           "name": "caller",
           "type": "address"
         }
       ],
-      "name": "Deposited",
+      "name": "Deposit",
       "type": "event"
     },
     {
@@ -50,7 +77,13 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "amount",
+          "name": "amountInvested",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountReceived",
           "type": "uint256"
         },
         {
@@ -78,7 +111,7 @@
           "type": "address"
         }
       ],
-      "name": "Exited",
+      "name": "Exit",
       "type": "event"
     },
     {
@@ -115,7 +148,26 @@
           "type": "address"
         }
       ],
-      "name": "Joined",
+      "name": "Join",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
       "type": "event"
     },
     {
@@ -128,7 +180,50 @@
           "type": "uint256"
         }
       ],
-      "name": "ProtocolFeeChanged",
+      "name": "ProtocolFeeSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "tokenIn",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "tokenOut",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountIn",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountOut",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "Swap",
       "type": "event"
     },
     {
@@ -141,7 +236,7 @@
           "type": "address"
         }
       ],
-      "name": "SwapConnectorChanged",
+      "name": "SwapConnectorSet",
       "type": "event"
     },
     {
@@ -160,7 +255,7 @@
           "type": "bool"
         }
       ],
-      "name": "WhitelistedStrategyChanged",
+      "name": "WhitelistedStrategySet",
       "type": "event"
     },
     {
@@ -197,7 +292,7 @@
           "type": "address"
         }
       ],
-      "name": "Withdrawn",
+      "name": "Withdraw",
       "type": "event"
     },
     {
@@ -223,7 +318,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "accountAddress",
           "type": "address"
         },
         {
@@ -246,7 +341,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "accountAddress",
           "type": "address"
         },
         {
@@ -274,7 +369,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "accountAddress",
           "type": "address"
         },
         {
@@ -298,7 +393,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "accountAddress",
           "type": "address"
         },
         {
@@ -327,7 +422,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "strategy",
+          "name": "",
           "type": "address"
         }
       ],
@@ -346,7 +441,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "accountAddress",
           "type": "address"
         },
         {
@@ -374,7 +469,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "accountAddress",
           "type": "address"
         },
         {
@@ -410,6 +505,19 @@
     },
     {
       "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "protocolFee",
       "outputs": [
         {
@@ -419,6 +527,13 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -482,7 +597,20 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "account",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "accountAddress",
           "type": "address"
         },
         {

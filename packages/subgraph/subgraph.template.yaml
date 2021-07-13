@@ -28,17 +28,19 @@ dataSources:
         - name: ERC20
           file: ./abi/IERC20.json
       eventHandlers:
-        - event: Deposited(indexed address,address[],uint256[],address)
+        - event: Deposit(indexed address,address[],uint256[],uint256[],address)
           handler: handleDeposit
-        - event: Withdrawn(indexed address,address[],uint256[],address,address)
+        - event: Withdraw(indexed address,address[],uint256[],address,address)
           handler: handleWithdraw
-        - event: Joined(indexed address,indexed address,uint256,uint256,address)
+        - event: Join(indexed address,indexed address,uint256,uint256,address)
           handler: handleJoin
-        - event: Exited(indexed address,indexed address,uint256,uint256,uint256,uint256,address)
+        - event: Exit(indexed address,indexed address,uint256,uint256,uint256,uint256,uint256,address)
           handler: handleExit
-        - event: ProtocolFeeChanged(uint256)
+        - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,bytes)
+          handler: handleSwap
+        - event: ProtocolFeeSet(uint256)
           handler: handleProtocolFeeChange
-        - event: WhitelistedStrategyChanged(indexed address,bool)
+        - event: WhitelistedStrategySet(indexed address,bool)
           handler: handleWhitelistedStrategyChange
       file: ./src/Vault.ts
   - kind: ethereum/contract
@@ -64,6 +66,8 @@ dataSources:
       eventHandlers:
         - event: AgreementCreated(indexed address)
           handler: handleCreate
+      blockHandlers:
+        - handler: handleBlock
       file: ./src/AgreementFactory.ts
 templates:
   - kind: ethereum/contract

@@ -16,7 +16,20 @@
     },
     {
       "inputs": [],
-      "name": "getRate",
+      "name": "getToken",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTokenBalance",
       "outputs": [
         {
           "internalType": "uint256",
@@ -29,12 +42,12 @@
     },
     {
       "inputs": [],
-      "name": "getToken",
+      "name": "getTotalShares",
       "outputs": [
         {
-          "internalType": "address",
+          "internalType": "uint256",
           "name": "",
-          "type": "address"
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",

@@ -1,11 +1,11 @@
-import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
+import { BigInt, Address, ethereum } from '@graphprotocol/graph-ts'
 
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { ERC20 as ERC20Contract } from '../types/Vault/ERC20'
 import { Strategy as StrategyContract } from '../types/Vault/Strategy'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
-import { Deposited, Withdrawn, Joined, Exited, ProtocolFeeChanged, WhitelistedStrategyChanged } from '../types/Vault/Vault'
+import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedStrategySet } from '../types/Vault/Vault'
 import {
   Vault as VaultEntity,
   Rate as RateEntity,
@@ -17,7 +17,9 @@ import {
   ERC20 as ERC20Entity
 } from '../types/schema'
 
-export function handleDeposit(event: Deposited): void {
+export const VAULT_ID = 'VAULT_ID'
+
+export function handleDeposit(event: Deposit): void {
   loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
@@ -30,7 +32,7 @@ export function handleDeposit(event: Deposited): void {
   })
 }
 
-export function handleWithdraw(event: Withdrawn): void {
+export function handleWithdraw(event: Withdraw): void {
   loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
@@ -43,57 +45,84 @@ export function handleWithdraw(event: Withdrawn): void {
   })
 }
 
-export function handleJoin(event: Joined): void {
-  loadOrCreateVault(event.address)
+export function handleJoin(event: Join): void {
+  let vault = loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
-  loadOrCreateStrategy(event.params.strategy, event.address, event)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, event.address, event)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.shares = strategy.shares.plus(event.params.shares)
-  strategy.deposited = strategy.deposited.plus(event.params.amount)
   strategy.save()
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
   accountStrategy.shares = accountStrategy.shares.plus(event.params.shares)
   accountStrategy.invested = accountStrategy.shares.plus(event.params.amount)
   accountStrategy.save()
+
+  let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
+  accountBalance.amount = accountBalance.amount.minus(event.params.amount)
+  accountBalance.save()
 }
 
-export function handleExit(event: Exited): void {
-  loadOrCreateVault(event.address)
+export function handleExit(event: Exit): void {
+  let vault = loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, event.address, event)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.shares = strategy.shares.minus(event.params.shares)
-  strategy.deposited = strategy.deposited.minus(event.params.amount)
   strategy.save()
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
   accountStrategy.shares = accountStrategy.shares.minus(event.params.shares)
-  accountStrategy.invested = accountStrategy.shares.minus(event.params.amount)
+  accountStrategy.invested = accountStrategy.shares.minus(event.params.amountInvested)
   accountStrategy.save()
+
+  let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
+  accountBalance.amount = accountBalance.amount.plus(event.params.amountReceived)
+  accountBalance.save()
 }
 
-export function handleProtocolFeeChange(event: ProtocolFeeChanged): void {
+export function handleSwap(event: Swap): void {
+  loadOrCreateERC20(event.params.tokenIn)
+  let balanceIn = loadOrCreateAccountBalance(event.params.account, event.params.tokenIn)
+  balanceIn.amount = balanceIn.amount.minus(event.params.amountIn)
+  balanceIn.save()
+
+  loadOrCreateERC20(event.params.tokenOut)
+  let balanceOut = loadOrCreateAccountBalance(event.params.account, event.params.tokenOut)
+  balanceOut.amount = balanceOut.amount.plus(event.params.amountOut)
+  balanceOut.save()
+}
+
+export function handleProtocolFeeChange(event: ProtocolFeeSet): void {
   let vault = loadOrCreateVault(event.address)
   vault.protocolFee = event.params.protocolFee
   vault.save()
 }
 
-export function handleWhitelistedStrategyChange(event: WhitelistedStrategyChanged): void {
-  loadOrCreateVault(event.address)
-  let strategy = loadOrCreateStrategy(event.params.strategy, event.address, event)
+export function handleWhitelistedStrategyChange(event: WhitelistedStrategySet): void {
+  let vault = loadOrCreateVault(event.address)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.whitelisted = event.params.whitelisted
   strategy.save();
 }
 
+export function handleBlock(block: ethereum.Block): void {
+  let vault = VaultEntity.load(VAULT_ID)
+  if (vault !== null) {
+    vault.strategies.forEach(strategyAddress => {
+      let strategy = StrategyEntity.load(strategyAddress)
+      if (strategy !== null) createLastRate(strategy!, block.timestamp)
+    })
+  }
+}
+
 function loadOrCreateVault(vaultAddress: Address): VaultEntity {
-  let id = vaultAddress.toHexString()
-  let vault = VaultEntity.load(id)
+  let vault = VaultEntity.load(VAULT_ID)
 
   if (vault === null) {
     let vaultContract = VaultContract.bind(vaultAddress)
-    vault = new VaultEntity(id)
+    vault = new VaultEntity(VAULT_ID)
+    vault.address = vaultAddress.toHexString()
     vault.protocolFee = vaultContract.protocolFee()
     vault.save()
   }
@@ -101,34 +130,41 @@ function loadOrCreateVault(vaultAddress: Address): VaultEntity {
   return vault!
 }
 
-function loadOrCreateStrategy(strategyAddress: Address, vaultAddress: Address, event: ethereum.Event): StrategyEntity {
+function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event): StrategyEntity {
   let id = strategyAddress.toHexString()
   let strategy = StrategyEntity.load(id)
   let strategyContract = StrategyContract.bind(strategyAddress)
 
   if (strategy === null) {
     strategy = new StrategyEntity(id)
-    strategy.vault = vaultAddress.toHexString()
+    strategy.vault = vault.id
     strategy.token = loadOrCreateERC20(strategyContract.getToken()).id
     strategy.whitelisted = false
     strategy.metadata = strategyContract.getMetadataURI()
     strategy.shares = BigInt.fromI32(0)
     strategy.deposited = BigInt.fromI32(0)
-  }
-
-  if (strategy.lastRate == null || RateEntity.load(strategy.lastRate).timestamp != event.block.timestamp) {
-    let rateId = strategyAddress.toHexString() + '-' + event.transaction.hash.toString() + '-' + event.logIndex.toString()
-    let rate = new RateEntity(rateId)
-    rate.strategy = strategyAddress.toHexString()
-    rate.value = strategyContract.getRate()
-    rate.timestamp = event.block.timestamp
-    rate.save()
-
-    strategy.lastRate = rateId
     strategy.save()
+    createLastRate(strategy!, event.block.timestamp)
   }
 
   return strategy!
+}
+
+function createLastRate(strategy: StrategyEntity, timestamp: BigInt): void {
+  let strategyContract = StrategyContract.bind(Address.fromString(strategy.id))
+  let shares = strategyContract.getTotalShares()
+  let value = shares.isZero() ? strategyContract.getTokenBalance().div(shares) : BigInt.fromI32(0)
+
+  let rateId = strategy.id + '-' + timestamp.toString()
+  let rate = new RateEntity(rateId)
+  rate.value = value
+  rate.strategy = strategy.id
+  rate.timestamp = timestamp
+  rate.save()
+
+  strategy.lastRate = rateId
+  strategy.deposited = shares.times(value).div(BigInt.fromString('1000000000000000000'))
+  strategy.save()
 }
 
 function loadOrCreateAccount(accountAddress: Address, vaultAddress: Address): AccountEntity {

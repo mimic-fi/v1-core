@@ -153,7 +153,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         require(currentBalance >= amountIn, "ACCOUNT_INSUFFICIENT_BALANCE");
         account.balance[token] = currentBalance.sub(amountIn);
 
-        uint256 amountOut = _swap(token, strategyToken, amountIn, minAmountOut, data);
+        uint256 amountOut = _swap(accountAddress, token, strategyToken, amountIn, minAmountOut, data);
         _join(accountAddress, strategy, strategyToken, amountOut, data);
     }
 
@@ -188,25 +188,19 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         nonReentrant
         authenticate(accountAddress, arr(strategy, ratio))
     {
-        require(ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
-
         Account storage account = accounts[accountAddress];
-        uint256 currentShares = account.shares[strategy];
-        uint256 exitingShares = currentShares.mulDown(ratio);
-        require(exitingShares > 0, "EXIT_SHARES_ZERO");
-        require(currentShares >= exitingShares, "ACCOUNT_INSUFFICIENT_SHARES");
-        account.shares[strategy] = currentShares - exitingShares;
-
+        uint256 exitingShares = _updateExitingShares(account, strategy, ratio);
         (address token, uint256 amountReceived) = IStrategy(strategy).onExit(exitingShares, data);
         _safeTransferFrom(token, strategy, amountReceived);
 
         uint256 invested = account.invested[strategy];
-        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(accountAddress, token, invested.mulUp(ratio), amountReceived);
+        uint256 deposited = invested.mulUp(ratio);
+        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(accountAddress, token, deposited, amountReceived);
 
-        account.invested[strategy] = invested.mulDown(FixedPoint.ONE.sub(ratio));
+        account.invested[strategy] = invested.sub(deposited);
         uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
         account.balance[token] = account.balance[token].add(amountAfterFees);
-        emit Exit(accountAddress, strategy, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
+        emit Exit(accountAddress, strategy, deposited, amountAfterFees, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
@@ -237,8 +231,20 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
+    function _updateExitingShares(Account storage account, address strategy, uint256 ratio) private returns (uint256) {
+        require(ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
+
+        uint256 currentShares = account.shares[strategy];
+        uint256 exitingShares = currentShares.mulDown(ratio);
+        require(exitingShares > 0, "EXIT_SHARES_ZERO");
+        require(currentShares >= exitingShares, "ACCOUNT_INSUFFICIENT_SHARES");
+
+        account.shares[strategy] = currentShares - exitingShares;
+        return exitingShares;
+    }
+
     function _payExitFees(address accountAddress, address token, uint256 deposited, uint256 received)
-        internal
+        private
         returns (uint256 protocolFeeAmount, uint256 performanceFeeAmount)
     {
         if (deposited >= received) {
@@ -262,14 +268,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function _swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256) {
-        uint256 amountOut = ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
+    function _swap(address accountAddress, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256 amountOut) {
+        amountOut = ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
         require(amountOut >= minAmountOut, "SWAP_MIN_AMOUNT");
         _safeTransfer(tokenIn, swapConnector, amountIn);
 
         ISwapConnector(swapConnector).swap(tokenIn, tokenOut, amountIn, minAmountOut, block.timestamp, data);
         _safeTransferFrom(tokenOut, swapConnector, amountOut);
-        return amountOut;
+        emit Swap(accountAddress, tokenIn, tokenOut, amountIn, amountOut, data);
     }
 
     function _safeTransfer(address token, address to, uint256 amount) internal {

@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { Contract, BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-import { fp, deploy, getSigners, assertEvent, BigNumberish, assertIndirectEvent, ZERO_ADDRESS } from '@octopus-fi/v1-helpers'
+import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS } from '@octopus-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
 import TokenList from '../helpers/models/tokens/TokenList'
@@ -742,7 +742,8 @@ describe('Vault', () => {
                   caller: from,
                 })
 
-                await assertIndirectEvent(tx, swapConnector.interface, 'Swap', {
+                await assertEvent(tx, 'Swap', {
+                  account,
                   tokenIn: joiningToken,
                   tokenOut: strategyToken,
                   amountIn: amount,
@@ -919,7 +920,8 @@ describe('Vault', () => {
                   caller: from,
                 })
 
-                await assertIndirectEvent(tx, swapConnector.interface, 'Swap', {
+                await assertEvent(tx, 'Swap', {
+                  account: portfolio,
                   tokenIn: joiningToken,
                   tokenOut: strategyToken,
                   amountIn: amount,
@@ -1090,7 +1092,8 @@ describe('Vault', () => {
                 await assertEvent(tx, 'Exit', {
                   account,
                   strategy,
-                  amount: expectedAmount,
+                  amountInvested: shares,
+                  // amountReceived: expectedAmountAfterFees, TODO: fix rounding
                   shares,
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   performanceFee: 0,
@@ -1282,7 +1285,8 @@ describe('Vault', () => {
                 await assertEvent(tx, 'Exit', {
                   account: portfolio,
                   strategy,
-                  amount: expectedAmount,
+                  amountInvested: shares,
+                  // amountReceived: expectedAmountAfterFees, TODO: fix rounding
                   shares,
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   // performanceFee: expectedPerformanceFee, TODO: fix rounding
