@@ -93,13 +93,13 @@ export function handleSwap(event: Swap): void {
   balanceOut.save()
 }
 
-export function handleProtocolFeeChange(event: ProtocolFeeSet): void {
+export function handleProtocolFeeSet(event: ProtocolFeeSet): void {
   let vault = loadOrCreateVault(event.address)
   vault.protocolFee = event.params.protocolFee
   vault.save()
 }
 
-export function handleWhitelistedStrategyChange(event: WhitelistedStrategySet): void {
+export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): void {
   let vault = loadOrCreateVault(event.address)
   let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.whitelisted = event.params.whitelisted
@@ -120,10 +120,9 @@ function loadOrCreateVault(vaultAddress: Address): VaultEntity {
   let vault = VaultEntity.load(VAULT_ID)
 
   if (vault === null) {
-    let vaultContract = VaultContract.bind(vaultAddress)
     vault = new VaultEntity(VAULT_ID)
     vault.address = vaultAddress.toHexString()
-    vault.protocolFee = vaultContract.protocolFee()
+    vault.protocolFee = BigInt.fromI32(0)
     vault.save()
   }
 

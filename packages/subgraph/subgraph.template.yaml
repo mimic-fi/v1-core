@@ -39,9 +39,11 @@ dataSources:
         - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,bytes)
           handler: handleSwap
         - event: ProtocolFeeSet(uint256)
-          handler: handleProtocolFeeChange
+          handler: handleProtocolFeeSet
         - event: WhitelistedStrategySet(indexed address,bool)
-          handler: handleWhitelistedStrategyChange
+          handler: handleWhitelistedStrategySet
+      blockHandlers:
+        - handler: handleBlock
       file: ./src/Vault.ts
   - kind: ethereum/contract
     name: AgreementFactory
@@ -66,8 +68,6 @@ dataSources:
       eventHandlers:
         - event: AgreementCreated(indexed address)
           handler: handleCreate
-      blockHandlers:
-        - handler: handleBlock
       file: ./src/AgreementFactory.ts
 templates:
   - kind: ethereum/contract
