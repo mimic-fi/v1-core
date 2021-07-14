@@ -23,13 +23,13 @@ fi
 
 # Create subgraph if missing
 {
-  graph create octopus-fi/core-${NETWORK} --node ${GRAPH_NODE}
+  graph create mimic-fi/core-${NETWORK} --node ${GRAPH_NODE}
 } || {
   echo 'Subgraph was already created'
 }
 
 # Deploy subgraph
-graph deploy octopus-fi/core-${NETWORK} \
+graph deploy mimic-fi/core-${NETWORK} \
   --ipfs ${IPFS_NODE} \
   --node ${GRAPH_NODE} \
   --access-token "$GRAPHKEY"

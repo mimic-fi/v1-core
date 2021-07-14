@@ -1,4 +1,4 @@
-import { MAX_UINT256, BigNumberish } from '@octopus-fi/v1-helpers'
+import { MAX_UINT256, BigNumberish } from '@mimic-fi/v1-helpers'
 import { BigNumber, Contract, ContractTransaction } from 'ethers'
 
 import { Account, toAddress, TxParams } from '../types'

@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { Contract, BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS } from '@octopus-fi/v1-helpers'
+import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
 import TokenList from '../helpers/models/tokens/TokenList'

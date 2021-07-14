@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { BigNumberish } from '@octopus-fi/v1-helpers'
+import { BigNumberish } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractTransaction } from 'ethers'
 

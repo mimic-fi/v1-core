@@ -1,6 +1,6 @@
 import { BigNumber, Contract } from 'ethers'
 
-import { BigNumberish, ZERO_ADDRESS } from '@octopus-fi/v1-helpers'
+import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import { Account, NAry, toAddress, toAddresses, TxParams } from '../types'
 import { AllowedStrategies, RawAgreementDeployment } from './types'

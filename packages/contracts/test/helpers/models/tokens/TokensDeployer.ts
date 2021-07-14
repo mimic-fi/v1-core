@@ -1,4 +1,4 @@
-import { deploy, getSigner } from '@octopus-fi/v1-helpers'
+import { deploy, getSigner } from '@mimic-fi/v1-helpers'
 
 import { NAry, TxParams } from '../types'
 

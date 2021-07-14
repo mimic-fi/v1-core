@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { BigNumberish } from '@octopus-fi/v1-helpers'
+import { BigNumberish } from '@mimic-fi/v1-helpers'
 
 import Token from './Token'
 import TokensDeployer from './TokensDeployer'

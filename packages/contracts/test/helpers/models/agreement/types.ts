@@ -1,7 +1,7 @@
 import { Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-import { BigNumberish } from '@octopus-fi/v1-helpers'
+import { BigNumberish } from '@mimic-fi/v1-helpers'
 
 import Vault from '../vault/Vault'
 import { Account } from '../types'

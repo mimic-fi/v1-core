@@ -1,4 +1,4 @@
-import { deploy, getSigner } from '@octopus-fi/v1-helpers'
+import { deploy, getSigner } from '@mimic-fi/v1-helpers'
 
 import Vault from './Vault'
 import { RawVaultDeployment, VaultDeployment } from './type'

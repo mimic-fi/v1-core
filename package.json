@@ -1,5 +1,5 @@
 {
-  "name": "@octopus-fi/core-monorepo",
+  "name": "@mimic-fi/core-monorepo",
   "private": true,
   "license": "GPL-3.0",
   "engines": {

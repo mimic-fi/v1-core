@@ -1,4 +1,4 @@
-import { deploy, getSigners } from '@octopus-fi/v1-helpers'
+import { deploy, getSigners } from '@mimic-fi/v1-helpers'
 
 import { toAddress, toAddresses } from '../types'
 
