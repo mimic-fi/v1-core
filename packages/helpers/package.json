@@ -1,23 +1,34 @@
 {
   "name": "@mimic-fi/v1-helpers",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "GPL-3.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "engines": {
     "node": ">=12.0.0"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "lint": "eslint . --ext .ts",
-    "build": "tsc",
-    "test": "echo 'Not tests for now'"
+    "build": "rm -rf dist && tsc",
+    "test": "echo 'Not tests for now'",
+    "prepublish": "yarn build"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "decimal.js": "^10.3.1",
+    "ethers": "^5.0.8"
+  },
+  "peerDependencies": {
+    "hardhat": "^2.4.1"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@typescript-eslint/eslint-plugin": "^4.1.1",
     "@typescript-eslint/parser": "^4.1.1",
-    "decimal.js": "^10.3.1",
     "eslint": "^7.9.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "ethers": "^5.0.8",
     "hardhat": "^2.4.1",
     "prettier": "^2.2.1",
     "ts-node": "^8.10.2",

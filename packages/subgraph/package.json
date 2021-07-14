@@ -1,5 +1,6 @@
 {
   "name": "@mimic-fi/v1-subgraph",
+  "private": true,
   "version": "0.0.1",
   "license": "GPL-3.0",
   "scripts": {
@@ -16,7 +17,7 @@
     "deploy:mainnet": "NETWORK=mainnet ./scripts/deploy.sh"
   },
   "devDependencies": {
-    "@mimic-fi/v1-contracts": "^0.0.1",
+    "@mimic-fi/v1-core": "^0.0.2",
     "@graphprotocol/graph-cli": "^0.20.1",
     "@graphprotocol/graph-ts": "^0.20.0"
   }

@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
+    "declaration": true,
     "target": "es2019",
     "module": "commonjs",
     "rootDir": ".",
-    "outDir": "build",
+    "outDir": "dist",
     "esModuleInterop": true,
     "strict": true
   }
