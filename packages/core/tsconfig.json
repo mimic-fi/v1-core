@@ -6,6 +6,5 @@
     "outDir": "build",
     "esModuleInterop": true,
     "strict": true
-  },
-  "files": ["./hardhat.config.ts"]
+  }
 }
