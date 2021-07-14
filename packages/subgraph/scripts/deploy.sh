@@ -23,13 +23,13 @@ fi
 
 # Create subgraph if missing
 {
-  graph create mimic-fi/core-${NETWORK} --node ${GRAPH_NODE}
+  graph create mimic-fi/${NETWORK} --node ${GRAPH_NODE}
 } || {
   echo 'Subgraph was already created'
 }
 
 # Deploy subgraph
-graph deploy mimic-fi/core-${NETWORK} \
+graph deploy mimic-fi/${NETWORK} \
   --ipfs ${IPFS_NODE} \
   --node ${GRAPH_NODE} \
   --access-token "$GRAPHKEY"
