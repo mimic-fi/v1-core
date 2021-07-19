@@ -1,6 +1,5 @@
 import { BigInt, Address, ethereum } from '@graphprotocol/graph-ts'
 
-import { Vault as VaultContract } from '../types/Vault/Vault'
 import { ERC20 as ERC20Contract } from '../types/Vault/ERC20'
 import { Strategy as StrategyContract } from '../types/Vault/Strategy'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'

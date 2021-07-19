@@ -2,8 +2,8 @@ type Vault @entity {
   id: ID!
   address: String!
   protocolFee: BigInt!
-  accounts: [Account!] @derivedFrom(field: "vault")
-  strategies: [Strategy!] @derivedFrom(field: "vault")
+  accounts: [Account!]! @derivedFrom(field: "vault")
+  strategies: [Strategy!]! @derivedFrom(field: "vault")
 }
 
 type Strategy @entity {
@@ -61,15 +61,15 @@ type Portfolio @entity {
 type Agreement @entity {
   id: ID!
   portfolio: Portfolio!
-  withdrawers: [String!]
-  managers: [Manager!]
+  withdrawers: [String!]!
+  managers: [Manager!]!
   allowedStrategies: AllowedStrategies!
-  customStrategies: [Strategy!]
+  customStrategies: [Strategy!]!
 }
 
 type Manager @entity {
   id: ID!
-  agreements: [Agreement!] @derivedFrom(field: "managers")
+  agreements: [Agreement!]! @derivedFrom(field: "managers")
 }
 
 enum AllowedStrategies {
