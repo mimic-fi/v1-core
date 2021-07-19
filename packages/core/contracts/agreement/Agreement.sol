@@ -92,6 +92,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
 
         require(_feeCollector != address(0), "FEE_COLLECTOR_ZERO_ADDRESS");
         feeCollector = _feeCollector;
+        emit FeesConfigSet(_depositFee, _performanceFee, _feeCollector);
 
         require(_managers.length == 2, "MUST_SPECIFY_2_MANAGERS");
         require(_managers[0] != address(0) && _managers[1] != address(0), "MANAGER_ZERO_ADDRESS");
