@@ -173,12 +173,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     }
 
     function _join(address accountAddress, address strategy, address token, uint256 amount, bytes memory data) private {
+        _safeTransfer(token, strategy, amount);
         Account storage account = accounts[accountAddress];
         uint256 shares = IStrategy(strategy).onJoin(amount, data);
         account.shares[strategy] = account.shares[strategy].add(shares);
         account.invested[strategy] = account.invested[strategy].add(amount);
-
-        _safeTransfer(token, strategy, amount);
         emit Join(accountAddress, strategy, amount, shares, msg.sender);
     }
 
