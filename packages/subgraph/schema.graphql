@@ -60,6 +60,7 @@ type Portfolio @entity {
 
 type Agreement @entity {
   id: ID!
+  name: String!
   portfolio: Portfolio!
   withdrawers: [String!]!
   managers: [Manager!]!
