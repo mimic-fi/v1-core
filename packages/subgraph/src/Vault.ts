@@ -22,26 +22,30 @@ export function handleDeposit(event: Deposit): void {
   loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
-  event.params.tokens.forEach((tokenAddress: Address) => {
-    loadOrCreateERC20(tokenAddress)
-    let balance = loadOrCreateAccountBalance(event.params.account, tokenAddress)
-    let amount = event.params.amounts.shift();
-    balance.amount = balance.amount.plus(amount)
+  let tokens = event.params.tokens;
+  let amounts = event.params.amounts;
+
+  for (let i: i32 = 0; i < tokens.length; i++) {
+    loadOrCreateERC20(tokens[i])
+    let balance = loadOrCreateAccountBalance(event.params.account, tokens[i])
+    balance.amount = balance.amount.plus(amounts[i])
     balance.save()
-  })
+  }
 }
 
 export function handleWithdraw(event: Withdraw): void {
   loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
-  event.params.tokens.forEach((tokenAddress: Address) => {
-    loadOrCreateERC20(tokenAddress)
-    let balance = loadOrCreateAccountBalance(event.params.account, tokenAddress)
-    let amount = event.params.amounts.shift();
-    balance.amount = balance.amount.minus(amount)
+  let tokens = event.params.tokens;
+  let amounts = event.params.amounts;
+
+  for (let i: i32 = 0; i < tokens.length; i++) {
+    loadOrCreateERC20(tokens[i])
+    let balance = loadOrCreateAccountBalance(event.params.account, tokens[i])
+    balance.amount = balance.amount.minus(amounts[i])
     balance.save()
-  })
+  }
 }
 
 export function handleJoin(event: Join): void {
@@ -107,11 +111,12 @@ export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): voi
 
 export function handleBlock(block: ethereum.Block): void {
   let vault = VaultEntity.load(VAULT_ID)
-  if (vault !== null) {
-    vault.strategies.forEach(strategyAddress => {
-      let strategy = StrategyEntity.load(strategyAddress)
+  if (vault !== null && Array.isArray(vault.strategies)) {
+    let strategies = vault.strategies!;
+    for (let i: i32 = 0; i < strategies.length; i++) {
+      let strategy = StrategyEntity.load(strategies[i])
       if (strategy !== null) createLastRate(strategy!, block.timestamp)
-    })
+    }
   }
 }
 
@@ -226,10 +231,6 @@ function tryDecodingPortfolio(accountAddress: Address): void {
       portfolio.account = id
       portfolio.save()
     }
-
-    let account = AccountEntity.load(id)
-    account.portfolio = id;
-    account.save()
   }
 }
 

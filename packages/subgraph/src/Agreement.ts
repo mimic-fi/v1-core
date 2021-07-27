@@ -4,49 +4,51 @@ import { ManagersSet, StrategiesSet, WithdrawersSet, FeesConfigSet } from '../ty
 import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as PortfolioEntity } from '../types/schema'
 
 export function handleWithdrawersSet(event: WithdrawersSet): void {
-  event.params.withdrawers.forEach(withdrawer => {
-    let agreement = loadOrCreateAgreement(event.address)
-    let withdrawers = agreement.withdrawers
+  let agreement = loadOrCreateAgreement(event.address)
+  let withdrawers = agreement.withdrawers
+  let eventWithdrawers = event.params.withdrawers;
+
+  for (let i: i32 = 0; i < eventWithdrawers.length; i++) {
+    let withdrawer = eventWithdrawers[i]
     withdrawers.push(withdrawer.toHexString())
-    agreement.withdrawers = withdrawers
-    agreement.save()
-  })
+  }
+
+  agreement.withdrawers = withdrawers
+  agreement.save()
 }
 
 export function handleManagersSet(event: ManagersSet): void {
-  event.params.managers.forEach(managerAddress => {
-    let agreement = loadOrCreateAgreement(event.address)
-    let managers = agreement.managers
-    managers.push(managerAddress.toHexString())
-    agreement.managers = managers
-    agreement.save()
+  let agreement = loadOrCreateAgreement(event.address)
+  let managers = agreement.managers
+  let eventManagers = event.params.managers
 
-    let manager = loadOrCreateManager(managerAddress)
-    let agreements = manager.agreements
-    agreements.push(event.address.toHexString())
-    manager.agreements = agreements
-    manager.save()
-  })
+  for (let i: i32 = 0; i < eventManagers.length; i++) {
+    let manager = loadOrCreateManager(eventManagers[i])
+    managers.push(manager.id)
+  }
+
+  agreement.managers = managers
+  agreement.save()
 }
 
 export function handleStrategiesSet(event: StrategiesSet): void {
   let agreement = loadOrCreateAgreement(event.address)
+  let customStrategies = agreement.customStrategies
+  let eventStrategies = event.params.customStrategies
+
+  for (let i: i32 = 0; i < eventStrategies.length; i++) {
+    let strategy = eventStrategies[i]
+    customStrategies.push(strategy.toHexString())
+  }
+
+  agreement.customStrategies = customStrategies
   agreement.allowedStrategies = parseAllowedStrategies(event.params.allowedStrategies)
   agreement.save()
-
-  event.params.customStrategies.forEach(strategy => {
-    let agreement = loadOrCreateAgreement(event.address)
-    let customStrategies = agreement.customStrategies
-    customStrategies.push(strategy.toHexString())
-    agreement.customStrategies = customStrategies
-    agreement.save()
-  })
 }
 
 export function handleFeesConfigSet(event: FeesConfigSet): void {
   let id = event.address.toHexString()
   let portfolio = PortfolioEntity.load(id) || new PortfolioEntity(id)
-  portfolio.agreement = id
   portfolio.depositFee = event.params.depositFee
   portfolio.performanceFee = event.params.performanceFee
   portfolio.feeCollector = event.params.feeCollector
@@ -76,7 +78,6 @@ function loadOrCreateManager(managerAddress: Address): ManagerEntity {
 
   if (manager === null) {
     manager = new ManagerEntity(id)
-    manager.agreements = []
     manager.save()
   }
 

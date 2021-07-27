@@ -2,8 +2,8 @@ type Vault @entity {
   id: ID!
   address: String!
   protocolFee: BigInt!
-  accounts: [Account!]! @derivedFrom(field: "vault")
-  strategies: [Strategy!]! @derivedFrom(field: "vault")
+  accounts: [Account!] @derivedFrom(field: "vault")
+  strategies: [Strategy!] @derivedFrom(field: "vault")
 }
 
 type Strategy @entity {
