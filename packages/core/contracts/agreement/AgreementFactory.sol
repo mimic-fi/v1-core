@@ -18,22 +18,12 @@ import "./Agreement.sol";
 
 contract AgreementFactory  {
     address public immutable vault;
-    mapping (address => bytes32) public agreementsByAddress;
-    mapping (bytes32 => address) public agreementsByNameHash;
+    mapping (address => bool) public isAgreement;
 
-    event AgreementCreated(address indexed agreement);
+    event AgreementCreated(address indexed agreement, string name);
 
     constructor(address _vault) {
         vault = _vault;
-    }
-
-    function isAgreement(address agreement) external view returns (bool) {
-        return agreementsByAddress[agreement] != bytes32(0);
-    }
-
-    function isAgreement(string memory name) external view returns (bool) {
-        bytes32 nameHash = keccak256(bytes(name));
-        return agreementsByNameHash[nameHash] == address(0);
     }
 
     function create(
@@ -46,12 +36,8 @@ contract AgreementFactory  {
         Agreement.AllowedStrategies _allowedStrategies,
         address[] memory _customStrategies
     ) external {
-        bytes32 nameHash = keccak256(bytes(_name));
-        require(agreementsByNameHash[nameHash] == address(0), "AGREEMENT_ALREADY_REGISTERED");
-
         Agreement agreement = new Agreement(_name, vault, _depositFee, _performanceFee, _feeCollector, _managers, _withdrawers, _allowedStrategies, _customStrategies);
-        agreementsByAddress[address(agreement)] = nameHash;
-        agreementsByNameHash[nameHash] = address(agreement);
-        emit AgreementCreated(address(agreement));
+        isAgreement[address(agreement)] = true;
+        emit AgreementCreated(address(agreement), _name);
     }
 }
