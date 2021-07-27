@@ -6,17 +6,17 @@ set -o errexit
 # Run graph build
 yarn build:$NETWORK
 
-# Require $GRAPHKEY to be set
-if [[ -z "${GRAPHKEY}" ]]; then
-  echo "Please set \$GRAPHKEY to your The Graph deploy key to run this command."
-  exit 1
-fi
-
 # Select IPFS and The Graph nodes
-if [[ "$NETWORK" = "rpc" ]]; then
+if [[ "$NETWORK" = "localhost" ]]; then
   IPFS_NODE="http://localhost:5001"
   GRAPH_NODE="http://127.0.0.1:8020"
 else
+  # Require $GRAPHKEY to be set
+  if [[ -z "${GRAPHKEY}" ]]; then
+    echo "Please set \$GRAPHKEY to your The Graph deploy key to run this command."
+    exit 1
+  fi
+
   IPFS_NODE="https://api.thegraph.com/ipfs/"
   GRAPH_NODE="https://api.thegraph.com/deploy/"
 fi

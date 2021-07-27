@@ -4,11 +4,13 @@
 set -o errexit
 
 # Vault addresses
+vault_localhost=0x5b1869D9A4C187F2EAa108f3062412ecf0526b24
 vault_ropsten=0x0000000000000000000000000000000000000001
 vault_rinkeby=0x64f5b5a847e808A5bE0Dc44d8C424DB46885778c
 vault_mainnet=0x0000000000000000000000000000000000000001
 
 # Agreement factory addresses
+agreement_factory_localhost=0xCfEB869F69431e42cdB54A4F4f105C19C080A601
 agreement_factory_ropsten=0x0000000000000000000000000000000000000002
 agreement_factory_rinkeby=0x51dA2949391aF90eb1112D68f3041635b625d339
 agreement_factory_mainnet=0x0000000000000000000000000000000000000002
@@ -19,14 +21,14 @@ start_block_rinkeby=8931080
 start_block_mainnet=
 
 # Validate network
-networks=(rpc ropsten rinkeby mainnet)
+networks=(localhost ropsten rinkeby mainnet)
 if [[ -z $NETWORK || ! " ${networks[@]} " =~ " ${NETWORK} " ]]; then
-  echo 'Please make sure the network provided is either rpc, ropsten, rinkeby, or mainnet.'
+  echo 'Please make sure the network provided is either localhost, ropsten, rinkeby, or mainnet.'
   exit 1
 fi
 
 # Use mainnet network in case of local deployment
-if [[ "$NETWORK" = "rpc" ]]; then
+if [[ "$NETWORK" = "localhost" ]]; then
   ENV='mainnet'
 else
   ENV=${NETWORK}
