@@ -36,7 +36,7 @@ dataSources:
           handler: handleJoin
         - event: Exit(indexed address,indexed address,uint256,uint256,uint256,uint256,uint256,address)
           handler: handleExit
-        - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,bytes)
+        - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,uint256,bytes)
           handler: handleSwap
         - event: ProtocolFeeSet(uint256)
           handler: handleProtocolFeeSet
