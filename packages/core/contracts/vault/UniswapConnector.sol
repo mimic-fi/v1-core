@@ -38,7 +38,7 @@ contract UniswapConnector is ISwapConnector {
         bool isTokenIn0 = tokenIn < tokenOut;
         uint256 reserveIn = isTokenIn0 ? reserve0 : reserve1;
         uint256 reserveOut = isTokenIn0 ? reserve1 : reserve0;
-        return amountIn.mul(reserveOut) / reserveIn;
+        return uniswap.getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
     function swap(
