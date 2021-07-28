@@ -87,7 +87,7 @@ export function handleExit(event: Exit): void {
 export function handleSwap(event: Swap): void {
   loadOrCreateERC20(event.params.tokenIn)
   let balanceIn = loadOrCreateAccountBalance(event.params.account, event.params.tokenIn)
-  balanceIn.amount = balanceIn.amount.minus(event.params.amountIn)
+  balanceIn.amount = balanceIn.amount.minus(event.params.amountIn).plus(event.params.remainingIn)
   balanceIn.save()
 
   loadOrCreateERC20(event.params.tokenOut)

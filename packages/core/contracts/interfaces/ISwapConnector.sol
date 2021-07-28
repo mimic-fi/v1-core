@@ -24,5 +24,5 @@ interface ISwapConnector {
         uint256 minAmountOut,
         uint256 deadline,
         bytes memory data
-    ) external returns (uint256 amountOut);
+    ) external returns (uint256 remainingIn, uint256 amountOut);
 }

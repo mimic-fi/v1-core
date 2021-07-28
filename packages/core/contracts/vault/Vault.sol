@@ -151,9 +151,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         Account storage account = accounts[accountAddress];
         uint256 currentBalance = account.balance[token];
         require(currentBalance >= amountIn, "ACCOUNT_INSUFFICIENT_BALANCE");
-        account.balance[token] = currentBalance.sub(amountIn);
 
-        uint256 amountOut = _swap(accountAddress, token, strategyToken, amountIn, minAmountOut, data);
+        (uint256 remainingIn, uint256 amountOut) = _swap(accountAddress, token, strategyToken, amountIn, minAmountOut, data);
+        account.balance[token] = currentBalance.sub(amountIn).add(remainingIn);
         _join(accountAddress, strategy, strategyToken, amountOut, data);
     }
 
@@ -267,14 +267,22 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function _swap(address accountAddress, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256 amountOut) {
-        amountOut = ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
-        require(amountOut >= minAmountOut, "SWAP_MIN_AMOUNT");
-        _safeTransfer(tokenIn, swapConnector, amountIn);
+    function _swap(address accountAddress, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256 remainingIn, uint256 amountOut) {
+        uint256 expectedAmountOut = ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
+        require(expectedAmountOut >= minAmountOut, "EXPECTED_SWAP_MIN_AMOUNT");
 
-        ISwapConnector(swapConnector).swap(tokenIn, tokenOut, amountIn, minAmountOut, block.timestamp, data);
-        _safeTransferFrom(tokenOut, swapConnector, amountOut);
-        emit Swap(accountAddress, tokenIn, tokenOut, amountIn, amountOut, data);
+        _safeTransfer(tokenIn, swapConnector, amountIn);
+        uint256 preBalanceIn = IERC20(tokenIn).balanceOf(address(this));
+        uint256 preBalanceOut = IERC20(tokenOut).balanceOf(address(this));
+        (remainingIn, amountOut) = ISwapConnector(swapConnector).swap(tokenIn, tokenOut, amountIn, minAmountOut, block.timestamp, data);
+
+        uint256 postBalanceIn = IERC20(tokenIn).balanceOf(address(this));
+        require(postBalanceIn.sub(preBalanceIn) >= remainingIn, "SWAP_INVALID_REMAINING_IN");
+
+        uint256 postBalanceOut = IERC20(tokenOut).balanceOf(address(this));
+        require(amountOut >= minAmountOut, "SWAP_MIN_AMOUNT");
+        require(postBalanceOut.sub(preBalanceOut) >= amountOut, "SWAP_INVALID_AMOUNT_OUT");
+        emit Swap(accountAddress, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
     }
 
     function _safeTransfer(address token, address to, uint256 amount) internal {
