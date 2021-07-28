@@ -1,6 +1,5 @@
 import { BigInt, Address } from '@graphprotocol/graph-ts'
 
-import { Agreement as AgreementContract } from '../types/Vault/Agreement'
 import { ManagersSet, StrategiesSet, WithdrawersSet, FeesConfigSet } from '../types/templates/Agreement/Agreement'
 import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as PortfolioEntity } from '../types/schema'
 
@@ -56,15 +55,14 @@ export function handleFeesConfigSet(event: FeesConfigSet): void {
   portfolio.save()
 }
 
-function loadOrCreateAgreement(address: Address): AgreementEntity {
+export function loadOrCreateAgreement(address: Address): AgreementEntity {
   let id = address.toHexString()
   let agreement = AgreementEntity.load(id)
 
   if (agreement === null) {
-    let agreementContract = AgreementContract.bind(address)
     agreement = new AgreementEntity(id)
     agreement.portfolio = id
-    agreement.name = agreementContract.name()
+    agreement.name = ''
     agreement.managers = []
     agreement.withdrawers = []
     agreement.customStrategies = []

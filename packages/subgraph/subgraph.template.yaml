@@ -66,7 +66,7 @@ dataSources:
         - name: ERC20
           file: ./abi/IERC20.json
       eventHandlers:
-        - event: AgreementCreated(indexed address)
+        - event: AgreementCreated(indexed address,string)
           handler: handleCreate
       file: ./src/AgreementFactory.ts
 templates:
