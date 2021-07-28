@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import "../interfaces/ISwapConnector.sol";
 
@@ -26,9 +26,9 @@ contract UniswapConnector is ISwapConnector {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IUniswapV2Router01 public immutable uniswap;
+    IUniswapV2Router02 public immutable uniswap;
 
-    constructor(IUniswapV2Router01 _uniswap) {
+    constructor(IUniswapV2Router02 _uniswap) {
         uniswap = _uniswap;
     }
 

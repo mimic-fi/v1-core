@@ -2,13 +2,13 @@ import { expect } from 'chai'
 import { Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-import { fp, deploy, instanceAt, getSigners, ZERO_ADDRESS, MAX_UINT256 } from '@mimic-fi/v1-helpers'
+import { fp, deploy, getSigners, ZERO_ADDRESS, MAX_UINT256 } from '@mimic-fi/v1-helpers'
 
 import TokenList from '../helpers/models/tokens/TokenList'
 
 describe('UniswapConnector', () => {
   let user: SignerWithAddress
-  let tokens: TokenList, factory: Contract, uniswap: Contract, pool: Contract, connector: Contract
+  let tokens: TokenList, factory: Contract, uniswap: Contract, connector: Contract
 
   const firstTokenInitialAmount = fp(1000)
   const secondTokenInitialAmount = fp(1000).mul(150)
@@ -20,7 +20,7 @@ describe('UniswapConnector', () => {
 
   beforeEach('create connector', async () => {
     factory = await deploy('@uniswap/v2-core/build/UniswapV2Factory', [user.address])
-    uniswap = await deploy('@uniswap/v2-periphery/build/UniswapV2Router01', [factory.address, ZERO_ADDRESS])
+    uniswap = await deploy('@uniswap/v2-periphery/build/UniswapV2Router02', [factory.address, ZERO_ADDRESS])
     connector = await deploy('UniswapConnector', [uniswap.address])
   })
 
