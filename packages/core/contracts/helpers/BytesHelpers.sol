@@ -14,6 +14,8 @@
 
 pragma solidity ^0.8.0;
 
+import "../interfaces/IVault.sol";
+
 library BytesHelpers {
     function toBytes32(bytes4 self) internal pure returns (bytes32 result) {
         assembly { result := self }
@@ -22,5 +24,29 @@ library BytesHelpers {
     function decodeAddress(bytes32[] memory self, uint256 index) internal pure returns (address) {
         require(self.length > index, "INVALID_BYTES_ARRAY_INDEX");
         return address(bytes20(self[index]));
+    }
+
+    function isJoinOrExit(bytes32 self) internal pure returns (bool) {
+        return isJoin(self) || isJoinSwap(self) || isExit(self);
+    }
+
+    function isJoin(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.join.selector);
+    }
+
+    function isJoinSwap(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.joinSwap.selector);
+    }
+
+    function isExit(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.exit.selector);
+    }
+
+    function isWithdraw(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.withdraw.selector);
+    }
+
+    function isDeposit(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.deposit.selector);
     }
 }

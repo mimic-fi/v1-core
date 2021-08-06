@@ -1,12 +1,11 @@
 import { expect } from 'chai'
 import { Contract, BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-
 import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
-import TokenList from '../helpers/models/tokens/TokenList'
 import Token from '../helpers/models/tokens/Token'
+import TokenList from '../helpers/models/tokens/TokenList'
 
 describe('Vault', () => {
   let tokens: TokenList, vault: Vault, portfolio: Contract

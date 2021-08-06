@@ -1,9 +1,8 @@
 import { MAX_UINT256, BigNumberish } from '@mimic-fi/v1-helpers'
 import { BigNumber, Contract, ContractTransaction } from 'ethers'
 
-import { Account, toAddress, TxParams } from '../types'
-
 import TokensDeployer from './TokensDeployer'
+import { Account, toAddress, TxParams } from '../types'
 
 export default class Token {
   symbol: string

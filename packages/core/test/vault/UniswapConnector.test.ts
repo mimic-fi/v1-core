@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-
 import { fp, deploy, getSigners, ZERO_ADDRESS, MAX_UINT256 } from '@mimic-fi/v1-helpers'
 
 import TokenList from '../helpers/models/tokens/TokenList'

@@ -1,12 +1,10 @@
 import { BigNumber, Contract } from 'ethers'
-
 import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
-
-import { Account, NAry, toAddress, toAddresses, TxParams } from '../types'
-import { AllowedStrategies, RawAgreementDeployment } from './types'
 
 import Vault from '../vault/Vault'
 import AgreementDeployer from './AgreementDeployer'
+import { AllowedStrategies, RawAgreementDeployment } from './types'
+import { Account, NAry, toAddress, toAddresses, TxParams } from '../types'
 
 export default class Agreement {
   instance: Contract

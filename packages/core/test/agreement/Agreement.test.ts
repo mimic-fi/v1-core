@@ -1,16 +1,12 @@
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-
-import { fp } from '../../../helpers/src/numbers'
-import { deploy } from '../../../helpers/src/contracts'
-import { getSigner, getSigners } from '../../../helpers/src/signers'
-import { MAX_UINT256, ZERO_ADDRESS } from '../../../helpers/src/constants'
-import { Account, toAddress, toAddresses } from '../helpers/models/types'
+import { fp, deploy, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
 import TokenList from '../helpers/models/tokens/TokenList'
 import Agreement from '../helpers/models/agreement/Agreement'
+import { Account, toAddress, toAddresses } from '../helpers/models/types'
 
 describe('Agreement', () => {
   let tokens: TokenList

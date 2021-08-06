@@ -1,9 +1,8 @@
 import { deploy, getSigners } from '@mimic-fi/v1-helpers'
 
-import { toAddress, toAddresses } from '../types'
-
 import Vault from '../vault/Vault'
 import Agreement from './Agreement'
+import { toAddress, toAddresses } from '../types'
 import { AgreementDeployment, RawAgreementDeployment } from './types'
 
 const ALLOWED_STRATEGIES = {

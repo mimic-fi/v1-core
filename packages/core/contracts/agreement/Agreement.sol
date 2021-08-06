@@ -32,6 +32,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     using FixedPoint for uint256;
     using BytesHelpers for bytes;
     using BytesHelpers for bytes4;
+    using BytesHelpers for bytes32;
     using BytesHelpers for bytes32[];
 
     enum AllowedStrategies {
@@ -189,12 +190,12 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
 
         // Eval different actions and parameters
-        if (what == IVault.joinSwap.selector.toBytes32() || what == IVault.join.selector.toBytes32() || what == IVault.exit.selector.toBytes32()) {
+        if (what.isJoinOrExit()) {
             return isStrategyAllowed(how.decodeAddress(0));
-        } else if (what == IVault.withdraw.selector.toBytes32()) {
+        } else if (what.isWithdraw()) {
             return isWithdrawer(how.decodeAddress(0));
         } else {
-            return what == IVault.deposit.selector.toBytes32();
+            return what.isDeposit();
         }
     }
 
