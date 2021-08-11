@@ -199,7 +199,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         account.invested[strategy] = invested.sub(deposited);
         uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
         account.balance[token] = account.balance[token].add(amountAfterFees);
-        emit Exit(accountAddress, strategy, deposited, amountAfterFees, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
+        emit Exit(accountAddress, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {

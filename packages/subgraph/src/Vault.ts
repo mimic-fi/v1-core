@@ -24,11 +24,12 @@ export function handleDeposit(event: Deposit): void {
 
   let tokens = event.params.tokens;
   let amounts = event.params.amounts;
+  let depositFees = event.params.depositFees;
 
   for (let i: i32 = 0; i < tokens.length; i++) {
     loadOrCreateERC20(tokens[i])
     let balance = loadOrCreateAccountBalance(event.params.account, tokens[i])
-    balance.amount = balance.amount.plus(amounts[i])
+    balance.amount = balance.amount.plus(amounts[i]).minus(depositFees[i])
     balance.save()
   }
 }
@@ -80,7 +81,7 @@ export function handleExit(event: Exit): void {
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
-  accountBalance.amount = accountBalance.amount.plus(event.params.amountReceived)
+  accountBalance.amount = accountBalance.amount.plus(event.params.amountReceived).minus(event.params.protocolFee).minus(event.params.performanceFee)
   accountBalance.save()
 }
 
