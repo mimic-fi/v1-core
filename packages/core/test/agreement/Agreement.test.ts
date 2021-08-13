@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import { Contract } from 'ethers'
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { fp, deploy, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
@@ -364,147 +363,63 @@ describe('Agreement', () => {
     })
   })
 
-  describe('approveTokens', () => {
-    let agreement: Agreement
-
-    context('when the sender is the vault', () => {
-      beforeEach('deploy agreement', async () => {
-        agreement = await Agreement.create({ vault: 'mocked' })
-      })
-
-      it('grants infinite allowance for all tokens', async () => {
-        const previousTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
-        previousTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(0))
-
-        await agreement.vault.instance.mockApproveTokens(agreement.address, tokens.addresses)
-
-        const currentTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
-        currentTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(MAX_UINT256))
-      })
-    })
-
-    context('when the sender is not the vault', () => {
-      beforeEach('deploy agreement', async () => {
-        agreement = await Agreement.create()
-      })
-
-      it('reverts', async () => {
-        await expect(agreement.approveTokens(tokens.addresses)).to.be.revertedWith('SENDER_NOT_ALLOWED')
-      })
-    })
-  })
-
-  describe('withdraw', () => {
+  describe('callbacks', () => {
     let agreement: Agreement
 
     beforeEach('deploy agreement', async () => {
-      agreement = await Agreement.create()
+      agreement = await Agreement.create({ vault: 'mocked' })
     })
 
-    context('when the sender is allowed', () => {
-      let from: SignerWithAddress
+    it('supports only before deposit and withdraw', async () => {
+      const callbacks = await agreement.getSupportedCallbacks()
+      expect(callbacks).to.be.equal('0x05')
+    })
 
-      const itWithdrawsProperly = () => {
-        let withdrawer: string
-        const amount = fp(10)
+    describe('before deposit', () => {
+      context('when the sender is the vault', () => {
+        it('grants infinite allowance for all tokens', async () => {
+          const previousTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
+          previousTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(0))
 
-        context('when the given withdrawer is allowed', () => {
-          beforeEach('set withdrawer', () => (withdrawer = agreement.withdrawer0))
+          await agreement.vault.instance.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, tokens.addresses, [])
 
-          context('when there is enough balance', () => {
-            beforeEach('mint tokens', async () => {
-              await tokens.mint(agreement.address, amount)
-            })
-
-            it('withdraws the tokens to the withdrawer', async () => {
-              const previousVaultBalances = await tokens.balanceOf(agreement.vault)
-              const previousAgreementBalances = await tokens.balanceOf(agreement.address)
-              const previousWithdrawerBalances = await tokens.balanceOf(withdrawer)
-
-              await agreement.withdraw(withdrawer, tokens.addresses, amount, { from })
-
-              const currentVaultBalances = await tokens.balanceOf(agreement.address)
-              currentVaultBalances.forEach((balance, i) => expect(balance).to.be.equal(previousVaultBalances[i]))
-
-              const currentAgreementBalances = await tokens.balanceOf(agreement.address)
-              currentAgreementBalances.forEach((balance, i) => expect(balance).to.be.equal(previousAgreementBalances[i].sub(amount)))
-
-              const currentWithdrawerBalances = await tokens.balanceOf(withdrawer)
-              currentWithdrawerBalances.forEach((balance, i) => expect(balance).to.be.equal(previousWithdrawerBalances[i].add(amount)))
-            })
-          })
-
-          context('when there is not enough balance', () => {
-            beforeEach('mint some tokens', async () => {
-              await tokens.mint(agreement.address, amount.div(2))
-            })
-
-            context('when there is enough balance in the vault', () => {
-              beforeEach('deposit tokens in vault', async () => {
-                await tokens.mint(agreement.address, amount.div(2))
-                await agreement.vault.deposit(agreement, tokens.addresses, amount.div(2), { from })
-              })
-
-              it('withdraws the tokens to the withdrawer', async () => {
-                const previousVaultBalances = await tokens.balanceOf(agreement.vault)
-                const previousAgreementBalances = await tokens.balanceOf(agreement)
-                const previousWithdrawerBalances = await tokens.balanceOf(withdrawer)
-
-                await agreement.withdraw(withdrawer, tokens.addresses, amount, { from })
-
-                const currentVaultBalances = await tokens.balanceOf(agreement.address)
-                currentVaultBalances.forEach((balance, i) => expect(balance).to.be.equal(previousVaultBalances[i].sub(amount.div(2))))
-
-                const currentAgreementBalances = await tokens.balanceOf(agreement.address)
-                currentAgreementBalances.forEach((balance, i) => expect(balance).to.be.equal(previousAgreementBalances[i].sub(amount.div(2))))
-
-                const currentWithdrawerBalances = await tokens.balanceOf(withdrawer)
-                currentWithdrawerBalances.forEach((balance, i) => expect(balance).to.be.equal(previousWithdrawerBalances[i].add(amount)))
-              })
-            })
-
-            context('when there is not enough balance in the vault either', () => {
-              it('reverts', async () => {
-                await expect(agreement.withdraw(withdrawer, tokens.addresses, amount, { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
-              })
-            })
-          })
+          const currentTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
+          currentTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(MAX_UINT256))
         })
-
-        context('when the given withdrawer is not allowed', () => {
-          beforeEach('set withdrawer', () => (withdrawer = agreement.manager0))
-
-          it('reverts', async () => {
-            const amounts = Array(tokens.length).fill(fp(10))
-
-            await expect(agreement.withdraw(withdrawer, tokens.addresses, amounts)).to.be.revertedWith('SENDER_NOT_ALLOWED')
-          })
-        })
-      }
-
-      context('when the sender is a withdrawer', () => {
-        beforeEach('set sender', () => {
-          from = agreement.withdrawers[0] as SignerWithAddress
-        })
-
-        itWithdrawsProperly()
       })
 
-      context('when the sender is a manager', () => {
-        beforeEach('set sender', () => {
-          from = agreement.managers[1] as SignerWithAddress
+      context('when the sender is not the vault', () => {
+        beforeEach('deploy agreement', async () => {
+          agreement = await Agreement.create()
         })
 
-        itWithdrawsProperly()
+        it('reverts', async () => {
+          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, [], [])).to.be.revertedWith('SENDER_NOT_ALLOWED')
+        })
       })
     })
 
-    context('when the sender is allowed', () => {
-      it('reverts', async () => {
-        const withdrawer = agreement.withdrawer0
-        const amounts = Array(tokens.length).fill(fp(10))
+    describe('before withdraw', () => {
+      context('when the sender is the vault', () => {
+        it('grants infinite allowance for all tokens', async () => {
+          const previousTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
+          previousTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(0))
 
-        await expect(agreement.withdraw(withdrawer, tokens.addresses, amounts)).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await agreement.vault.instance.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, tokens.addresses, [], ZERO_ADDRESS)
+
+          const currentTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
+          currentTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(MAX_UINT256))
+        })
+      })
+
+      context('when the sender is not the vault', () => {
+        beforeEach('deploy agreement', async () => {
+          agreement = await Agreement.create()
+        })
+
+        it('reverts', async () => {
+          await expect(agreement.instance.beforeWithdraw(ZERO_ADDRESS, [], [], ZERO_ADDRESS)).to.be.revertedWith('SENDER_NOT_ALLOWED')
+        })
       })
     })
   })

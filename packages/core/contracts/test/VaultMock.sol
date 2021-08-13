@@ -9,7 +9,11 @@ contract VaultMock is Vault {
         Vault(_protocolFee, _swapConnector, _whitelistedStrategies)
     {}
 
-    function mockApproveTokens(address portfolio, address[] memory tokens) external {
-        IPortfolio(portfolio).approveTokens(tokens);
+    function mockBeforeDeposit(address portfolio, address sender, address[] memory tokens, uint256[] memory amounts) external {
+        IPortfolio(portfolio).beforeDeposit(sender, tokens, amounts);
+    }
+
+    function mockBeforeWithdraw(address portfolio, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external {
+        IPortfolio(portfolio).beforeWithdraw(sender, tokens, amounts, recipient);
     }
 }

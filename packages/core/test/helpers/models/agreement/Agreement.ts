@@ -3,8 +3,8 @@ import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from '../vault/Vault'
 import AgreementDeployer from './AgreementDeployer'
+import { Account, toAddress, toAddresses } from '../types'
 import { AllowedStrategies, RawAgreementDeployment } from './types'
-import { Account, NAry, toAddress, toAddresses, TxParams } from '../types'
 
 export default class Agreement {
   instance: Contract
@@ -114,6 +114,10 @@ export default class Agreement {
     return this.instance.feeCollector()
   }
 
+  async getSupportedCallbacks(): Promise<string> {
+    return this.instance.getSupportedCallbacks()
+  }
+
   async canDeposit({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
     return this.canPerform({ who, where, what: this.vault.getSighash('deposit'), how })
   }
@@ -139,15 +143,5 @@ export default class Agreement {
     what = padRight(what ?? ZERO_ADDRESS)
     how = (how ?? []).map(padRight)
     return this.instance.canPerform(toAddress(who), toAddress(where), what, how)
-  }
-
-  async approveTokens(tokens: Array<Account>): Promise<void> {
-    await this.instance.approveTokens(toAddresses(tokens))
-  }
-
-  async withdraw(withdrawer: Account, tokens: Array<Account>, amounts: NAry<BigNumberish>, { from }: TxParams = {}): Promise<void> {
-    const agreement = from ? this.instance.connect(from) : this.instance
-    if (!Array.isArray(amounts)) amounts = Array(tokens.length).fill(amounts)
-    await agreement.withdraw(toAddress(withdrawer), toAddresses(tokens), amounts)
   }
 }

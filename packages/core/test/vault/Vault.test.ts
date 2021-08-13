@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { Contract, BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS, MAX_UINT256, assertIndirectEvent, assertNoIndirectEvent } from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
 import Token from '../helpers/models/tokens/Token'
@@ -175,18 +175,91 @@ describe('Vault', () => {
                 caller: from,
               })
             })
+
+            describe('callbacks', async () => {
+              context('when non is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x00')
+                })
+
+                it('does not call the portfolio', async () => {
+                  const tx = await vault.deposit(portfolio, tokens.addresses, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeDeposit')
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterDeposit')
+                })
+              })
+
+              context('when before is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x01')
+                })
+
+                it('only calls before to the portfolio', async () => {
+                  const tx = await vault.deposit(portfolio, tokens.addresses, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterDeposit')
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeDeposit', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                  })
+                })
+              })
+
+              context('when after is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x02')
+                })
+
+                it('only calls after to the portfolio', async () => {
+                  const tx = await vault.deposit(portfolio, tokens.addresses, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeDeposit')
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterDeposit', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                  })
+                })
+              })
+
+              context('when both are allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x03')
+                })
+
+                it('calls before and after to the portfolio', async () => {
+                  const tx = await vault.deposit(portfolio, tokens.addresses, amount, { from })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeDeposit', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                  })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterDeposit', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                  })
+                })
+              })
+            })
           }
 
           context('when the sender has approved enough tokens', async () => {
-            beforeEach('mint tokens', async () => {
-              await portfolio.approveTokens(tokens.addresses)
+            beforeEach('approve tokens', async () => {
+              await portfolio.mockApproveTokens(tokens.addresses, MAX_UINT256)
             })
 
             itTransfersTheTokensToTheVault()
           })
 
           context('when the portfolio did not approve enough tokens', async () => {
-            itTransfersTheTokensToTheVault()
+            it('reverts', async () => {
+              await expect(vault.deposit(portfolio, tokens.addresses, amount, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+            })
           })
         })
       })
@@ -204,6 +277,8 @@ describe('Vault', () => {
   })
 
   describe('withdraw', () => {
+    const amount = fp(500)
+
     context('when the account is an EOA', () => {
       context('when the sender is the EOA', () => {
         let from: SignerWithAddress
@@ -213,8 +288,6 @@ describe('Vault', () => {
         })
 
         context('when the sender has deposited enough tokens', async () => {
-          const amount = fp(500)
-
           beforeEach('deposit tokens', async () => {
             await tokens.mint(account, amount)
             await tokens.approve(vault, amount, { from: account })
@@ -262,7 +335,7 @@ describe('Vault', () => {
 
         context('when the sender did not deposit enough tokens', async () => {
           it('reverts', async () => {
-            await expect(vault.withdraw(account, tokens.addresses, fp(10), other, { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
+            await expect(vault.withdraw(account, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -275,7 +348,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.withdraw(account, tokens.addresses, fp(10), other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.withdraw(account, tokens.addresses, amount, other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
         })
       })
     })
@@ -292,58 +365,321 @@ describe('Vault', () => {
           await portfolio.mockCanPerform(true)
         })
 
-        context('when the portfolio has deposited enough tokens', async () => {
-          const amount = fp(500)
-
-          beforeEach('deposit tokens', async () => {
-            const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-            const depositedAmount = amount.add(expectedFee)
-            await tokens.mint(portfolio, depositedAmount)
-            await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
+        context('when the portfolio has enough balance', async () => {
+          beforeEach('mint tokens', async () => {
+            await tokens.mint(portfolio, amount)
           })
 
-          it('transfers the tokens to the recipient', async () => {
-            const previousVaultBalances = await tokens.balanceOf(vault)
-            const previousRecipientBalances = await tokens.balanceOf(portfolio)
+          context('when the portfolio has allowed the corresponding amount', async () => {
+            beforeEach('approve tokens', async () => {
+              await portfolio.mockApproveTokens(tokens.addresses, amount)
+            })
 
-            await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+            it('transfers the tokens to the recipient', async () => {
+              const previousVaultBalances = await tokens.balanceOf(vault)
+              const previousPortfolioBalances = await tokens.balanceOf(portfolio)
+              const previousRecipientBalances = await tokens.balanceOf(other)
 
-            await tokens.asyncEach(async (token, i) => {
-              const currentVaultBalance = await token.balanceOf(vault)
-              expect(currentVaultBalance).to.be.equal(previousVaultBalances[i].sub(amount))
+              await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
 
-              const currentRecipientBalance = await token.balanceOf(other)
-              expect(currentRecipientBalance).to.be.equal(previousRecipientBalances[i].add(amount))
+              await tokens.asyncEach(async (token, i) => {
+                const currentVaultBalance = await token.balanceOf(vault)
+                expect(currentVaultBalance).to.be.equal(previousVaultBalances[i])
+
+                const currentPortfolioBalance = await token.balanceOf(portfolio)
+                expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalances[i].sub(amount))
+
+                const currentRecipientBalance = await token.balanceOf(other)
+                expect(currentRecipientBalance).to.be.equal(previousRecipientBalances[i].add(amount))
+              })
+            })
+
+            it('does not affect the account available balance in the vault', async () => {
+              const previousBalances = await tokens.asyncMap((token) => vault.getAccountBalance(portfolio, token))
+
+              await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+              await tokens.asyncEach(async (token, i) => {
+                const currentBalance = await vault.getAccountBalance(portfolio, token)
+                expect(currentBalance).to.be.equal(previousBalances[i])
+              })
+            })
+
+            it('emits an event', async () => {
+              const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+              await assertEvent(tx, 'Withdraw', {
+                account: portfolio,
+                tokens: tokens.addresses,
+                amounts: Array(tokens.length).fill(amount),
+                fromVault: Array(tokens.length).fill(fp(0)),
+                recipient: other,
+                caller: from,
+              })
+            })
+
+            describe('callbacks', async () => {
+              context('when non is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x00')
+                })
+
+                it('does not call the portfolio', async () => {
+                  const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeWithdraw')
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterWithdraw')
+                })
+              })
+
+              context('when before is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x04')
+                })
+
+                it('only calls before to the portfolio', async () => {
+                  const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterWithdraw')
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeWithdraw', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                    recipient: other,
+                  })
+                })
+              })
+
+              context('when after is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x08')
+                })
+
+                it('only calls after to the portfolio', async () => {
+                  const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeWithdraw')
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterWithdraw', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                    recipient: other,
+                  })
+                })
+              })
+
+              context('when both are allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x0C')
+                })
+
+                it('calls before and after to the portfolio', async () => {
+                  const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeWithdraw', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                    recipient: other,
+                  })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterWithdraw', {
+                    sender: from,
+                    tokens: tokens.addresses,
+                    amounts: Array(tokens.length).fill(amount),
+                    recipient: other,
+                  })
+                })
+              })
             })
           })
 
-          it('decreases the account available balance in the vault', async () => {
-            const previousBalances = await tokens.asyncMap((token) => vault.getAccountBalance(portfolio, token))
-
-            await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
-
-            await tokens.asyncEach(async (token, i) => {
-              const currentBalance = await vault.getAccountBalance(portfolio, token)
-              expect(currentBalance).to.be.equal(previousBalances[i].sub(amount))
-            })
-          })
-
-          it('emits an event', async () => {
-            const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
-
-            await assertEvent(tx, 'Withdraw', {
-              account: portfolio,
-              tokens: tokens.addresses,
-              amounts: Array(tokens.length).fill(amount),
-              recipient: other,
-              caller: from,
+          context('when the portfolio did not allow the corresponding amount', async () => {
+            it('reverts', async () => {
+              await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
             })
           })
         })
 
-        context('when the portfolio did not deposit enough tokens', async () => {
-          it('reverts', async () => {
-            await expect(vault.withdraw(portfolio, tokens.addresses, fp(10), other, { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
+        context('when the portfolio does not have enough balance', async () => {
+          beforeEach('mint tokens', async () => {
+            await tokens.mint(portfolio, amount.div(2))
+          })
+
+          context('when the portfolio has allowed the corresponding amount', async () => {
+            beforeEach('approve tokens', async () => {
+              await portfolio.mockApproveTokens(tokens.addresses, MAX_UINT256)
+            })
+
+            context('when there are enough tokens deposited in the vault', async () => {
+              beforeEach('deposit tokens', async () => {
+                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+                const depositedAmount = amount.add(expectedFee)
+                await tokens.mint(portfolio, depositedAmount)
+                await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
+              })
+
+              it('transfers the tokens to the recipient', async () => {
+                const previousVaultBalances = await tokens.balanceOf(vault)
+                const previousPortfolioBalances = await tokens.balanceOf(portfolio)
+                const previousRecipientBalances = await tokens.balanceOf(other)
+
+                await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                await tokens.asyncEach(async (token, i) => {
+                  const currentVaultBalance = await token.balanceOf(vault)
+                  expect(currentVaultBalance).to.be.equal(previousVaultBalances[i].sub(amount.div(2)))
+
+                  const currentPortfolioBalance = await token.balanceOf(portfolio)
+                  expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalances[i].sub(amount.div(2)))
+
+                  const currentRecipientBalance = await token.balanceOf(other)
+                  expect(currentRecipientBalance).to.be.equal(previousRecipientBalances[i].add(amount))
+                })
+              })
+
+              it('decreases the account available balance in the vault', async () => {
+                const previousBalances = await tokens.asyncMap((token) => vault.getAccountBalance(portfolio, token))
+
+                await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                await tokens.asyncEach(async (token, i) => {
+                  const currentBalance = await vault.getAccountBalance(portfolio, token)
+                  expect(currentBalance).to.be.equal(previousBalances[i].sub(amount.div(2)))
+                })
+              })
+
+              it('emits an event', async () => {
+                const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+                await assertEvent(tx, 'Withdraw', {
+                  account: portfolio,
+                  tokens: tokens.addresses,
+                  amounts: Array(tokens.length).fill(amount),
+                  fromVault: Array(tokens.length).fill(amount.div(2)),
+                  recipient: other,
+                  caller: from,
+                })
+              })
+            })
+
+            context('when there are not enough tokens deposited in the vault', async () => {
+              it('reverts', async () => {
+                await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+              })
+            })
+          })
+
+          context('when the portfolio did not allow the corresponding amount', async () => {
+            context('when there are enough tokens deposited in the vault', async () => {
+              beforeEach('deposit tokens', async () => {
+                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+                const depositedAmount = amount.add(expectedFee)
+                await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
+                await tokens.mint(portfolio, depositedAmount)
+                await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
+              })
+
+              it('reverts', async () => {
+                await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+              })
+            })
+
+            context('when there are not enough tokens deposited in the vault', async () => {
+              it('reverts', async () => {
+                await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+              })
+            })
+          })
+        })
+
+        context('when the portfolio does not have balance at all', async () => {
+          const itWithdrawsTokensFromVault = () => {
+            it('transfers the tokens to the recipient', async () => {
+              const previousVaultBalances = await tokens.balanceOf(vault)
+              const previousPortfolioBalances = await tokens.balanceOf(portfolio)
+              const previousRecipientBalances = await tokens.balanceOf(other)
+
+              await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+              await tokens.asyncEach(async (token, i) => {
+                const currentVaultBalance = await token.balanceOf(vault)
+                expect(currentVaultBalance).to.be.equal(previousVaultBalances[i].sub(amount))
+
+                const currentPortfolioBalance = await token.balanceOf(portfolio)
+                expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalances[i])
+
+                const currentRecipientBalance = await token.balanceOf(other)
+                expect(currentRecipientBalance).to.be.equal(previousRecipientBalances[i].add(amount))
+              })
+            })
+
+            it('decreases the account available balance in the vault', async () => {
+              const previousBalances = await tokens.asyncMap((token) => vault.getAccountBalance(portfolio, token))
+
+              await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+              await tokens.asyncEach(async (token, i) => {
+                const currentBalance = await vault.getAccountBalance(portfolio, token)
+                expect(currentBalance).to.be.equal(previousBalances[i].sub(amount))
+              })
+            })
+
+            it('emits an event', async () => {
+              const tx = await vault.withdraw(portfolio, tokens.addresses, amount, other, { from })
+
+              await assertEvent(tx, 'Withdraw', {
+                account: portfolio,
+                tokens: tokens.addresses,
+                amounts: Array(tokens.length).fill(amount),
+                fromVault: Array(tokens.length).fill(amount),
+                recipient: other,
+                caller: from,
+              })
+            })
+          }
+
+          context('when the portfolio has allowed the vault', async () => {
+            beforeEach('approve tokens', async () => {
+              await portfolio.mockApproveTokens(tokens.addresses, MAX_UINT256)
+            })
+
+            context('when there are enough tokens deposited in the vault', async () => {
+              beforeEach('deposit tokens', async () => {
+                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+                const depositedAmount = amount.add(expectedFee)
+                await tokens.mint(portfolio, depositedAmount)
+                await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
+              })
+
+              itWithdrawsTokensFromVault()
+            })
+
+            context('when there are not enough tokens deposited in the vault', async () => {
+              it('reverts', async () => {
+                await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+              })
+            })
+          })
+
+          context('when the portfolio did not allow the vault', async () => {
+            context('when there are enough tokens deposited in the vault', async () => {
+              beforeEach('deposit tokens', async () => {
+                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+                const depositedAmount = amount.add(expectedFee)
+                await tokens.mint(portfolio, depositedAmount)
+                await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
+                await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
+              })
+
+              itWithdrawsTokensFromVault()
+            })
+
+            context('when there are not enough tokens deposited in the vault', async () => {
+              it('reverts', async () => {
+                await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+              })
+            })
           })
         })
       })
@@ -354,7 +690,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.withdraw(portfolio, tokens.addresses, fp(10), other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
         })
       })
     })
@@ -468,7 +804,7 @@ describe('Vault', () => {
 
         context('when the sender did not deposit enough tokens', async () => {
           it('reverts', async () => {
-            await expect(vault.join(account, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
+            await expect(vault.join(account, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -505,6 +841,7 @@ describe('Vault', () => {
             const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             const depositedAmount = amount.add(expectedFee)
             await token.mint(portfolio, depositedAmount)
+            await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
             await vault.deposit(portfolio, token, depositedAmount, { from })
           })
 
@@ -575,7 +912,79 @@ describe('Vault', () => {
 
           context('with a rate lower than one', async () => {
             const rate = fp(0.99)
+
             itJoinsAsExpected(rate)
+
+            describe('callbacks', async () => {
+              context('when non is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x00')
+                })
+
+                it('does not call the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
+                })
+              })
+
+              context('when before is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x10')
+                })
+
+                it('only calls before to the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
+                    sender: from,
+                    strategy,
+                    data: '0x',
+                  })
+                })
+              })
+
+              context('when after is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x20')
+                })
+
+                it('only calls after to the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
+                    sender: from,
+                    strategy,
+                    data: '0x',
+                  })
+                })
+              })
+
+              context('when both are allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x30')
+                })
+
+                it('calls before and after to the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
+                    sender: from,
+                    strategy,
+                    data: '0x',
+                  })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
+                    sender: from,
+                    strategy,
+                    data: '0x',
+                  })
+                })
+              })
+            })
           })
 
           context('with a rate equal to one', async () => {
@@ -591,7 +1000,7 @@ describe('Vault', () => {
 
         context('when the portfolio did not deposit enough tokens', async () => {
           it('reverts', async () => {
-            await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
+            await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -779,7 +1188,7 @@ describe('Vault', () => {
 
         context('when the sender did not deposit enough tokens', async () => {
           it('reverts', async () => {
-            await expect(vault.joinSwap(account, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
+            await expect(vault.joinSwap(account, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -817,6 +1226,7 @@ describe('Vault', () => {
             const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             const depositedAmount = amount.add(expectedFee)
             await joiningToken.mint(portfolio, depositedAmount)
+            await portfolio.mockApproveTokens([joiningToken.address], depositedAmount)
             await vault.deposit(portfolio, joiningToken, depositedAmount, { from })
           })
 
@@ -932,7 +1342,79 @@ describe('Vault', () => {
 
             context('with a rate lower than one', async () => {
               const rate = fp(0.99)
+
               itJoinsAsExpected(rate)
+
+              describe('callbacks', async () => {
+                context('when non is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x00')
+                  })
+
+                  it('does not call the portfolio', async () => {
+                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
+                  })
+                })
+
+                context('when before is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x10')
+                  })
+
+                  it('only calls before to the portfolio', async () => {
+                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
+                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
+                      sender: from,
+                      strategy,
+                      data: '0x',
+                    })
+                  })
+                })
+
+                context('when after is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x20')
+                  })
+
+                  it('only calls after to the portfolio', async () => {
+                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
+                    await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
+                      sender: from,
+                      strategy,
+                      data: '0x',
+                    })
+                  })
+                })
+
+                context('when both are allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x30')
+                  })
+
+                  it('calls before and after to the portfolio', async () => {
+                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
+
+                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
+                      sender: from,
+                      strategy,
+                      data: '0x',
+                    })
+
+                    await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
+                      sender: from,
+                      strategy,
+                      data: '0x',
+                    })
+                  })
+                })
+              })
             })
 
             context('with a rate equal to one', async () => {
@@ -957,7 +1439,7 @@ describe('Vault', () => {
 
         context('when the portfolio did not deposit enough tokens', async () => {
           it('reverts', async () => {
-            await expect(vault.joinSwap(portfolio, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('ACCOUNT_INSUFFICIENT_BALANCE')
+            await expect(vault.joinSwap(portfolio, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -1171,6 +1653,7 @@ describe('Vault', () => {
             const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             const depositedAmount = amount.add(expectedFee)
             await token.mint(portfolio, depositedAmount)
+            await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
             await vault.deposit(portfolio, token, depositedAmount, { from })
             await vault.join(portfolio, strategy, amount, { from })
           })
@@ -1302,6 +1785,81 @@ describe('Vault', () => {
               })
 
               itExitsAsExpected(rate)
+
+              describe('callbacks', async () => {
+                context('when non is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x00')
+                  })
+
+                  it('does not call the portfolio', async () => {
+                    const tx = await vault.exit(portfolio, strategy, ratio, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeExit')
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterExit')
+                  })
+                })
+
+                context('when before is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x40')
+                  })
+
+                  it('only calls before to the portfolio', async () => {
+                    const tx = await vault.exit(portfolio, strategy, ratio, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterExit')
+                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeExit', {
+                      sender: from,
+                      strategy,
+                      ratio,
+                      data: '0x',
+                    })
+                  })
+                })
+
+                context('when after is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x80')
+                  })
+
+                  it('only calls after to the portfolio', async () => {
+                    const tx = await vault.exit(portfolio, strategy, ratio, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeExit')
+                    await assertIndirectEvent(tx, portfolio.interface, 'AfterExit', {
+                      sender: from,
+                      strategy,
+                      ratio,
+                      data: '0x',
+                    })
+                  })
+                })
+
+                context('when both are allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0xC0')
+                  })
+
+                  it('calls before and after to the portfolio', async () => {
+                    const tx = await vault.exit(portfolio, strategy, ratio, { from })
+
+                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeExit', {
+                      sender: from,
+                      strategy,
+                      ratio,
+                      data: '0x',
+                    })
+
+                    await assertIndirectEvent(tx, portfolio.interface, 'AfterExit', {
+                      sender: from,
+                      strategy,
+                      ratio,
+                      data: '0x',
+                    })
+                  })
+                })
+              })
             })
 
             context('when the user is even', async () => {

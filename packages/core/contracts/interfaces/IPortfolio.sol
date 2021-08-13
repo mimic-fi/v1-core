@@ -17,11 +17,40 @@ pragma solidity ^0.8.0;
 interface IPortfolio {
     event FeesConfigSet(uint256 depositFee, uint256 performanceFee, address feeCollector);
 
+    /**
+     * @dev Supported callbacks are a 8-bit map with the following structure:
+     * - Least significant bit #0: before deposit
+     * - Least significant bit #1: after deposit
+     * - Least significant bit #2: before withdraw
+     * - Least significant bit #3: after withdraw
+     * - Least significant bit #4: before join
+     * - Least significant bit #5: after join
+     * - Least significant bit #6: before exit
+     * - Least significant bit #7: after exit
+     *
+     * For example, if a Portfolio supports "before join" and "after exit" it should respond "10010000" (0x90).
+     */
+    function getSupportedCallbacks() external view returns (bytes1);
+
     function getPerformanceFee() external view returns (uint256 fee, address collector);
 
     function getDepositFee() external view returns (uint256 fee, address collector);
 
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external view returns (bool);
 
-    function approveTokens(address[] memory tokens) external;
+    function beforeDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external;
+
+    function afterDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external;
+
+    function beforeWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external;
+
+    function afterWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external;
+
+    function beforeJoin(address sender, address strategy, uint256 amount, bytes memory data) external;
+
+    function afterJoin(address sender, address strategy, uint256 amount, bytes memory data) external;
+
+    function beforeExit(address sender, address strategy, uint256 ratio, bytes memory data) external;
+
+    function afterExit(address sender, address strategy, uint256 ratio, bytes memory data) external;
 }

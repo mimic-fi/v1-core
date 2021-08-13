@@ -18,26 +18,28 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "../helpers/Utils.sol";
-import "../helpers/FixedPoint.sol";
-import "../helpers/BytesHelpers.sol";
+import "../libraries/Utils.sol";
+import "../libraries/Accounts.sol";
+import "../libraries/FixedPoint.sol";
+import "../libraries/BytesHelpers.sol";
 
-import "../interfaces/IPortfolio.sol";
 import "../interfaces/IStrategy.sol";
 import "../interfaces/ISwapConnector.sol";
 import "../interfaces/IVault.sol";
 
 contract Vault is IVault, Ownable, ReentrancyGuard {
-    using Address for address;
     using SafeERC20 for IERC20;
     using FixedPoint for uint256;
     using BytesHelpers for bytes4;
+    using Accounts for Accounts.Data;
 
     uint256 private constant _MAX_PROTOCOL_FEE = 0.05e16; // 5%
 
-    struct Account {
+    struct Accounting {
         mapping (address => uint256) balance;
         mapping (address => uint256) shares;
         mapping (address => uint256) invested;
@@ -47,12 +49,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     address public override swapConnector;
     mapping (address => bool) public override isStrategyWhitelisted;
 
-    mapping (address => Account) internal accounts;
-
-    modifier authenticate(address account, bytes32[] memory params) {
-        _authenticate(account, params);
-        _;
-    }
+    mapping (address => Accounting) internal accountings;
 
     constructor (uint256 _protocolFee, address _swapConnector, address[] memory _whitelistedStrategies) {
         setProtocolFee(_protocolFee);
@@ -61,145 +58,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     }
 
     function getAccountBalance(address accountAddress, address token) external override view returns (uint256) {
-        Account storage account = accounts[accountAddress];
-        return account.balance[token];
+        Accounting storage accounting = accountings[accountAddress];
+        return accounting.balance[token];
     }
 
     function getAccountInvestment(address accountAddress, address strategy) external override view returns (uint256 invested, uint256 shares) {
-        Account storage account = accounts[accountAddress];
-        invested = account.invested[strategy];
-        shares = account.shares[strategy];
-    }
-
-    function batch(bytes[] memory data) external override returns (bytes[] memory results) {
-        results = new bytes[](data.length);
-        for (uint i = 0; i < data.length; i++) {
-            results[i] = Address.functionDelegateCall(address(this), data[i]);
-        }
-    }
-
-    function deposit(address accountAddress, address[] memory tokens, uint256[] memory amounts)
-        external
-        override
-        nonReentrant
-        authenticate(accountAddress, arr())
-    {
-        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
-        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
-
-        uint256 depositFee;
-        address feeCollector;
-        if (accountAddress.isContract()) {
-            IPortfolio(accountAddress).approveTokens(tokens);
-            (depositFee, feeCollector) = IPortfolio(accountAddress).getDepositFee();
-        }
-
-        Account storage account = accounts[accountAddress];
-        uint256[] memory depositFees = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            uint256 amount = amounts[i];
-            _safeTransferFrom(token, accountAddress, amount);
-
-            uint256 depositFeeAmount;
-            if (depositFee > 0) {
-                depositFeeAmount = amount.mulDown(depositFee);
-                _safeTransfer(token, feeCollector, depositFeeAmount);
-            }
-
-            depositFees[i] = depositFeeAmount;
-            uint256 amountAfterFees = amount.sub(depositFeeAmount);
-            account.balance[token] = account.balance[token].add(amountAfterFees);
-        }
-
-        emit Deposit(accountAddress, tokens, amounts, depositFees, msg.sender);
-    }
-
-    function withdraw(address accountAddress, address[] memory tokens, uint256[] memory amounts, address recipient)
-        external
-        override
-        nonReentrant
-        authenticate(accountAddress, arr(recipient))
-    {
-        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
-        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
-
-        Account storage account = accounts[accountAddress];
-        for (uint256 i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            uint256 amount = amounts[i];
-
-            uint256 currentBalance = account.balance[token];
-            require(currentBalance >= amount, "ACCOUNT_INSUFFICIENT_BALANCE");
-
-            account.balance[token] = currentBalance.sub(amount);
-            _safeTransfer(token, recipient, amount);
-        }
-
-        emit Withdraw(accountAddress, tokens, amounts, recipient, msg.sender);
-    }
-
-    function joinSwap(address accountAddress, address strategy, address token, uint256 amountIn, uint256 minAmountOut, bytes memory data)
-        external
-        override
-        nonReentrant
-        authenticate(accountAddress, arr(strategy, token, amountIn))
-    {
-        address strategyToken = IStrategy(strategy).getToken();
-        require(strategyToken != token, "JOIN_SWAP_INVALID_TOKEN");
-
-        Account storage account = accounts[accountAddress];
-        uint256 currentBalance = account.balance[token];
-        require(currentBalance >= amountIn, "ACCOUNT_INSUFFICIENT_BALANCE");
-
-        (uint256 remainingIn, uint256 amountOut) = _swap(accountAddress, token, strategyToken, amountIn, minAmountOut, data);
-        account.balance[token] = currentBalance.sub(amountIn).add(remainingIn);
-        _join(accountAddress, strategy, strategyToken, amountOut, data);
-    }
-
-    function join(address accountAddress, address strategy, uint256 amount, bytes memory data)
-        external
-        override
-        nonReentrant
-        authenticate(accountAddress, arr(strategy, amount))
-    {
-        address token = IStrategy(strategy).getToken();
-        Account storage account = accounts[accountAddress];
-        uint256 currentBalance = account.balance[token];
-        require(currentBalance >= amount, "ACCOUNT_INSUFFICIENT_BALANCE");
-        account.balance[token] = currentBalance.sub(amount);
-
-        _join(accountAddress, strategy, token, amount, data);
-    }
-
-    function _join(address accountAddress, address strategy, address token, uint256 amount, bytes memory data) private {
-        _safeTransfer(token, strategy, amount);
-        Account storage account = accounts[accountAddress];
-        uint256 shares = IStrategy(strategy).onJoin(amount, data);
-        account.shares[strategy] = account.shares[strategy].add(shares);
-        account.invested[strategy] = account.invested[strategy].add(amount);
-        emit Join(accountAddress, strategy, amount, shares, msg.sender);
-    }
-
-    function exit(address accountAddress, address strategy, uint256 ratio, bytes memory data)
-        external
-        override
-        nonReentrant
-        authenticate(accountAddress, arr(strategy, ratio))
-    {
-        Account storage account = accounts[accountAddress];
-        uint256 exitingShares = _updateExitingShares(account, strategy, ratio);
-        (address token, uint256 amountReceived) = IStrategy(strategy).onExit(exitingShares, data);
-        _safeTransferFrom(token, strategy, amountReceived);
-
-        uint256 invested = account.invested[strategy];
-        uint256 deposited = invested.mulUp(ratio);
-        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(accountAddress, token, deposited, amountReceived);
-
-        account.invested[strategy] = invested.sub(deposited);
-        uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
-        account.balance[token] = account.balance[token].add(amountAfterFees);
-        emit Exit(accountAddress, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
+        Accounting storage accounting = accountings[accountAddress];
+        invested = accounting.invested[strategy];
+        shares = accounting.shares[strategy];
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
@@ -230,19 +96,200 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function _updateExitingShares(Account storage account, address strategy, uint256 ratio) private returns (uint256) {
+    function batch(bytes[] memory data) external override nonReentrant returns (bytes[] memory results) {
+        results = new bytes[](data.length);
+        for (uint i = 0; i < data.length; i++) {
+            results[i] = Address.functionDelegateCall(address(this), data[i]);
+        }
+    }
+
+    function deposit(address accountAddress, address[] memory tokens, uint256[] memory amounts)
+        external
+        override
+        nonReentrant
+    {
+        Accounts.Data memory account = _authenticate(accountAddress, arr());
+        account.beforeDeposit(msg.sender, tokens, amounts);
+        _deposit(account, tokens, amounts);
+        account.afterDeposit(msg.sender, tokens, amounts);
+    }
+
+    function withdraw(address accountAddress, address[] memory tokens, uint256[] memory amounts, address recipient)
+        external
+        override
+        nonReentrant
+    {
+        Accounts.Data memory account = _authenticate(accountAddress, arr(recipient));
+        account.beforeWithdraw(msg.sender, tokens, amounts, recipient);
+        _withdraw(account, tokens, amounts, recipient);
+        account.afterWithdraw(msg.sender, tokens, amounts, recipient);
+    }
+
+    function joinSwap(address accountAddress, address strategy, address tokenIn, uint256 amountIn, uint256 minAmountOut, bytes memory data)
+        external
+        override
+        nonReentrant
+    {
+        Accounts.Data memory account = _authenticate(accountAddress, arr(strategy, tokenIn, amountIn));
+        uint256 amountOut = _swap(account, strategy, tokenIn, amountIn, minAmountOut, data);
+        account.beforeJoin(msg.sender, strategy, amountOut, data);
+        _join(account, strategy, amountOut, data);
+        account.afterJoin(msg.sender, strategy, amountOut, data);
+    }
+
+    function join(address accountAddress, address strategy, uint256 amount, bytes memory data)
+        external
+        override
+        nonReentrant
+    {
+        Accounts.Data memory account = _authenticate(accountAddress, arr(strategy, amount));
+        account.beforeJoin(msg.sender, strategy, amount, data);
+        _join(account, strategy, amount, data);
+        account.afterJoin(msg.sender, strategy, amount, data);
+    }
+
+    function exit(address accountAddress, address strategy, uint256 ratio, bytes memory data)
+        external
+        override
+        nonReentrant
+    {
+        Accounts.Data memory account = _authenticate(accountAddress, arr(strategy, ratio));
+        account.beforeExit(msg.sender, strategy, ratio, data);
+        _exit(account, strategy, ratio, data);
+        account.afterExit(msg.sender, strategy, ratio, data);
+    }
+
+    function _deposit(Accounts.Data memory account, address[] memory tokens, uint256[] memory amounts) internal {
+        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
+        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
+
+        (uint256 depositFee, address feeCollector) = account.getDepositFee();
+        Accounting storage accounting = accountings[account.addr];
+        uint256[] memory depositFees = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 amount = amounts[i];
+            require(amount > 0, "DEPOSIT_AMOUNT_ZERO");
+
+            address token = tokens[i];
+            _safeTransferFrom(token, account.addr, address(this), amount);
+
+            uint256 depositFeeAmount;
+            if (depositFee > 0) {
+                depositFeeAmount = amount.mulDown(depositFee);
+                _safeTransfer(token, feeCollector, depositFeeAmount);
+            }
+
+            depositFees[i] = depositFeeAmount;
+            uint256 amountAfterFees = amount.sub(depositFeeAmount);
+            accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
+        }
+
+        emit Deposit(account.addr, tokens, amounts, depositFees, msg.sender);
+    }
+
+    function _withdraw(Accounts.Data memory account, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
+        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
+        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
+
+        Accounting storage accounting = accountings[account.addr];
+        uint256[] memory fromVault = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 amount = amounts[i];
+            require(amount > 0, "WITHDRAW_AMOUNT_ZERO");
+
+            address token = tokens[i];
+            uint256 vaultBalance = accounting.balance[token];
+            uint256 accountBalance = account.isPortfolio ? IERC20(token).balanceOf(account.addr) : 0;
+            require(vaultBalance.add(accountBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
+
+            uint256 fromAccount = Math.min(accountBalance, amount);
+            if (account.isPortfolio) {
+                _safeTransferFrom(token, account.addr, recipient, fromAccount);
+            }
+
+            if (fromAccount < amount) {
+                fromVault[i] = amount - fromAccount;
+                _safeTransfer(token, recipient, fromVault[i]);
+                accounting.balance[token] = vaultBalance.sub(fromVault[i]);
+            }
+        }
+
+        emit Withdraw(account.addr, tokens, amounts, fromVault, recipient, msg.sender);
+    }
+
+    function _swap(Accounts.Data memory account, address strategy, address tokenIn, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256) {
+        address tokenOut = IStrategy(strategy).getToken();
+        require(tokenIn != tokenOut, "JOIN_SWAP_SAME_TOKEN");
+
+        Accounting storage accounting = accountings[account.addr];
+        uint256 currentBalance = accounting.balance[tokenIn];
+        require(currentBalance >= amountIn, "ACCOUNTING_INSUFFICIENT_BALANCE");
+
+        uint256 amountOut;
+        uint256 remainingIn;
+        { // scope to avoid stack too deep
+            require(ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn) >= minAmountOut, "EXPECTED_SWAP_MIN_AMOUNT");
+
+            _safeTransfer(tokenIn, swapConnector, amountIn);
+            uint256 preBalanceIn = IERC20(tokenIn).balanceOf(address(this));
+            uint256 preBalanceOut = IERC20(tokenOut).balanceOf(address(this));
+            (remainingIn, amountOut) = ISwapConnector(swapConnector).swap(tokenIn, tokenOut, amountIn, minAmountOut, block.timestamp, data);
+
+            uint256 postBalanceIn = IERC20(tokenIn).balanceOf(address(this));
+            require(postBalanceIn.sub(preBalanceIn) >= remainingIn, "SWAP_INVALID_REMAINING_IN");
+
+            uint256 postBalanceOut = IERC20(tokenOut).balanceOf(address(this));
+            require(amountOut >= minAmountOut, "SWAP_MIN_AMOUNT");
+            require(postBalanceOut.sub(preBalanceOut) >= amountOut, "SWAP_INVALID_AMOUNT_OUT");
+        }
+
+        accounting.balance[tokenIn] = currentBalance.sub(amountIn).add(remainingIn);
+        accounting.balance[tokenOut] = accounting.balance[tokenOut].add(amountOut);
+        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
+        return amountOut;
+    }
+
+    function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data) internal {
+        require(amount > 0, "JOIN_AMOUNT_ZERO");
+
+        address token = IStrategy(strategy).getToken();
+        Accounting storage accounting = accountings[account.addr];
+        uint256 currentBalance = accounting.balance[token];
+        require(currentBalance >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
+        accounting.balance[token] = currentBalance.sub(amount);
+
+        _safeTransfer(token, strategy, amount);
+        uint256 shares = IStrategy(strategy).onJoin(amount, data);
+        accounting.shares[strategy] = accounting.shares[strategy].add(shares);
+        accounting.invested[strategy] = accounting.invested[strategy].add(amount);
+        emit Join(account.addr, strategy, amount, shares, msg.sender);
+    }
+
+    function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bytes memory data) internal {
+        require(ratio > 0, "EXIT_RATIO_ZERO");
         require(ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
 
-        uint256 currentShares = account.shares[strategy];
+        Accounting storage accounting = accountings[account.addr];
+        uint256 currentShares = accounting.shares[strategy];
         uint256 exitingShares = currentShares.mulDown(ratio);
         require(exitingShares > 0, "EXIT_SHARES_ZERO");
         require(currentShares >= exitingShares, "ACCOUNT_INSUFFICIENT_SHARES");
+        accounting.shares[strategy] = currentShares - exitingShares;
 
-        account.shares[strategy] = currentShares - exitingShares;
-        return exitingShares;
+        (address token, uint256 amountReceived) = IStrategy(strategy).onExit(exitingShares, data);
+        _safeTransferFrom(token, strategy, address(this), amountReceived);
+
+        uint256 invested = accounting.invested[strategy];
+        uint256 deposited = invested.mulUp(ratio);
+        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(account, token, deposited, amountReceived);
+
+        accounting.invested[strategy] = invested.sub(deposited);
+        uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
+        accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
+        emit Exit(account.addr, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
     }
 
-    function _payExitFees(address accountAddress, address token, uint256 deposited, uint256 received)
+    function _payExitFees(Accounts.Data memory account, address token, uint256 deposited, uint256 received)
         private
         returns (uint256 protocolFeeAmount, uint256 performanceFeeAmount)
     {
@@ -251,38 +298,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
 
         uint256 gains = received - deposited;
+        protocolFeeAmount = gains.mulUp(protocolFee);
+        _safeTransfer(token, owner(), protocolFeeAmount);
 
-        if (protocolFee > 0) {
-            protocolFeeAmount = gains.mulUp(protocolFee);
-            _safeTransfer(token, owner(), protocolFeeAmount);
-        }
-
-        if (accountAddress.isContract()) {
-            (uint256 performanceFee, address feeCollector) = IPortfolio(accountAddress).getPerformanceFee();
-            if (performanceFee > 0) {
-                uint256 gainsAfterProtocolFees = gains.sub(protocolFeeAmount);
-                performanceFeeAmount = gainsAfterProtocolFees.mulDown(performanceFee);
-                _safeTransfer(token, feeCollector, performanceFeeAmount);
-            }
-        }
-    }
-
-    function _swap(address accountAddress, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256 remainingIn, uint256 amountOut) {
-        uint256 expectedAmountOut = ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
-        require(expectedAmountOut >= minAmountOut, "EXPECTED_SWAP_MIN_AMOUNT");
-
-        _safeTransfer(tokenIn, swapConnector, amountIn);
-        uint256 preBalanceIn = IERC20(tokenIn).balanceOf(address(this));
-        uint256 preBalanceOut = IERC20(tokenOut).balanceOf(address(this));
-        (remainingIn, amountOut) = ISwapConnector(swapConnector).swap(tokenIn, tokenOut, amountIn, minAmountOut, block.timestamp, data);
-
-        uint256 postBalanceIn = IERC20(tokenIn).balanceOf(address(this));
-        require(postBalanceIn.sub(preBalanceIn) >= remainingIn, "SWAP_INVALID_REMAINING_IN");
-
-        uint256 postBalanceOut = IERC20(tokenOut).balanceOf(address(this));
-        require(amountOut >= minAmountOut, "SWAP_MIN_AMOUNT");
-        require(postBalanceOut.sub(preBalanceOut) >= amountOut, "SWAP_INVALID_AMOUNT_OUT");
-        emit Swap(accountAddress, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
+        uint256 gainsAfterProtocolFees = gains.sub(protocolFeeAmount);
+        (uint256 performanceFee, address feeCollector) = account.getPerformanceFee();
+        performanceFeeAmount = gainsAfterProtocolFees.mulDown(performanceFee);
+        _safeTransfer(token, feeCollector, performanceFeeAmount);
     }
 
     function _safeTransfer(address token, address to, uint256 amount) internal {
@@ -291,28 +313,17 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function _safeTransferFrom(address token, address from, uint256 amount) internal {
+    function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
         if (amount > 0) {
-            IERC20(token).safeTransferFrom(from, address(this), amount);
+            IERC20(token).safeTransferFrom(from, to, amount);
         }
     }
 
-    function _authenticate(address account, bytes32[] memory params) internal view {
-        require(_canPerform(account, params), "SENDER_NOT_ALLOWED");
-    }
-
-    function _canPerform(address account, bytes32[] memory params) internal view returns (bool) {
-        // Allow users operating on their behalf
-        if (msg.sender == account) {
-            return true;
-        }
-
-        // Disallow users operating on behalf of foreign EOAs
-        if (!account.isContract()) {
-            return false;
-        }
-
-        // Finally, ask the account if the sender can operate on their behalf
-        return IPortfolio(account).canPerform(msg.sender, address(this), msg.sig.toBytes32(), params);
+    function _authenticate(address accountAddress, bytes32[] memory params) internal view returns (Accounts.Data memory account) {
+        // Check the given account is the msg.sender, otherwise it will ask the account whether the sender can operate
+        // on its behalf. Note that this will never apply for accounts trying to operate on behalf of foreign EOAs.
+        account = Accounts.parse(accountAddress);
+        bool allowed = account.isSender() || account.canPerform(msg.sender, address(this), msg.sig.toBytes32(), params);
+        require(allowed, "SENDER_NOT_ALLOWED");
     }
 }

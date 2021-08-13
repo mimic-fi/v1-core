@@ -3,13 +3,26 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+import "../libraries/FixedPoint.sol";
 
 import "../interfaces/IPortfolio.sol";
 
-import "../helpers/FixedPoint.sol";
-
 contract PortfolioMock is IPortfolio {
+    using SafeMath for uint256;
+
+    event BeforeDeposit(address sender, address[] tokens, uint256[] amounts);
+    event AfterDeposit(address sender, address[] tokens, uint256[] amounts);
+    event BeforeWithdraw(address sender, address[] tokens, uint256[] amounts, address recipient);
+    event AfterWithdraw(address sender, address[] tokens, uint256[] amounts, address recipient);
+    event BeforeJoin(address sender, address strategy, uint256 amount, bytes data);
+    event AfterJoin(address sender, address strategy, uint256 amount, bytes data);
+    event BeforeExit(address sender, address strategy, uint256 ratio, bytes data);
+    event AfterExit(address sender, address strategy, uint256 ratio, bytes data);
+
     bool public mockedCanPerform;
+    bytes1 public mockedSupportedCallbacks;
 
     address public vault;
     uint256 public depositFee;
@@ -27,6 +40,16 @@ contract PortfolioMock is IPortfolio {
         mockedCanPerform = newMockedCanPerform;
     }
 
+    function mockSupportedCallbacks(bytes1 newMockedSupportedCallbacks) external {
+        mockedSupportedCallbacks = newMockedSupportedCallbacks;
+    }
+
+    function mockApproveTokens(address[] memory tokens, uint256 amount) external {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            IERC20(tokens[i]).approve(vault, amount);
+        }
+    }
+
     function getPerformanceFee() external override view returns (uint256 fee, address collector) {
         return (performanceFee, feeCollector);
     }
@@ -39,9 +62,39 @@ contract PortfolioMock is IPortfolio {
         return mockedCanPerform;
     }
 
-    function approveTokens(address[] memory tokens) external override {
-        for(uint256 i = 0; i < tokens.length; i++) {
-            IERC20(tokens[i]).approve(vault, FixedPoint.MAX_UINT256);
-        }
+    function getSupportedCallbacks() external override view returns (bytes1) {
+        return mockedSupportedCallbacks;
+    }
+
+    function beforeDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external override {
+        emit BeforeDeposit(sender, tokens, amounts);
+    }
+
+    function afterDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external override {
+        emit AfterDeposit(sender, tokens, amounts);
+    }
+
+    function beforeWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external override {
+        emit BeforeWithdraw(sender, tokens, amounts, recipient);
+    }
+
+    function afterWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external override {
+        emit AfterWithdraw(sender, tokens, amounts, recipient);
+    }
+
+    function beforeJoin(address sender, address strategy, uint256 amount, bytes memory data) external override {
+        emit BeforeJoin(sender, strategy, amount, data);
+    }
+
+    function afterJoin(address sender, address strategy, uint256 amount, bytes memory data) external override {
+        emit AfterJoin(sender, strategy, amount, data);
+    }
+
+    function beforeExit(address sender, address strategy, uint256 ratio, bytes memory data) external override {
+        emit BeforeExit(sender, strategy, ratio, data);
+    }
+
+    function afterExit(address sender, address strategy, uint256 ratio, bytes memory data) external override {
+        emit AfterExit(sender, strategy, ratio, data);
     }
 }

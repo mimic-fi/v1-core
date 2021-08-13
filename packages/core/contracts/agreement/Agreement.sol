@@ -20,8 +20,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "../helpers/FixedPoint.sol";
-import "../helpers/BytesHelpers.sol";
+import "../libraries/FixedPoint.sol";
+import "../libraries/BytesHelpers.sol";
 
 import "../interfaces/IAgreement.sol";
 import "../interfaces/IVault.sol";
@@ -66,7 +66,10 @@ contract Agreement is IAgreement, ReentrancyGuard {
     address public immutable customStrategy7;
     AllowedStrategies public immutable allowedStrategies;
 
-    event Withdrawn(address indexed caller, address indexed withdrawer, address[] tokens, uint256[] amounts);
+    modifier onlyVault() {
+        require(msg.sender == vault, "SENDER_NOT_ALLOWED");
+        _;
+    }
 
     constructor(
         string memory _name,
@@ -155,11 +158,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     }
 
     function isStrategyAllowed(address strategy) public override view returns (bool) {
-        if (allowedStrategies == AllowedStrategies.Any) {
-            return true;
-        }
-
-        if (isCustomStrategy(strategy)) {
+        if (allowedStrategies == AllowedStrategies.Any || isCustomStrategy(strategy)) {
             return true;
         }
 
@@ -199,44 +198,54 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
     }
 
-    function approveTokens(address[] memory tokens) external override nonReentrant {
-        require(msg.sender == vault, "SENDER_NOT_ALLOWED");
+    function getSupportedCallbacks() external override pure returns (bytes1) {
+        // Supported callbacks are "before deposit" and "before withdraw": 00000101 (0x05).
+        return bytes1(0x05);
+    }
+
+    function beforeDeposit(address /* sender */, address[] memory tokens, uint256[] memory /* amounts */) external override onlyVault {
+        _approveTokens(tokens);
+    }
+
+    function afterDeposit(address /* sender */, address[] memory /* tokens */, uint256[] memory /* amounts */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function beforeWithdraw(address /* sender */, address[] memory tokens, uint256[] memory /* amounts */, address /* recipient */) external override onlyVault {
+        _approveTokens(tokens);
+    }
+
+    function afterWithdraw(address /* sender */, address[] memory /* tokens */, uint256[] memory /* amounts */, address /* recipient */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function beforeJoin(address /* sender */, address /* strategy */, uint256 /* amount */, bytes memory /* data */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function afterJoin(address /* sender */, address /* strategy */, uint256 /* amount */, bytes memory /* data */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function beforeExit(address /* sender */, address /* strategy */, uint256 /* ratio */, bytes memory /* data */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function afterExit(address /* sender */, address /* strategy */, uint256 /* ratio */, bytes memory /* data */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function _approveTokens(address[] memory tokens) internal {
         for (uint256 i = 0; i < tokens.length; i++) {
             IERC20 token = IERC20(tokens[i]);
             uint256 allowance = token.allowance(address(this), vault);
             if (allowance < FixedPoint.MAX_UINT256) {
-                if (token.allowance(address(this), vault) > 0) {
+                if (allowance > 0) {
                     // Some tokens revert when changing non-zero approvals
                     token.safeApprove(vault, 0);
                 }
                 token.safeApprove(vault, FixedPoint.MAX_UINT256);
             }
         }
-    }
-
-    function withdraw(address withdrawer, address[] memory tokens, uint256[] memory amounts) external nonReentrant {
-        require(isSenderAllowed(msg.sender), "SENDER_NOT_ALLOWED");
-        require(isWithdrawer(withdrawer), "WITHDRAWER_NOT_ALLOWED");
-
-        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
-        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
-
-        uint256[] memory missingAmounts = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            uint256 amount = amounts[i];
-            uint256 currentBalance = getBalance(token);
-
-            bool requiresVaultBalance = amount > currentBalance;
-            missingAmounts[i] = requiresVaultBalance ? amount - currentBalance : 0;
-            uint256 vaultBalance = requiresVaultBalance ? IVault(vault).getAccountBalance(address(this), token) : 0;
-            require(vaultBalance.add(currentBalance) >= amount, "ACCOUNT_INSUFFICIENT_BALANCE");
-
-            require(currentBalance >= amount - missingAmounts[i], "ACCOUNT_INSUFFICIENT_BALANCE");
-            IERC20(token).safeTransfer(withdrawer, amount - missingAmounts[i]);
-        }
-
-        IVault(vault).withdraw(address(this), tokens, missingAmounts, withdrawer);
-        emit Withdrawn(msg.sender, withdrawer, tokens, amounts);
     }
 }
