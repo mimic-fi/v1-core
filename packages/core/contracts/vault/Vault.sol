@@ -96,7 +96,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function batch(bytes[] memory data) external override nonReentrant returns (bytes[] memory results) {
+    function batch(bytes[] memory data) external override returns (bytes[] memory results) {
         results = new bytes[](data.length);
         for (uint i = 0; i < data.length; i++) {
             results[i] = Address.functionDelegateCall(address(this), data[i]);
