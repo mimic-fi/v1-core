@@ -93,6 +93,22 @@ export async function assertNoEvent(tx: ContractTransaction, eventName: string):
   }
 }
 
+export async function assertNoIndirectEvent(tx: ContractTransaction, emitter: Interface, eventName: string): Promise<void> {
+  const receipt = await tx.wait()
+  const decodedEvents = receipt.logs
+    .map((log) => {
+      try {
+        return emitter.parseLog(log)
+      } catch {
+        return undefined
+      }
+    })
+    .filter((e): e is LogDescription => e !== undefined)
+
+  const events = decodedEvents.filter((event) => event.name === eventName)
+  expect(events.length > 0).to.equal(false, `'${eventName}' event found`)
+}
+
 function contains(args: { [key: string]: any | undefined }, key: string, value: any) {
   expect(key in args).to.equal(true, `Event argument '${key}' not found`)
 

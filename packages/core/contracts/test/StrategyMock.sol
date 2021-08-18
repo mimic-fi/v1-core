@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IStrategy.sol";
 
-import "../helpers/FixedPoint.sol";
+import "../libraries/FixedPoint.sol";
 
 contract StrategyMock is IStrategy {
     using FixedPoint for uint256;

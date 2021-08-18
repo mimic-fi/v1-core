@@ -49,4 +49,40 @@ library BytesHelpers {
     function isDeposit(bytes32 self) internal pure returns (bool) {
         return self == toBytes32(IVault.deposit.selector);
     }
+
+    function supportsBeforeDeposit(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 0);
+    }
+
+    function supportsAfterDeposit(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 1);
+    }
+
+    function supportsBeforeWithdraw(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 2);
+    }
+
+    function supportsAfterWithdraw(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 3);
+    }
+
+    function supportsBeforeJoin(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 4);
+    }
+
+    function supportsAfterJoin(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 5);
+    }
+
+    function supportsBeforeExit(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 6);
+    }
+
+    function supportsAfterExit(bytes1 self) internal pure returns (bool) {
+        return isBitSet(self, 7);
+    }
+
+    function isBitSet(bytes1 self, uint256 pos) internal pure returns (bool) {
+        return (uint8(self) & (1 << pos)) != 0;
+    }
 }

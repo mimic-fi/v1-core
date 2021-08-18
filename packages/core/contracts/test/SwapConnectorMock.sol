@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/ISwapConnector.sol";
 
-import "../helpers/FixedPoint.sol";
+import "../libraries/FixedPoint.sol";
 
 contract SwapConnectorMock is ISwapConnector {
     using FixedPoint for uint256;

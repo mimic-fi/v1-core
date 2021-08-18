@@ -58,14 +58,13 @@ describe('AgreementFactory', () => {
       expect(await factory.isAgreement(agreement.address)).to.be.true
     })
 
-    it('costs almost 2M', async () => {
+    it('costs at most 2M', async () => {
       const managers = [manager1, manager2]
       const withdrawers = [withdrawer1, withdrawer2]
 
       const tx = await factory.create(name, depositFee, performanceFee, feeCollector, managers, withdrawers, allowedStrategies, strategies)
       const { gasUsed } = await tx.wait()
-      expect(gasUsed).to.be.at.least(2.0e6)
-      expect(gasUsed).to.be.at.most(2.1e6)
+      expect(gasUsed).to.be.at.most(2e6)
     })
   })
 })

@@ -32,7 +32,7 @@ contract UniswapConnector is ISwapConnector {
         uniswap = _uniswap;
     }
 
-    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view override returns (uint256) {
+    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external override view returns (uint256) {
         (uint256 reserve0, uint256 reserve1,) = _getPool(tokenIn, tokenOut).getReserves();
         require(reserve0 > 0 && reserve1 > 0, "UNISWAP_POOL_NOT_INITIALIZED");
         bool isTokenIn0 = tokenIn < tokenOut;
