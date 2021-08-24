@@ -1,19 +1,18 @@
-import { BigInt, Address, ethereum } from '@graphprotocol/graph-ts'
+import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
 
-import { ERC20 as ERC20Contract } from '../types/Vault/ERC20'
-import { Strategy as StrategyContract } from '../types/Vault/Strategy'
+import { loadOrCreateERC20 } from './ERC20';
+import { loadOrCreateStrategy, createLastRate } from './Strategy';
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
+import { ERC20 as ERC20Contract } from '../types/Vault/ERC20'
 
 import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedStrategySet } from '../types/Vault/Vault'
 import {
   Vault as VaultEntity,
-  Rate as RateEntity,
   Strategy as StrategyEntity,
   Account as AccountEntity,
   AccountBalance as AccountBalanceEntity,
   AccountStrategy as AccountStrategyEntity,
   Portfolio as PortfolioEntity,
-  ERC20 as ERC20Entity
 } from '../types/schema'
 
 export const VAULT_ID = 'VAULT_ID'
@@ -39,7 +38,7 @@ export function handleWithdraw(event: Withdraw): void {
   loadOrCreateAccount(event.params.account, event.address)
 
   let tokens = event.params.tokens;
-  let amounts = event.params.amounts;
+  let amounts = event.params.fromVault;
 
   for (let i: i32 = 0; i < tokens.length; i++) {
     loadOrCreateERC20(tokens[i])
@@ -134,43 +133,6 @@ function loadOrCreateVault(vaultAddress: Address): VaultEntity {
   return vault!
 }
 
-function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event): StrategyEntity {
-  let id = strategyAddress.toHexString()
-  let strategy = StrategyEntity.load(id)
-  let strategyContract = StrategyContract.bind(strategyAddress)
-
-  if (strategy === null) {
-    strategy = new StrategyEntity(id)
-    strategy.vault = vault.id
-    strategy.token = loadOrCreateERC20(strategyContract.getToken()).id
-    strategy.whitelisted = false
-    strategy.metadata = strategyContract.getMetadataURI()
-    strategy.shares = BigInt.fromI32(0)
-    strategy.deposited = BigInt.fromI32(0)
-    strategy.save()
-    createLastRate(strategy!, event.block.timestamp)
-  }
-
-  return strategy!
-}
-
-function createLastRate(strategy: StrategyEntity, timestamp: BigInt): void {
-  let strategyContract = StrategyContract.bind(Address.fromString(strategy.id))
-  let shares = strategyContract.getTotalShares()
-  let value = shares.isZero() ? strategyContract.getTokenBalance().div(shares) : BigInt.fromI32(0)
-
-  let rateId = strategy.id + '-' + timestamp.toString()
-  let rate = new RateEntity(rateId)
-  rate.value = value
-  rate.strategy = strategy.id
-  rate.timestamp = timestamp
-  rate.save()
-
-  strategy.lastRate = rateId
-  strategy.deposited = shares.times(value).div(BigInt.fromString('1000000000000000000'))
-  strategy.save()
-}
-
 function loadOrCreateAccount(accountAddress: Address, vaultAddress: Address): AccountEntity {
   let id = accountAddress.toHexString()
   let account = AccountEntity.load(id)
@@ -233,20 +195,4 @@ function tryDecodingPortfolio(accountAddress: Address): void {
       portfolio.save()
     }
   }
-}
-
-function loadOrCreateERC20(address: Address): ERC20Entity {
-  let id = address.toHexString()
-  let erc20 = ERC20Entity.load(id)
-
-  if (erc20 === null) {
-    let erc20Contract = ERC20Contract.bind(address)
-    erc20 = new ERC20Entity(id)
-    erc20.name = erc20Contract.name()
-    erc20.symbol = erc20Contract.symbol()
-    erc20.decimals = erc20Contract.decimals()
-    erc20.save()
-  }
-
-  return erc20!
 }
