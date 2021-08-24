@@ -179,7 +179,7 @@ describe('Vault', () => {
             describe('callbacks', async () => {
               context('when non is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x00')
+                  await portfolio.mockSupportedCallbacks('0x0000')
                 })
 
                 it('does not call the portfolio', async () => {
@@ -192,7 +192,7 @@ describe('Vault', () => {
 
               context('when before is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x01')
+                  await portfolio.mockSupportedCallbacks('0x0001')
                 })
 
                 it('only calls before to the portfolio', async () => {
@@ -209,7 +209,7 @@ describe('Vault', () => {
 
               context('when after is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x02')
+                  await portfolio.mockSupportedCallbacks('0x0002')
                 })
 
                 it('only calls after to the portfolio', async () => {
@@ -226,7 +226,7 @@ describe('Vault', () => {
 
               context('when both are allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x03')
+                  await portfolio.mockSupportedCallbacks('0x0003')
                 })
 
                 it('calls before and after to the portfolio', async () => {
@@ -421,7 +421,7 @@ describe('Vault', () => {
             describe('callbacks', async () => {
               context('when non is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x00')
+                  await portfolio.mockSupportedCallbacks('0x0000')
                 })
 
                 it('does not call the portfolio', async () => {
@@ -434,7 +434,7 @@ describe('Vault', () => {
 
               context('when before is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x04')
+                  await portfolio.mockSupportedCallbacks('0x0004')
                 })
 
                 it('only calls before to the portfolio', async () => {
@@ -452,7 +452,7 @@ describe('Vault', () => {
 
               context('when after is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x08')
+                  await portfolio.mockSupportedCallbacks('0x0008')
                 })
 
                 it('only calls after to the portfolio', async () => {
@@ -470,7 +470,7 @@ describe('Vault', () => {
 
               context('when both are allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x0C')
+                  await portfolio.mockSupportedCallbacks('0x000C')
                 })
 
                 it('calls before and after to the portfolio', async () => {
@@ -687,6 +687,450 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+        })
+      })
+    })
+  })
+
+  describe('swap', () => {
+    let tokenIn: Token, tokenOut: Token, priceOracle: Contract, swapConnector: Contract
+
+    const amount = fp(500)
+    const ORACLE_RATE = fp(0.98)
+
+    beforeEach('deploy strategy', async () => {
+      tokenIn = tokens.first
+      tokenOut = tokens.second
+    })
+
+    beforeEach('mock price oracle rate', async () => {
+      priceOracle = vault.priceOracle
+      swapConnector = vault.swapConnector
+      await priceOracle.mockRate(ORACLE_RATE)
+    })
+
+    context('when the account is an EOA', () => {
+      context('when the sender is the EOA', () => {
+        let from: SignerWithAddress
+
+        beforeEach('set sender', async () => {
+          from = account
+        })
+
+        context('when the sender has deposited enough tokens', async () => {
+          beforeEach('deposit tokens', async () => {
+            await tokenIn.mint(account, amount)
+            await tokenIn.approve(vault, amount, { from: account })
+            await vault.deposit(account, tokenIn, amount, { from: account })
+          })
+
+          const itSwapsAsExpected = (rate: BigNumberish, slippage: BigNumberish) => {
+            const expectedAmountOut = amount.mul(rate).div(fp(1))
+
+            beforeEach('fund swap connector', async () => {
+              await tokenOut.mint(swapConnector, expectedAmountOut)
+            })
+
+            it('transfers the token in to the swap connector', async () => {
+              const previousVaultBalance = await tokenIn.balanceOf(vault)
+              const previousAccountBalance = await tokenIn.balanceOf(account)
+              const previousConnectorBalance = await tokenIn.balanceOf(swapConnector)
+
+              await vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })
+
+              const currentVaultBalance = await tokenIn.balanceOf(vault)
+              expect(currentVaultBalance).to.be.equal(previousVaultBalance.sub(amount))
+
+              const currentAccountBalance = await tokenIn.balanceOf(account)
+              expect(currentAccountBalance).to.be.equal(previousAccountBalance)
+
+              const currentConnectorBalance = await tokenIn.balanceOf(swapConnector)
+              expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.add(amount))
+            })
+
+            it('transfers the token out to the vault account', async () => {
+              const previousVaultBalance = await tokenOut.balanceOf(vault)
+              const previousAccountBalance = await tokenOut.balanceOf(account)
+              const previousConnectorBalance = await tokenOut.balanceOf(swapConnector)
+
+              await vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })
+
+              const currentVaultBalance = await tokenOut.balanceOf(vault)
+              expect(currentVaultBalance).to.be.equal(previousVaultBalance.add(expectedAmountOut))
+
+              const currentAccountBalance = await tokenOut.balanceOf(account)
+              expect(currentAccountBalance).to.be.equal(previousAccountBalance)
+
+              const currentConnectorBalance = await tokenOut.balanceOf(swapConnector)
+              expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.sub(expectedAmountOut))
+            })
+
+            it('updates the account available balance in the vault', async () => {
+              const previousTokenInBalance = await vault.getAccountBalance(account, tokenIn)
+              const previousTokenOutBalance = await vault.getAccountBalance(account, tokenOut)
+
+              await vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })
+
+              const currentTokenInBalance = await vault.getAccountBalance(account, tokenIn)
+              expect(currentTokenInBalance).to.be.equal(previousTokenInBalance.sub(amount))
+
+              const currentTokenOutBalance = await vault.getAccountBalance(account, tokenOut)
+              expect(currentTokenOutBalance).to.be.equal(previousTokenOutBalance.add(expectedAmountOut))
+            })
+
+            it('emits an events', async () => {
+              const tx = await vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })
+
+              await assertEvent(tx, 'Swap', {
+                account,
+                tokenIn,
+                tokenOut,
+                amountIn: amount,
+                remainingIn: 0,
+                amountOut: expectedAmountOut,
+                caller: from,
+                data: '0x',
+              })
+            })
+          }
+
+          context('when the swap connector provides a worse rate', () => {
+            const connectorSlippage = fp(0.01)
+            const SWAP_RATE = ORACLE_RATE.mul(fp(1).sub(connectorSlippage)).div(fp(1))
+
+            beforeEach('mock swap connector rate', async () => {
+              await swapConnector.mockRate(SWAP_RATE)
+            })
+
+            context('when the user accepts that slippage', () => {
+              const slippage = connectorSlippage
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+
+            context('when the user does not accept that slippage', () => {
+              const slippage = connectorSlippage.sub(1)
+
+              it('reverts', async () => {
+                await expect(vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
+              })
+            })
+          })
+
+          context('when the swap connector provides the same rate', () => {
+            const SWAP_RATE = ORACLE_RATE
+
+            beforeEach('mock swap connector rate', async () => {
+              await swapConnector.mockRate(SWAP_RATE)
+            })
+
+            context('when the user accepts no slippage', () => {
+              const slippage = 0
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+
+            context('when the user accepts a higher slippage', () => {
+              const slippage = fp(0.2)
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+          })
+
+          context('when the swap connector provides a better rate', () => {
+            const SWAP_RATE = ORACLE_RATE.add(fp(0.01))
+
+            beforeEach('mock swap connector rate', async () => {
+              await swapConnector.mockRate(SWAP_RATE)
+            })
+
+            context('when the user accepts no slippage', () => {
+              const slippage = 0
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+
+            context('when the user accepts a higher slippage', () => {
+              const slippage = fp(0.2)
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+          })
+        })
+
+        context('when the sender did not deposit enough tokens', () => {
+          it('reverts', async () => {
+            await expect(vault.swap(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+          })
+        })
+      })
+
+      context('when the sender is not the EOA', () => {
+        let from: SignerWithAddress
+
+        beforeEach('set sender', async () => {
+          from = other
+        })
+
+        it('reverts', async () => {
+          await expect(vault.swap(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+        })
+      })
+    })
+
+    context('when the account is a portfolio', () => {
+      let from: SignerWithAddress
+
+      beforeEach('set sender', async () => {
+        from = other
+      })
+
+      context('when the sender is allowed', () => {
+        beforeEach('mock can perform', async () => {
+          await portfolio.mockCanPerform(true)
+        })
+
+        context('when the portfolio has deposited enough tokens', async () => {
+          beforeEach('deposit tokens', async () => {
+            const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+            await tokenIn.mint(portfolio, depositedAmount)
+            await portfolio.mockApproveTokens([tokenIn.address], depositedAmount)
+            await vault.deposit(portfolio, tokenIn, depositedAmount, { from })
+          })
+
+          const itSwapsAsExpected = (rate: BigNumberish, slippage: BigNumberish) => {
+            const expectedAmountOut = amount.mul(rate).div(fp(1))
+
+            beforeEach('fund swap connector', async () => {
+              await tokenOut.mint(swapConnector, expectedAmountOut)
+            })
+
+            it('transfers the token in to the swap connector', async () => {
+              const previousVaultBalance = await tokenIn.balanceOf(vault)
+              const previousPortfolioBalance = await tokenIn.balanceOf(portfolio)
+              const previousConnectorBalance = await tokenIn.balanceOf(swapConnector)
+
+              await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+              const currentVaultBalance = await tokenIn.balanceOf(vault)
+              expect(currentVaultBalance).to.be.equal(previousVaultBalance.sub(amount))
+
+              const currentPortfolioBalance = await tokenIn.balanceOf(portfolio)
+              expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance)
+
+              const currentConnectorBalance = await tokenIn.balanceOf(swapConnector)
+              expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.add(amount))
+            })
+
+            it('transfers the token out to the strategy', async () => {
+              const previousVaultBalance = await tokenOut.balanceOf(vault)
+              const previousPortfolioBalance = await tokenOut.balanceOf(portfolio)
+              const previousConnectorBalance = await tokenOut.balanceOf(swapConnector)
+
+              await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+              const currentVaultBalance = await tokenOut.balanceOf(vault)
+              expect(currentVaultBalance).to.be.equal(previousVaultBalance.add(expectedAmountOut))
+
+              const currentPortfolioBalance = await tokenOut.balanceOf(portfolio)
+              expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance)
+
+              const currentConnectorBalance = await tokenOut.balanceOf(swapConnector)
+              expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.sub(expectedAmountOut))
+            })
+
+            it('decreases the portfolio available balance of the joining token in the vault', async () => {
+              const previousTokenInBalance = await vault.getAccountBalance(portfolio, tokenIn)
+              const previousTokenOutBalance = await vault.getAccountBalance(portfolio, tokenOut)
+
+              await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+              const currentTokenInBalance = await vault.getAccountBalance(portfolio, tokenIn)
+              expect(currentTokenInBalance).to.be.equal(previousTokenInBalance.sub(amount))
+
+              const currentTokenOutBalance = await vault.getAccountBalance(portfolio, tokenOut)
+              expect(currentTokenOutBalance).to.be.equal(previousTokenOutBalance.add(expectedAmountOut))
+            })
+
+            it('emits an events', async () => {
+              const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+              await assertEvent(tx, 'Swap', {
+                account: portfolio,
+                tokenIn,
+                tokenOut,
+                amountIn: amount,
+                remainingIn: 0,
+                amountOut: expectedAmountOut,
+                caller: from,
+                data: '0x',
+              })
+            })
+          }
+
+          context('when the swap connector provides a worse rate', () => {
+            const connectorSlippage = fp(0.01)
+            const SWAP_RATE = ORACLE_RATE.mul(fp(1).sub(connectorSlippage)).div(fp(1))
+
+            beforeEach('mock swap connector rate', async () => {
+              await swapConnector.mockRate(SWAP_RATE)
+            })
+
+            context('when the user accepts that slippage', () => {
+              const slippage = connectorSlippage
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+
+            context('when the user does not accept that slippage', () => {
+              const slippage = connectorSlippage.sub(1)
+
+              it('reverts', async () => {
+                await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
+              })
+            })
+          })
+
+          context('when the swap connector provides the same rate', () => {
+            const SWAP_RATE = ORACLE_RATE
+
+            beforeEach('mock swap connector rate', async () => {
+              await swapConnector.mockRate(SWAP_RATE)
+            })
+
+            context('when the user accepts no slippage', () => {
+              const slippage = 0
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+
+            context('when the user accepts a higher slippage', () => {
+              const slippage = fp(0.2)
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+          })
+
+          context('when the swap connector provides a better rate', () => {
+            const SWAP_RATE = ORACLE_RATE.add(1)
+
+            beforeEach('mock swap connector rate', async () => {
+              await swapConnector.mockRate(SWAP_RATE)
+            })
+
+            context('when the user accepts no slippage', () => {
+              const slippage = 0
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+            })
+
+            context('when the user accepts a higher slippage', () => {
+              const slippage = fp(0.2)
+
+              itSwapsAsExpected(SWAP_RATE, slippage)
+
+              describe('callbacks', async () => {
+                const slippage = fp(0.2)
+
+                context('when non is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x0000')
+                  })
+
+                  it('does not call the portfolio', async () => {
+                    const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeSwap')
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterSwap')
+                  })
+                })
+
+                context('when before is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x0010')
+                  })
+
+                  it('only calls before to the portfolio', async () => {
+                    const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterSwap')
+                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeSwap', {
+                      sender: from,
+                      tokenIn,
+                      tokenOut,
+                      amountIn: amount,
+                      slippage,
+                      data: '0x',
+                    })
+                  })
+                })
+
+                context('when after is allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x0020')
+                  })
+
+                  it('only calls after to the portfolio', async () => {
+                    const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeSwap')
+                    await assertIndirectEvent(tx, portfolio.interface, 'AfterSwap', {
+                      sender: from,
+                      tokenIn,
+                      tokenOut,
+                      amountIn: amount,
+                      slippage,
+                      data: '0x',
+                    })
+                  })
+                })
+
+                context('when both are allowed', () => {
+                  beforeEach('mock supported callbacks', async () => {
+                    await portfolio.mockSupportedCallbacks('0x0030')
+                  })
+
+                  it('calls before and after to the portfolio', async () => {
+                    const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+
+                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeSwap', {
+                      sender: from,
+                      tokenIn,
+                      tokenOut,
+                      amountIn: amount,
+                      slippage,
+                      data: '0x',
+                    })
+
+                    await assertIndirectEvent(tx, portfolio.interface, 'AfterSwap', {
+                      sender: from,
+                      tokenIn,
+                      tokenOut,
+                      amountIn: amount,
+                      slippage,
+                      data: '0x',
+                    })
+                  })
+                })
+              })
+            })
+          })
+        })
+
+        context('when the portfolio did not deposit enough tokens', async () => {
+          it('reverts', async () => {
+            await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+          })
+        })
+      })
+
+      context('when the sender is not allowed', () => {
+        beforeEach('mock can perform', async () => {
+          await portfolio.mockCanPerform(false)
+        })
+
+        it('reverts', async () => {
+          await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, fp(1), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
         })
       })
     })
@@ -913,7 +1357,7 @@ describe('Vault', () => {
             describe('callbacks', async () => {
               context('when non is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x00')
+                  await portfolio.mockSupportedCallbacks('0x0000')
                 })
 
                 it('does not call the portfolio', async () => {
@@ -926,7 +1370,7 @@ describe('Vault', () => {
 
               context('when before is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x10')
+                  await portfolio.mockSupportedCallbacks('0x0040')
                 })
 
                 it('only calls before to the portfolio', async () => {
@@ -943,7 +1387,7 @@ describe('Vault', () => {
 
               context('when after is allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x20')
+                  await portfolio.mockSupportedCallbacks('0x0080')
                 })
 
                 it('only calls after to the portfolio', async () => {
@@ -960,7 +1404,7 @@ describe('Vault', () => {
 
               context('when both are allowed', () => {
                 beforeEach('mock supported callbacks', async () => {
-                  await portfolio.mockSupportedCallbacks('0x30')
+                  await portfolio.mockSupportedCallbacks('0x00C0')
                 })
 
                 it('calls before and after to the portfolio', async () => {
@@ -1007,444 +1451,6 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
-        })
-      })
-    })
-  })
-
-  describe('join swap', () => {
-    let strategy: Contract, swapConnector: Contract, strategyToken: Token, joiningToken: Token
-
-    const SWAP_RATE = fp(0.98)
-
-    beforeEach('deploy strategy', async () => {
-      strategyToken = tokens.first
-      joiningToken = tokens.second
-      strategy = await deploy('StrategyMock', [strategyToken.address])
-    })
-
-    beforeEach('mock swap rate', async () => {
-      swapConnector = vault.swapConnector
-      await swapConnector.mockRate(SWAP_RATE)
-    })
-
-    context('when the account is an EOA', () => {
-      context('when the sender is the EOA', () => {
-        let from: SignerWithAddress
-
-        beforeEach('set sender', async () => {
-          from = account
-        })
-
-        context('when the sender has deposited enough tokens', async () => {
-          const amount = fp(500)
-          const expectedAmountOut = amount.mul(SWAP_RATE).div(fp(1))
-
-          beforeEach('deposit tokens', async () => {
-            await joiningToken.mint(account, amount)
-            await joiningToken.approve(vault, amount, { from: account })
-            await vault.deposit(account, joiningToken, amount, { from: account })
-          })
-
-          beforeEach('fund swap connector', async () => {
-            await strategyToken.mint(swapConnector, expectedAmountOut)
-          })
-
-          context('when the min amount out is correct', async () => {
-            const minAmountOut = expectedAmountOut
-
-            const itJoinsAsExpected = (rate: BigNumberish) => {
-              const expectedShares = expectedAmountOut.mul(rate).div(fp(1))
-
-              beforeEach('mock strategy rate', async () => {
-                await strategy.mockRate(rate)
-              })
-
-              it('transfers the joining tokens to the swap connector', async () => {
-                const previousVaultBalance = await joiningToken.balanceOf(vault)
-                const previousAccountBalance = await joiningToken.balanceOf(account)
-                const previousStrategyBalance = await joiningToken.balanceOf(strategy)
-                const previousConnectorBalance = await joiningToken.balanceOf(swapConnector)
-
-                await vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentVaultBalance = await joiningToken.balanceOf(vault)
-                expect(currentVaultBalance).to.be.equal(previousVaultBalance.sub(amount))
-
-                const currentAccountBalance = await joiningToken.balanceOf(account)
-                expect(currentAccountBalance).to.be.equal(previousAccountBalance)
-
-                const currentStrategyBalance = await joiningToken.balanceOf(strategy)
-                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance)
-
-                const currentConnectorBalance = await joiningToken.balanceOf(swapConnector)
-                expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.add(amount))
-              })
-
-              it('transfers the strategy tokens to the strategy', async () => {
-                const previousVaultBalance = await strategyToken.balanceOf(vault)
-                const previousAccountBalance = await strategyToken.balanceOf(account)
-                const previousStrategyBalance = await strategyToken.balanceOf(strategy)
-                const previousConnectorBalance = await strategyToken.balanceOf(swapConnector)
-
-                await vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentVaultBalance = await strategyToken.balanceOf(vault)
-                expect(currentVaultBalance).to.be.equal(previousVaultBalance)
-
-                const currentAccountBalance = await strategyToken.balanceOf(account)
-                expect(currentAccountBalance).to.be.equal(previousAccountBalance)
-
-                const currentStrategyBalance = await strategyToken.balanceOf(strategy)
-                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance.add(expectedAmountOut))
-
-                const currentConnectorBalance = await strategyToken.balanceOf(swapConnector)
-                expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.sub(expectedAmountOut))
-              })
-
-              it('decreases the account available balance of the joining token in the vault', async () => {
-                const previousJoiningTokenBalance = await vault.getAccountBalance(account, joiningToken)
-                const previousStrategyTokenBalance = await vault.getAccountBalance(account, strategyToken)
-
-                await vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentJoiningTokenBalance = await vault.getAccountBalance(account, joiningToken)
-                expect(currentJoiningTokenBalance).to.be.equal(previousJoiningTokenBalance.sub(amount))
-
-                const currentStrategyTokenBalance = await vault.getAccountBalance(account, strategyToken)
-                expect(currentStrategyTokenBalance).to.be.equal(previousStrategyTokenBalance)
-              })
-
-              it('increases the account invested balance in the vault', async () => {
-                const previousInvestment = await vault.getAccountInvestment(account, strategy)
-
-                await vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentInvestment = await vault.getAccountInvestment(account, strategy)
-                expect(currentInvestment.invested).to.be.equal(previousInvestment.invested.add(expectedAmountOut))
-                expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.add(expectedShares))
-              })
-
-              it('allocates the expected number of shares to the user', async () => {
-                const previousShares = await strategy.getTotalShares()
-
-                await vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentShares = await strategy.getTotalShares()
-                expect(currentShares).to.be.equal(previousShares.add(expectedShares))
-              })
-
-              it('emits two events', async () => {
-                const tx = await vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })
-
-                await assertEvent(tx, 'Join', {
-                  account,
-                  strategy,
-                  amount: expectedAmountOut,
-                  shares: expectedShares,
-                  caller: from,
-                })
-
-                await assertEvent(tx, 'Swap', {
-                  account,
-                  tokenIn: joiningToken,
-                  tokenOut: strategyToken,
-                  amountIn: amount,
-                  amountOut: expectedAmountOut,
-                  data: '0x',
-                })
-              })
-            }
-
-            context('with a rate lower than one', async () => {
-              const rate = fp(0.99)
-              itJoinsAsExpected(rate)
-            })
-
-            context('with a rate equal to one', async () => {
-              const rate = fp(1)
-              itJoinsAsExpected(rate)
-            })
-
-            context('with a rate higher to one', async () => {
-              const rate = fp(1.01)
-              itJoinsAsExpected(rate)
-            })
-          })
-
-          context('when the min amount out is too high', async () => {
-            const minAmountOut = expectedAmountOut.add(1)
-
-            it('reverts', async () => {
-              await expect(vault.joinSwap(account, strategy, amount, joiningToken, minAmountOut, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
-            })
-          })
-        })
-
-        context('when the sender did not deposit enough tokens', async () => {
-          it('reverts', async () => {
-            await expect(vault.joinSwap(account, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
-          })
-        })
-      })
-
-      context('when the sender is not the EOA', () => {
-        let from: SignerWithAddress
-
-        beforeEach('set sender', async () => {
-          from = other
-        })
-
-        it('reverts', async () => {
-          await expect(vault.joinSwap(account, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
-        })
-      })
-    })
-
-    context('when the account is a portfolio', () => {
-      let from: SignerWithAddress
-
-      beforeEach('set sender', async () => {
-        from = other
-      })
-
-      context('when the sender is allowed', () => {
-        beforeEach('mock can perform', async () => {
-          await portfolio.mockCanPerform(true)
-        })
-
-        context('when the portfolio has deposited enough tokens', async () => {
-          const amount = fp(500)
-          const expectedAmountOut = amount.mul(SWAP_RATE).div(fp(1))
-
-          beforeEach('deposit tokens', async () => {
-            const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-            await joiningToken.mint(portfolio, depositedAmount)
-            await portfolio.mockApproveTokens([joiningToken.address], depositedAmount)
-            await vault.deposit(portfolio, joiningToken, depositedAmount, { from })
-          })
-
-          beforeEach('fund swap connector', async () => {
-            await strategyToken.mint(swapConnector, expectedAmountOut)
-          })
-
-          context('when the min amount out is correct', async () => {
-            const minAmountOut = expectedAmountOut
-
-            const itJoinsAsExpected = (rate: BigNumberish) => {
-              const expectedShares = expectedAmountOut.mul(rate).div(fp(1))
-
-              beforeEach('mock strategy rate', async () => {
-                await strategy.mockRate(rate)
-              })
-
-              it('transfers the joining tokens to the swap connector', async () => {
-                const previousVaultBalance = await joiningToken.balanceOf(vault)
-                const previousPortfolioBalance = await joiningToken.balanceOf(portfolio)
-                const previousStrategyBalance = await joiningToken.balanceOf(strategy)
-                const previousConnectorBalance = await joiningToken.balanceOf(swapConnector)
-
-                await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentVaultBalance = await joiningToken.balanceOf(vault)
-                expect(currentVaultBalance).to.be.equal(previousVaultBalance.sub(amount))
-
-                const currentPortfolioBalance = await joiningToken.balanceOf(portfolio)
-                expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance)
-
-                const currentStrategyBalance = await joiningToken.balanceOf(strategy)
-                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance)
-
-                const currentConnectorBalance = await joiningToken.balanceOf(swapConnector)
-                expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.add(amount))
-              })
-
-              it('transfers the strategy tokens to the strategy', async () => {
-                const previousVaultBalance = await strategyToken.balanceOf(vault)
-                const previousPortfolioBalance = await strategyToken.balanceOf(portfolio)
-                const previousStrategyBalance = await strategyToken.balanceOf(strategy)
-                const previousConnectorBalance = await strategyToken.balanceOf(swapConnector)
-
-                await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentVaultBalance = await strategyToken.balanceOf(vault)
-                expect(currentVaultBalance).to.be.equal(previousVaultBalance)
-
-                const currentPortfolioBalance = await strategyToken.balanceOf(portfolio)
-                expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance)
-
-                const currentStrategyBalance = await strategyToken.balanceOf(strategy)
-                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance.add(expectedAmountOut))
-
-                const currentConnectorBalance = await strategyToken.balanceOf(swapConnector)
-                expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.sub(expectedAmountOut))
-              })
-
-              it('decreases the portfolio available balance of the joining token in the vault', async () => {
-                const previousJoiningTokenBalance = await vault.getAccountBalance(portfolio, joiningToken)
-                const previousStrategyTokenBalance = await vault.getAccountBalance(portfolio, strategyToken)
-
-                await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentJoiningTokenBalance = await vault.getAccountBalance(portfolio, joiningToken)
-                expect(currentJoiningTokenBalance).to.be.equal(previousJoiningTokenBalance.sub(amount))
-
-                const currentStrategyTokenBalance = await vault.getAccountBalance(portfolio, strategyToken)
-                expect(currentStrategyTokenBalance).to.be.equal(previousStrategyTokenBalance)
-              })
-
-              it('increases the portfolio invested balance in the vault', async () => {
-                const previousInvestment = await vault.getAccountInvestment(portfolio, strategy)
-
-                await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentInvestment = await vault.getAccountInvestment(portfolio, strategy)
-                expect(currentInvestment.invested).to.be.equal(previousInvestment.invested.add(expectedAmountOut))
-                expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.add(expectedShares))
-              })
-
-              it('allocates the expected number of shares to the account', async () => {
-                const previousShares = await strategy.getTotalShares()
-
-                await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                const currentShares = await strategy.getTotalShares()
-                expect(currentShares).to.be.equal(previousShares.add(expectedShares))
-              })
-
-              it('emits two events', async () => {
-                const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                await assertEvent(tx, 'Join', {
-                  account: portfolio,
-                  strategy,
-                  amount: expectedAmountOut,
-                  shares: expectedShares,
-                  caller: from,
-                })
-
-                await assertEvent(tx, 'Swap', {
-                  account: portfolio,
-                  tokenIn: joiningToken,
-                  tokenOut: strategyToken,
-                  amountIn: amount,
-                  amountOut: expectedAmountOut,
-                  data: '0x',
-                })
-              })
-            }
-
-            context('with a rate lower than one', async () => {
-              const rate = fp(0.99)
-
-              itJoinsAsExpected(rate)
-
-              describe('callbacks', async () => {
-                context('when non is allowed', () => {
-                  beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x00')
-                  })
-
-                  it('does not call the portfolio', async () => {
-                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
-                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
-                  })
-                })
-
-                context('when before is allowed', () => {
-                  beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x10')
-                  })
-
-                  it('only calls before to the portfolio', async () => {
-                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                    await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
-                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
-                      sender: from,
-                      strategy,
-                      data: '0x',
-                    })
-                  })
-                })
-
-                context('when after is allowed', () => {
-                  beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x20')
-                  })
-
-                  it('only calls after to the portfolio', async () => {
-                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                    await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
-                    await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
-                      sender: from,
-                      strategy,
-                      data: '0x',
-                    })
-                  })
-                })
-
-                context('when both are allowed', () => {
-                  beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x30')
-                  })
-
-                  it('calls before and after to the portfolio', async () => {
-                    const tx = await vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })
-
-                    await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
-                      sender: from,
-                      strategy,
-                      data: '0x',
-                    })
-
-                    await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
-                      sender: from,
-                      strategy,
-                      data: '0x',
-                    })
-                  })
-                })
-              })
-            })
-
-            context('with a rate equal to one', async () => {
-              const rate = fp(1)
-              itJoinsAsExpected(rate)
-            })
-
-            context('with a rate higher to one', async () => {
-              const rate = fp(1.01)
-              itJoinsAsExpected(rate)
-            })
-          })
-
-          context('when the min amount out is too high', async () => {
-            const minAmountOut = expectedAmountOut.add(1)
-
-            it('reverts', async () => {
-              await expect(vault.joinSwap(portfolio, strategy, amount, joiningToken, minAmountOut, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
-            })
-          })
-        })
-
-        context('when the portfolio did not deposit enough tokens', async () => {
-          it('reverts', async () => {
-            await expect(vault.joinSwap(portfolio, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
-          })
-        })
-      })
-
-      context('when the sender is not allowed', () => {
-        beforeEach('mock can perform', async () => {
-          await portfolio.mockCanPerform(false)
-        })
-
-        it('reverts', async () => {
-          await expect(vault.joinSwap(portfolio, strategy, fp(1), joiningToken, 0, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
         })
       })
     })
@@ -1782,7 +1788,7 @@ describe('Vault', () => {
               describe('callbacks', async () => {
                 context('when non is allowed', () => {
                   beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x00')
+                    await portfolio.mockSupportedCallbacks('0x0000')
                   })
 
                   it('does not call the portfolio', async () => {
@@ -1795,7 +1801,7 @@ describe('Vault', () => {
 
                 context('when before is allowed', () => {
                   beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x40')
+                    await portfolio.mockSupportedCallbacks('0x0100')
                   })
 
                   it('only calls before to the portfolio', async () => {
@@ -1813,7 +1819,7 @@ describe('Vault', () => {
 
                 context('when after is allowed', () => {
                   beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0x80')
+                    await portfolio.mockSupportedCallbacks('0x0200')
                   })
 
                   it('only calls after to the portfolio', async () => {
@@ -1831,7 +1837,7 @@ describe('Vault', () => {
 
                 context('when both are allowed', () => {
                   beforeEach('mock supported callbacks', async () => {
-                    await portfolio.mockSupportedCallbacks('0xC0')
+                    await portfolio.mockSupportedCallbacks('0x0300')
                   })
 
                   it('calls before and after to the portfolio', async () => {
@@ -1992,6 +1998,52 @@ describe('Vault', () => {
     })
   })
 
+  describe('set price oracle', () => {
+    let from: SignerWithAddress
+
+    context('when the sender is the admin', () => {
+      beforeEach('set sender', async () => {
+        from = admin
+      })
+
+      context('when the new oracle is a contract', () => {
+        it('updates the price oracle', async () => {
+          const newOracle = await deploy('PriceOracleMock')
+
+          await vault.setPriceOracle(newOracle, { from })
+
+          expect(await vault.getPriceOracle()).to.be.equal(newOracle.address)
+        })
+
+        it('emits an event', async () => {
+          const newOracle = await deploy('PriceOracleMock')
+
+          const tx = await vault.setPriceOracle(newOracle, { from })
+
+          await assertEvent(tx, 'PriceOracleSet', { priceOracle: newOracle })
+        })
+      })
+
+      context('when the new oracle is not a contract', () => {
+        const newOracle = ZERO_ADDRESS
+
+        it('reverts', async () => {
+          await expect(vault.setPriceOracle(newOracle, { from })).to.be.revertedWith('PRICE_ORACLE_ZERO_ADDRESS')
+        })
+      })
+    })
+
+    context('when the sender is not the admin', () => {
+      beforeEach('set sender', async () => {
+        from = other
+      })
+
+      it('reverts', async () => {
+        await expect(vault.setPriceOracle(ZERO_ADDRESS, { from })).to.be.revertedWith('Ownable: caller is not the owner')
+      })
+    })
+  })
+
   describe('set swap connector', () => {
     let from: SignerWithAddress
 
@@ -2055,16 +2107,47 @@ describe('Vault', () => {
 
           expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
           expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
+
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
         })
 
-        it('emits an event', async () => {
+        it('emits an event for the whitelisted strategy only', async () => {
           const strategy1 = await deploy('StrategyMock', [tokens.first.address])
           const strategy2 = await deploy('StrategyMock', [tokens.second.address])
 
           const tx = await vault.setWhitelistedStrategies([strategy1, strategy2], [true, false], { from })
 
           await assertEvent(tx, 'WhitelistedStrategySet', { strategy: strategy1, whitelisted: true })
-          await assertEvent(tx, 'WhitelistedStrategySet', { strategy: strategy2, whitelisted: false })
+        })
+
+        it('can be rolled back', async () => {
+          const strategy1 = await deploy('StrategyMock', [tokens.first.address])
+          const strategy2 = await deploy('StrategyMock', [tokens.second.address])
+
+          await vault.setWhitelistedStrategies([strategy1, strategy2], [true, false], { from })
+          expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
+
+          await vault.setWhitelistedStrategies([strategy1, strategy2], [true, true], { from })
+          expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isStrategyWhitelisted(strategy2)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.true
+
+          await vault.setWhitelistedStrategies([strategy1, strategy2], [true, false], { from })
+          expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
+
+          await vault.setWhitelistedStrategies([strategy1, strategy2], [false, false], { from })
+          expect(await vault.isStrategyWhitelisted(strategy1)).to.be.false
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.false
+          expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
         })
       })
 

@@ -36,4 +36,6 @@ interface IAgreement is IPortfolio {
     function isWithdrawer(address account) external view returns (bool);
 
     function isStrategyAllowed(address strategy) external view returns (bool);
+
+    function isTokenAllowed(address token) external view returns (bool);
 }

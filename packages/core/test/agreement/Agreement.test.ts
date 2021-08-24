@@ -11,7 +11,7 @@ describe('Agreement', () => {
   let tokens: TokenList
 
   beforeEach('deploy tokens', async () => {
-    tokens = await TokenList.create(2)
+    tokens = await TokenList.create(4)
   })
 
   describe('withdrawers', () => {
@@ -140,6 +140,36 @@ describe('Agreement', () => {
     })
   })
 
+  describe('max swap slippage', () => {
+    context('when 0%', async () => {
+      const maxSwapSlippage = 0
+
+      it('accepts the slippage', async () => {
+        const agreement = await Agreement.create({ maxSwapSlippage })
+
+        expect(await agreement.getMaxSwapSlippage()).to.be.equal(maxSwapSlippage)
+      })
+    })
+
+    context('when between 0% and 100%', async () => {
+      const maxSwapSlippage = fp(0.5)
+
+      it('accepts the slippage', async () => {
+        const agreement = await Agreement.create({ maxSwapSlippage })
+
+        expect(await agreement.getMaxSwapSlippage()).to.be.equal(maxSwapSlippage)
+      })
+    })
+
+    context('when above 100%', async () => {
+      const maxSwapSlippage = fp(1).add(1)
+
+      it('reverts', async () => {
+        await expect(Agreement.create({ maxSwapSlippage })).to.be.revertedWith('MAX_SWAP_SLIPPAGE_TOO_HIGH')
+      })
+    })
+  })
+
   describe('strategies', () => {
     let strategies: Contract[]
 
@@ -245,12 +275,104 @@ describe('Agreement', () => {
     })
   })
 
+  describe('tokens', () => {
+    let vault: Vault, whitelistedStrategy: Contract, whitelistedToken: string, strategies: Contract[], customTokens: string[]
+
+    beforeEach('deploy strategies', async () => {
+      strategies = []
+      customTokens = []
+
+      for (let i = 0; i < 3; i++) {
+        const token = tokens.addresses[i]
+        customTokens.push(token)
+        strategies.push(await deploy('StrategyMock', [token]))
+      }
+
+      whitelistedToken = tokens.addresses[3]
+      whitelistedStrategy = await deploy('StrategyMock', [whitelistedToken])
+      vault = await Vault.create({ strategies: [whitelistedStrategy] })
+    })
+
+    context('when allowing any strategy', () => {
+      const allowedStrategies = 'any'
+
+      it('allows any token', async () => {
+        const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
+
+        expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.true
+        expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
+        expect(await agreement.isTokenAllowed(customTokens[1])).to.be.true
+        expect(await agreement.isTokenAllowed(customTokens[2])).to.be.true
+        expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.true
+      })
+    })
+
+    context('when allowing no strategies', () => {
+      const allowedStrategies = 'none'
+
+      context('without a custom set of strategies', () => {
+        it('does not allow any token', async () => {
+          const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
+
+          expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[0])).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[1])).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[2])).to.be.false
+          expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.false
+        })
+      })
+
+      context('with a custom set of strategies', () => {
+        it('allows only the tokens of the custom strategies', async () => {
+          const agreement = await Agreement.create({ vault, allowedStrategies, strategies })
+
+          expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[1])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[2])).to.be.true
+          expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.false
+        })
+      })
+    })
+
+    context('when allowing whitelisted strategies', () => {
+      const allowedStrategies = 'whitelisted'
+
+      context('without a custom set of strategies', () => {
+        it('allows any token from a whitelisted strategy', async () => {
+          const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
+
+          expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[0])).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[1])).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[2])).to.be.false
+          expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.true
+        })
+      })
+
+      context('with a custom set of strategies', () => {
+        it('allows any token from a whitelisted and custom strategy', async () => {
+          const agreement = await Agreement.create({ vault, allowedStrategies, strategies })
+
+          expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[1])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[2])).to.be.true
+          expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.true
+        })
+      })
+    })
+  })
+
   describe('can perform', () => {
-    let agreement: Agreement, who: Account, where: string, customStrategy: Contract
+    let agreement: Agreement, who: Account, where: string, customStrategy: Contract, customToken: string
+
+    const maxSwapSlippage = fp(0.2)
 
     beforeEach('deploy agreement', async () => {
-      customStrategy = await deploy('StrategyMock', [tokens.first.address])
-      agreement = await Agreement.create({ allowedStrategies: 'none', strategies: [customStrategy] })
+      customToken = tokens.first.address
+      customStrategy = await deploy('StrategyMock', [customToken])
+      agreement = await Agreement.create({ allowedStrategies: 'none', strategies: [customStrategy], maxSwapSlippage })
     })
 
     const itDoesNotAcceptAnyAction = () => {
@@ -264,8 +386,8 @@ describe('Agreement', () => {
         expect(await agreement.canWithdraw({ who, where })).to.be.false
         expect(await agreement.canWithdraw({ who, where, how: [ZERO_ADDRESS] })).to.be.false
 
-        expect(await agreement.canJoinSwap({ who, where })).to.be.false
-        expect(await agreement.canJoinSwap({ who, where, how: [ZERO_ADDRESS] })).to.be.false
+        expect(await agreement.canSwap({ who, where })).to.be.false
+        expect(await agreement.canSwap({ who, where, how: [ZERO_ADDRESS] })).to.be.false
 
         expect(await agreement.canJoin({ who, where })).to.be.false
         expect(await agreement.canJoin({ who, where, how: [ZERO_ADDRESS] })).to.be.false
@@ -295,11 +417,23 @@ describe('Agreement', () => {
       })
 
       it('accepts operating with allowed strategies', async () => {
-        const whitelistedStrategy = await deploy('StrategyMock', [tokens.first.address])
+        const unknownToken = tokens.addresses[3]
+        const whitelistedToken = tokens.second.address
+        const whitelistedStrategy = await deploy('StrategyMock', [whitelistedToken])
         await agreement.vault.setWhitelistedStrategies(whitelistedStrategy)
 
-        expect(await agreement.canJoinSwap({ who, where, how: [customStrategy.address] })).to.be.true
-        expect(await agreement.canJoinSwap({ who, where, how: [whitelistedStrategy.address] })).to.be.false
+        // valid token out, valid slippage
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken, fp(10), maxSwapSlippage] })).to.be.true
+        // valid token out, invalid slippage
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
+        // invalid token out, valid slippage
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken, fp(10), maxSwapSlippage] })).to.be.false
+        // invalid token out, invalid slippage
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
+        // invalid token out, valid slippage
+        expect(await agreement.canSwap({ who, where, how: [customToken, unknownToken, fp(10), maxSwapSlippage] })).to.be.false
+        // invalid token out, invalid slippage
+        expect(await agreement.canSwap({ who, where, how: [customToken, unknownToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
 
         expect(await agreement.canJoin({ who, where, how: [customStrategy.address] })).to.be.true
         expect(await agreement.canJoin({ who, where, how: [whitelistedStrategy.address] })).to.be.false
@@ -372,7 +506,7 @@ describe('Agreement', () => {
 
     it('supports only before deposit and withdraw', async () => {
       const callbacks = await agreement.getSupportedCallbacks()
-      expect(callbacks).to.be.equal('0x05')
+      expect(callbacks).to.be.equal('0x0005')
     })
 
     describe('before deposit', () => {

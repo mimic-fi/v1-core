@@ -1,10 +1,11 @@
-import { BigNumber, Contract } from 'ethers'
+import { BigNumber, Contract, utils } from 'ethers'
 import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+
+import { Account, toAddress, toAddresses } from '../types'
+import { AllowedStrategies, RawAgreementDeployment } from './types'
 
 import Vault from '../vault/Vault'
 import AgreementDeployer from './AgreementDeployer'
-import { Account, toAddress, toAddresses } from '../types'
-import { AllowedStrategies, RawAgreementDeployment } from './types'
 
 export default class Agreement {
   instance: Contract
@@ -13,6 +14,7 @@ export default class Agreement {
   depositFee: BigNumberish
   performanceFee: BigNumberish
   feeCollector: Account
+  maxSwapSlippage: BigNumberish
   managers: Account[]
   withdrawers: Account[]
   allowedStrategies: AllowedStrategies
@@ -29,6 +31,7 @@ export default class Agreement {
     depositFee: BigNumberish,
     performanceFee: BigNumberish,
     feeCollector: Account,
+    maxSwapSlippage: BigNumberish,
     managers: Account[],
     withdrawers: Account[],
     allowedStrategies: AllowedStrategies,
@@ -40,6 +43,7 @@ export default class Agreement {
     this.depositFee = depositFee
     this.performanceFee = performanceFee
     this.feeCollector = feeCollector
+    this.maxSwapSlippage = maxSwapSlippage
     this.managers = managers
     this.withdrawers = withdrawers
     this.allowedStrategies = allowedStrategies
@@ -100,6 +104,10 @@ export default class Agreement {
     return this.instance.isStrategyAllowed(toAddress(strategy))
   }
 
+  async isTokenAllowed(token: Account): Promise<boolean> {
+    return this.instance.isTokenAllowed(toAddress(token))
+  }
+
   async getDepositFee(): Promise<{ fee: BigNumber; collector: string }> {
     const [fee, collector] = await this.instance.getDepositFee()
     return { fee, collector }
@@ -114,6 +122,10 @@ export default class Agreement {
     return this.instance.feeCollector()
   }
 
+  async getMaxSwapSlippage(): Promise<BigNumber> {
+    return this.instance.maxSwapSlippage()
+  }
+
   async getSupportedCallbacks(): Promise<string> {
     return this.instance.getSupportedCallbacks()
   }
@@ -126,8 +138,9 @@ export default class Agreement {
     return this.canPerform({ who, where, what: this.vault.getSighash('withdraw'), how })
   }
 
-  async canJoinSwap({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('joinSwap'), how })
+  async canSwap({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
+    const parsedHow = how ? how.map((h) => (typeof h === 'string' ? h : utils.hexZeroPad(utils.hexlify(h), 32))) : []
+    return this.canPerform({ who, where, what: this.vault.getSighash('swap'), how: parsedHow })
   }
 
   async canJoin({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {

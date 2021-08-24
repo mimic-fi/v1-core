@@ -44,3 +44,11 @@ function arr(address p1, address p2, uint256 p3) pure returns (bytes32[] memory 
     result[1] = bytes32(bytes20(p2));
     result[2] = bytes32(p3);
 }
+
+function arr(address p1, address p2, uint256 p3, uint256 p4) pure returns (bytes32[] memory result) {
+    result = new bytes32[](4);
+    result[0] = bytes32(bytes20(p1));
+    result[1] = bytes32(bytes20(p2));
+    result[2] = bytes32(p3);
+    result[3] = bytes32(p4);
+}

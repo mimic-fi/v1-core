@@ -21,12 +21,12 @@ import "./BytesHelpers.sol";
 import "../interfaces/IPortfolio.sol";
 
 library Accounts {
-    using BytesHelpers for bytes1;
+    using BytesHelpers for bytes2;
 
     struct Data {
         address addr;
         bool isPortfolio;
-        bytes1 callbacks;
+        bytes2 callbacks;
     }
 
     function parse(address self) internal view returns (Data memory) {
@@ -49,8 +49,8 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).getDepositFee() : (0, address(0));
     }
 
-    function getSupportedCallbacks(Data memory self) internal view returns (bytes1) {
-        return self.isPortfolio ? IPortfolio(self.addr).getSupportedCallbacks() : bytes1(0x00);
+    function getSupportedCallbacks(Data memory self) internal view returns (bytes2) {
+        return self.isPortfolio ? IPortfolio(self.addr).getSupportedCallbacks() : bytes2(0x00);
     }
 
     function canPerform(Data memory self, address who, address where, bytes32 what, bytes32[] memory how) internal view returns (bool) {
@@ -78,6 +78,18 @@ library Accounts {
     function afterWithdraw(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
         if (self.callbacks.supportsAfterWithdraw()) {
             IPortfolio(self.addr).afterWithdraw(sender, tokens, amounts, recipient);
+        }
+    }
+
+    function beforeSwap(Data memory self, address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
+        if (self.callbacks.supportsBeforeSwap()) {
+            IPortfolio(self.addr).beforeSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
+        }
+    }
+
+    function afterSwap(Data memory self, address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
+        if (self.callbacks.supportsAfterSwap()) {
+            IPortfolio(self.addr).afterSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
         }
     }
 

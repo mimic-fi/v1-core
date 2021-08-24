@@ -20,6 +20,7 @@ describe('AgreementFactory', () => {
     const name = 'Test Agreement'
     const depositFee = fp(0.00005)
     const performanceFee = fp(0.00001)
+    const maxSwapSlippage = fp(0.1)
     const allowedStrategies = 2
 
     before('set up withdrawers and managers', async () => {
@@ -38,7 +39,7 @@ describe('AgreementFactory', () => {
       const managers = [manager1, manager2]
       const withdrawers = [withdrawer1, withdrawer2]
 
-      const tx = await factory.create(name, depositFee, performanceFee, feeCollector, managers, withdrawers, allowedStrategies, strategies)
+      const tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, managers, withdrawers, allowedStrategies, strategies)
 
       const { args } = await assertEvent(tx, 'AgreementCreated', { name })
       const agreement = await instanceAt('Agreement', args.agreement)
@@ -48,6 +49,7 @@ describe('AgreementFactory', () => {
       expect(await agreement.depositFee()).to.equal(depositFee)
       expect(await agreement.performanceFee()).to.equal(performanceFee)
       expect(await agreement.feeCollector()).to.equal(feeCollector)
+      expect(await agreement.maxSwapSlippage()).to.equal(maxSwapSlippage)
       expect(await agreement.isManager(manager1)).to.be.true
       expect(await agreement.isManager(manager2)).to.be.true
       expect(await agreement.isWithdrawer(withdrawer1)).to.be.true
@@ -58,13 +60,13 @@ describe('AgreementFactory', () => {
       expect(await factory.isAgreement(agreement.address)).to.be.true
     })
 
-    it('costs at most 2M', async () => {
+    it('costs at most 2.4M', async () => {
       const managers = [manager1, manager2]
       const withdrawers = [withdrawer1, withdrawer2]
 
-      const tx = await factory.create(name, depositFee, performanceFee, feeCollector, managers, withdrawers, allowedStrategies, strategies)
+      const tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, managers, withdrawers, allowedStrategies, strategies)
       const { gasUsed } = await tx.wait()
-      expect(gasUsed).to.be.at.most(2e6)
+      expect(gasUsed).to.be.at.most(2.4e6)
     })
   })
 })

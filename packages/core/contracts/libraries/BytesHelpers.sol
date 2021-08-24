@@ -26,63 +26,76 @@ library BytesHelpers {
         return address(bytes20(self[index]));
     }
 
-    function isJoinOrExit(bytes32 self) internal pure returns (bool) {
-        return isJoin(self) || isJoinSwap(self) || isExit(self);
-    }
-
-    function isJoin(bytes32 self) internal pure returns (bool) {
-        return self == toBytes32(IVault.join.selector);
-    }
-
-    function isJoinSwap(bytes32 self) internal pure returns (bool) {
-        return self == toBytes32(IVault.joinSwap.selector);
-    }
-
-    function isExit(bytes32 self) internal pure returns (bool) {
-        return self == toBytes32(IVault.exit.selector);
-    }
-
-    function isWithdraw(bytes32 self) internal pure returns (bool) {
-        return self == toBytes32(IVault.withdraw.selector);
+    function decodeUint256(bytes32[] memory self, uint256 index) internal pure returns (uint256) {
+        require(self.length > index, "INVALID_BYTES_ARRAY_INDEX");
+        return uint256(self[index]);
     }
 
     function isDeposit(bytes32 self) internal pure returns (bool) {
         return self == toBytes32(IVault.deposit.selector);
     }
 
-    function supportsBeforeDeposit(bytes1 self) internal pure returns (bool) {
+    function isWithdraw(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.withdraw.selector);
+    }
+
+    function isSwap(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.swap.selector);
+    }
+
+    function isJoin(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.join.selector);
+    }
+
+    function isExit(bytes32 self) internal pure returns (bool) {
+        return self == toBytes32(IVault.exit.selector);
+    }
+
+    function isJoinOrExit(bytes32 self) internal pure returns (bool) {
+        return isJoin(self) || isExit(self);
+    }
+
+    function supportsBeforeDeposit(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 0);
     }
 
-    function supportsAfterDeposit(bytes1 self) internal pure returns (bool) {
+    function supportsAfterDeposit(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 1);
     }
 
-    function supportsBeforeWithdraw(bytes1 self) internal pure returns (bool) {
+    function supportsBeforeWithdraw(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 2);
     }
 
-    function supportsAfterWithdraw(bytes1 self) internal pure returns (bool) {
+    function supportsAfterWithdraw(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 3);
     }
 
-    function supportsBeforeJoin(bytes1 self) internal pure returns (bool) {
+    function supportsBeforeSwap(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 4);
     }
 
-    function supportsAfterJoin(bytes1 self) internal pure returns (bool) {
+    function supportsAfterSwap(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 5);
     }
 
-    function supportsBeforeExit(bytes1 self) internal pure returns (bool) {
+    function supportsBeforeJoin(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 6);
     }
 
-    function supportsAfterExit(bytes1 self) internal pure returns (bool) {
+    function supportsAfterJoin(bytes2 self) internal pure returns (bool) {
         return isBitSet(self, 7);
     }
 
-    function isBitSet(bytes1 self, uint256 pos) internal pure returns (bool) {
-        return (uint8(self) & (1 << pos)) != 0;
+    function supportsBeforeExit(bytes2 self) internal pure returns (bool) {
+        return isBitSet(self, 8);
+    }
+
+    function supportsAfterExit(bytes2 self) internal pure returns (bool) {
+        return isBitSet(self, 9);
+    }
+
+    function isBitSet(bytes2 self, uint256 pos) internal pure returns (bool) {
+        return (uint16(self) & (1 << pos)) != 0;
     }
 }

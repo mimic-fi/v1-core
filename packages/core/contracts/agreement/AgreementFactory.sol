@@ -31,12 +31,13 @@ contract AgreementFactory  {
         uint256 _depositFee,
         uint256 _performanceFee,
         address _feeCollector,
+        uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
         Agreement.AllowedStrategies _allowedStrategies,
         address[] memory _customStrategies
     ) external {
-        Agreement agreement = new Agreement(_name, vault, _depositFee, _performanceFee, _feeCollector, _managers, _withdrawers, _allowedStrategies, _customStrategies);
+        Agreement agreement = new Agreement(_name, vault, _depositFee, _performanceFee, _feeCollector, _maxSwapSlippage, _managers, _withdrawers, _allowedStrategies, _customStrategies);
         isAgreement[address(agreement)] = true;
         emit AgreementCreated(address(agreement), _name);
     }

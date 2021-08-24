@@ -4,12 +4,14 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractTransaction } from 'ethers'
 
 import { RawVaultDeployment } from './type'
-
-import VaultDeployer from './VaultDeployer'
 import { NAry, Account, TxParams, toAddresses, toAddress } from '../types'
+
+import Token from '../tokens/Token'
+import VaultDeployer from './VaultDeployer'
 
 export default class Vault {
   instance: Contract
+  priceOracle: Contract
   swapConnector: Contract
   protocolFee: BigNumberish
   strategies: Contract[]
@@ -19,8 +21,9 @@ export default class Vault {
     return VaultDeployer.deploy(params)
   }
 
-  constructor(instance: Contract, swapConnector: Contract, protocolFee: BigNumberish, strategies: Contract[], admin: SignerWithAddress) {
+  constructor(instance: Contract, priceOracle: Contract, swapConnector: Contract, protocolFee: BigNumberish, strategies: Contract[], admin: SignerWithAddress) {
     this.instance = instance
+    this.priceOracle = priceOracle
     this.swapConnector = swapConnector
     this.protocolFee = protocolFee
     this.strategies = strategies
@@ -39,12 +42,20 @@ export default class Vault {
     return this.instance.protocolFee()
   }
 
-  async getSwapConnector(): Promise<BigNumber> {
+  async getPriceOracle(): Promise<string> {
+    return this.instance.priceOracle()
+  }
+
+  async getSwapConnector(): Promise<string> {
     return this.instance.swapConnector()
   }
 
   async isStrategyWhitelisted(strategy: Account): Promise<boolean> {
     return this.instance.isStrategyWhitelisted(toAddress(strategy))
+  }
+
+  async isTokenWhitelisted(token: Token): Promise<boolean> {
+    return this.instance.isTokenWhitelisted(token.address)
   }
 
   async getAccountBalance(account: Account, token: Account): Promise<BigNumber> {
@@ -76,19 +87,19 @@ export default class Vault {
     return vault.join(toAddress(account), toAddress(strategy), amount, data)
   }
 
-  async joinSwap(
+  async swap(
     account: Account,
-    strategy: Account,
-    amount: BigNumberish,
-    token: Account,
-    minAmountOut: BigNumberish,
+    tokenIn: Token,
+    tokenOut: Token,
+    amountIn: BigNumberish,
+    slippage: BigNumberish,
     dataOrParams: string | TxParams = '0x',
     params: TxParams = {}
   ): Promise<ContractTransaction> {
     const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
     const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const vault = from ? this.instance.connect(from) : this.instance
-    return vault.joinSwap(toAddress(account), toAddress(strategy), toAddress(token), amount, minAmountOut, data)
+    return vault.swap(toAddress(account), tokenIn.address, tokenOut.address, amountIn, slippage, data)
   }
 
   async exit(account: Account, strategy: Account, ratio: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {
@@ -101,6 +112,11 @@ export default class Vault {
   async setProtocolFee(fee: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = this.instance.connect(from || this.admin)
     return vault.setProtocolFee(fee)
+  }
+
+  async setPriceOracle(oracle: Account, { from }: TxParams = {}): Promise<ContractTransaction> {
+    const vault = this.instance.connect(from || this.admin)
+    return vault.setPriceOracle(toAddress(oracle))
   }
 
   async setSwapConnector(connector: Account, { from }: TxParams = {}): Promise<ContractTransaction> {

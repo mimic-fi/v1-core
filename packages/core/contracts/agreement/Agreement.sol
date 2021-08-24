@@ -24,6 +24,7 @@ import "../libraries/FixedPoint.sol";
 import "../libraries/BytesHelpers.sol";
 
 import "../interfaces/IAgreement.sol";
+import "../interfaces/IStrategy.sol";
 import "../interfaces/IVault.sol";
 
 contract Agreement is IAgreement, ReentrancyGuard {
@@ -43,6 +44,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
 
     uint256 internal constant MAX_DEPOSIT_FEE = 1e18; // 100%
     uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
+    uint256 internal constant MAX_SWAP_SLIPPAGE = 1e18; // 100%
 
     string public override name;
     address public immutable override vault;
@@ -55,6 +57,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     address public immutable withdrawer0;
     address public immutable withdrawer1;
 
+    uint256 public immutable maxSwapSlippage;
     uint256 public immutable customStrategies;
     address public immutable customStrategy0;
     address public immutable customStrategy1;
@@ -77,6 +80,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         uint256 _depositFee,
         uint256 _performanceFee,
         address _feeCollector,
+        uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
         AllowedStrategies _allowedStrategies,
@@ -109,6 +113,9 @@ contract Agreement is IAgreement, ReentrancyGuard {
         withdrawer0 = _withdrawers[0];
         withdrawer1 = _withdrawers[1];
         emit WithdrawersSet(_withdrawers);
+
+        require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
+        maxSwapSlippage = _maxSwapSlippage;
 
         uint256 length = _customStrategies.length;
         require(length <= 8, "TOO_MANY_CUSTOM_STRATEGIES");
@@ -177,6 +184,26 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return false;
     }
 
+    function isTokenAllowed(address token) public override view returns (bool) {
+        if (allowedStrategies == AllowedStrategies.Any || isCustomToken(token)) {
+            return true;
+        }
+
+        return allowedStrategies == AllowedStrategies.Whitelisted && IVault(vault).isTokenWhitelisted(token);
+    }
+
+    function isCustomToken(address token) public view returns (bool) {
+        if (customStrategies > 0 && token == IStrategy(customStrategy0).getToken()) return true;
+        if (customStrategies > 1 && token == IStrategy(customStrategy1).getToken()) return true;
+        if (customStrategies > 2 && token == IStrategy(customStrategy2).getToken()) return true;
+        if (customStrategies > 3 && token == IStrategy(customStrategy3).getToken()) return true;
+        if (customStrategies > 4 && token == IStrategy(customStrategy4).getToken()) return true;
+        if (customStrategies > 5 && token == IStrategy(customStrategy5).getToken()) return true;
+        if (customStrategies > 6 && token == IStrategy(customStrategy6).getToken()) return true;
+        if (customStrategies > 7 && token == IStrategy(customStrategy7).getToken()) return true;
+        return false;
+    }
+
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external override view returns (bool) {
         // If the sender is not allowed, then it cannot perform any actions
         if (!isSenderAllowed(who)) {
@@ -189,7 +216,11 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
 
         // Eval different actions and parameters
-        if (what.isJoinOrExit()) {
+        if (what.isSwap()) {
+            address tokenOut = how.decodeAddress(1);
+            uint256 slippage = how.decodeUint256(3);
+            return isTokenAllowed(tokenOut) && slippage <= maxSwapSlippage;
+        } else if (what.isJoinOrExit()) {
             return isStrategyAllowed(how.decodeAddress(0));
         } else if (what.isWithdraw()) {
             return isWithdrawer(how.decodeAddress(0));
@@ -198,9 +229,9 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
     }
 
-    function getSupportedCallbacks() external override pure returns (bytes1) {
-        // Supported callbacks are "before deposit" and "before withdraw": 00000101 (0x05).
-        return bytes1(0x05);
+    function getSupportedCallbacks() external override pure returns (bytes2) {
+        // Supported callbacks are "before deposit" and "before withdraw": 0000000101 (0x0005).
+        return bytes2(0x0005);
     }
 
     function beforeDeposit(address /* sender */, address[] memory tokens, uint256[] memory /* amounts */) external override onlyVault {
@@ -216,6 +247,14 @@ contract Agreement is IAgreement, ReentrancyGuard {
     }
 
     function afterWithdraw(address /* sender */, address[] memory /* tokens */, uint256[] memory /* amounts */, address /* recipient */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function beforeSwap(address /* sender */, address /* tokenIn */, address /* tokenOut */, uint256 /* amountIn */, uint256 /* slippage */, bytes memory /* data */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function afterSwap(address /* sender */, address /* tokenIn */, address /* tokenOut */, uint256 /* amountIn */, uint256 /* slippage */, bytes memory /* data */) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 

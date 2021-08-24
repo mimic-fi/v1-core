@@ -19,14 +19,19 @@ interface IVault {
     event Withdraw(address indexed account, address[] tokens, uint256[] amounts, uint256[] fromVault, address recipient, address caller);
     event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares, address caller);
     event Exit(address indexed account, address indexed strategy, uint256 amountInvested, uint256 amountReceived, uint256 shares, uint256 protocolFee, uint256 performanceFee, address caller);
-    event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut, bytes data);
+    event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut, bytes data, address caller);
     event ProtocolFeeSet(uint256 protocolFee);
+    event PriceOracleSet(address priceOracle);
     event SwapConnectorSet(address swapConnector);
     event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
 
     function protocolFee() external view returns (uint256);
 
+    function priceOracle() external view returns (address);
+
     function swapConnector() external view returns (address);
+
+    function isTokenWhitelisted(address token) external view returns (bool);
 
     function isStrategyWhitelisted(address strategy) external view returns (bool);
 
@@ -40,13 +45,15 @@ interface IVault {
 
     function withdraw(address account, address[] memory tokens, uint256[] memory amounts, address recipient) external;
 
-    function joinSwap(address account, address strategy, address token, uint256 amountIn, uint256 minAmountOut, bytes memory data) external;
+    function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
 
     function join(address account, address strategy, uint256 amount, bytes memory data) external;
 
     function exit(address account, address strategy, uint256 ratio, bytes memory data) external;
 
     function setProtocolFee(uint256 newProtocolFee) external;
+
+    function setPriceOracle(address newPriceOracle) external;
 
     function setSwapConnector(address newSwapConnector) external;
 
