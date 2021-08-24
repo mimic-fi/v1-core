@@ -127,7 +127,7 @@ describe('Vault', () => {
 
         context('when the portfolio has enough tokens', async () => {
           const amount = fp(500)
-          const expectedFees = amount.mul(depositFee).div(fp(1))
+          const expectedFee = amount.mul(depositFee).div(fp(1))
 
           beforeEach('mint tokens', async () => {
             await tokens.mint(portfolio, amount)
@@ -143,10 +143,10 @@ describe('Vault', () => {
 
               await tokens.asyncEach(async (token, i) => {
                 const currentCollectorBalance = await token.balanceOf(feeCollector)
-                expect(currentCollectorBalance).to.be.equal(previousCollectorBalances[i].add(expectedFees))
+                expect(currentCollectorBalance).to.be.equal(previousCollectorBalances[i].add(expectedFee))
 
                 const currentVaultBalance = await token.balanceOf(vault)
-                expect(currentVaultBalance).to.be.equal(previousVaultBalances[i].add(amount).sub(expectedFees))
+                expect(currentVaultBalance).to.be.equal(previousVaultBalances[i].add(amount).sub(expectedFee))
 
                 const currentPortfolioBalance = await token.balanceOf(portfolio)
                 expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalances[i].sub(amount))
@@ -160,7 +160,7 @@ describe('Vault', () => {
 
               await tokens.asyncEach(async (token, i) => {
                 const currentBalance = await vault.getAccountBalance(portfolio, token)
-                expect(currentBalance).to.be.equal(previousBalances[i].add(amount).sub(expectedFees))
+                expect(currentBalance).to.be.equal(previousBalances[i].add(amount).sub(expectedFee))
               })
             })
 
@@ -171,7 +171,7 @@ describe('Vault', () => {
                 account: portfolio,
                 tokens: tokens.addresses,
                 amounts: Array(tokens.length).fill(amount),
-                depositFees: Array(tokens.length).fill(expectedFees),
+                depositFees: Array(tokens.length).fill(expectedFee),
                 caller: from,
               })
             })
@@ -513,8 +513,7 @@ describe('Vault', () => {
 
             context('when there are enough tokens deposited in the vault', async () => {
               beforeEach('deposit tokens', async () => {
-                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-                const depositedAmount = amount.add(expectedFee)
+                const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
                 await tokens.mint(portfolio, depositedAmount)
                 await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
               })
@@ -573,8 +572,7 @@ describe('Vault', () => {
           context('when the portfolio did not allow the corresponding amount', async () => {
             context('when there are enough tokens deposited in the vault', async () => {
               beforeEach('deposit tokens', async () => {
-                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-                const depositedAmount = amount.add(expectedFee)
+                const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
                 await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
                 await tokens.mint(portfolio, depositedAmount)
                 await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
@@ -646,8 +644,7 @@ describe('Vault', () => {
 
             context('when there are enough tokens deposited in the vault', async () => {
               beforeEach('deposit tokens', async () => {
-                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-                const depositedAmount = amount.add(expectedFee)
+                const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
                 await tokens.mint(portfolio, depositedAmount)
                 await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
               })
@@ -665,8 +662,7 @@ describe('Vault', () => {
           context('when the portfolio did not allow the vault', async () => {
             context('when there are enough tokens deposited in the vault', async () => {
               beforeEach('deposit tokens', async () => {
-                const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-                const depositedAmount = amount.add(expectedFee)
+                const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
                 await tokens.mint(portfolio, depositedAmount)
                 await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
                 await vault.deposit(portfolio, tokens.addresses, depositedAmount, { from })
@@ -838,8 +834,7 @@ describe('Vault', () => {
           const amount = fp(500)
 
           beforeEach('deposit tokens', async () => {
-            const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-            const depositedAmount = amount.add(expectedFee)
+            const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             await token.mint(portfolio, depositedAmount)
             await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
             await vault.deposit(portfolio, token, depositedAmount, { from })
@@ -1223,8 +1218,7 @@ describe('Vault', () => {
           const expectedAmountOut = amount.mul(SWAP_RATE).div(fp(1))
 
           beforeEach('deposit tokens', async () => {
-            const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-            const depositedAmount = amount.add(expectedFee)
+            const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             await joiningToken.mint(portfolio, depositedAmount)
             await portfolio.mockApproveTokens([joiningToken.address], depositedAmount)
             await vault.deposit(portfolio, joiningToken, depositedAmount, { from })
@@ -1650,8 +1644,7 @@ describe('Vault', () => {
 
           beforeEach('join strategy', async () => {
             const amount = shares // mocked rate is 1 initially
-            const expectedFee = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-            const depositedAmount = amount.add(expectedFee)
+            const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             await token.mint(portfolio, depositedAmount)
             await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
             await vault.deposit(portfolio, token, depositedAmount, { from })
@@ -1902,7 +1895,57 @@ describe('Vault', () => {
   })
 
   describe('batch', () => {
-    // TODO: implement
+    let strategy: Contract, token: Token, from: SignerWithAddress
+
+    beforeEach('deploy strategy', async () => {
+      token = tokens.first
+      strategy = await deploy('StrategyMock', [token.address])
+    })
+
+    beforeEach('mock can perform', async () => {
+      from = other
+      await portfolio.mockCanPerform(true)
+    })
+
+    it('allows batching actions', async () => {
+      const amount = fp(500)
+      const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+      const expectedFee = depositedAmount.sub(amount)
+      await token.mint(portfolio, depositedAmount)
+      await portfolio.mockApproveTokens(tokens.addresses, depositedAmount)
+
+      const deposit = await vault.instance.populateTransaction.deposit(portfolio.address, [token.address], [depositedAmount])
+      const join = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, amount, '0x')
+      const exit = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, fp(0.5), '0x')
+      const tx = await vault.instance.connect(from).batch([deposit, join, exit].map((tx) => tx.data))
+
+      await assertEvent(tx, 'Deposit', {
+        account: portfolio,
+        tokens: [token.address],
+        amounts: [depositedAmount],
+        depositFees: [expectedFee],
+        caller: from,
+      })
+
+      await assertEvent(tx, 'Join', {
+        account: portfolio,
+        strategy,
+        amount,
+        shares: amount,
+        caller: from,
+      })
+
+      await assertEvent(tx, 'Exit', {
+        account: portfolio,
+        strategy,
+        amountInvested: amount.div(2),
+        amountReceived: amount.div(2),
+        shares: amount.div(2),
+        protocolFee: 0,
+        performanceFee: 0,
+        caller: from,
+      })
+    })
   })
 
   describe('set protocol fee', () => {
