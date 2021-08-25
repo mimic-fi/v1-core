@@ -40,10 +40,10 @@ async function benchmarkAgreement(vault: Contract, strategies: Contract[]): Prom
   const [withdrawer1, withdrawer2, manager1, manager2, feeCollector] = toAddresses(await getSigners())
   const managers = [manager1, manager2]
   const withdrawers = [withdrawer1, withdrawer2]
-  const agreement1Tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, managers, withdrawers, toAddresses(strategies), allowedStrategies)
-  const agreement2Tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, [manager1], [withdrawer1], toAddresses(strategies), allowedStrategies)
-  const agreement3Tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, [manager1], [withdrawer1], [strategies[0].address], allowedStrategies)
-  const agreement4Tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, [manager1], [withdrawer1], [], allowedStrategies)
+  const agreement1Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, toAddresses(strategies), allowedStrategies)
+  const agreement2Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], toAddresses(strategies), allowedStrategies)
+  const agreement3Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [strategies[0].address], allowedStrategies)
+  const agreement4Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [], allowedStrategies)
 
   console.log(`- 2 managers, 2 withdrawers, 2 custom strategies: ${(await agreement1Tx.wait()).gasUsed}`)
   console.log(`- 1 managers, 1 withdrawers, 2 custom strategies: ${(await agreement2Tx.wait()).gasUsed}`)

@@ -28,16 +28,16 @@ contract AgreementFactory  {
 
     function create(
         string memory _name,
+        address _feeCollector,
         uint256 _depositFee,
         uint256 _performanceFee,
-        address _feeCollector,
         uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
-        Agreement.AllowedStrategies _allowedStrategies,
-        address[] memory _customStrategies
+        address[] memory _customStrategies,
+        Agreement.AllowedStrategies _allowedStrategies
     ) external {
-        Agreement agreement = new Agreement(_name, vault, _depositFee, _performanceFee, _feeCollector, _maxSwapSlippage, _managers, _withdrawers, _allowedStrategies, _customStrategies);
+        Agreement agreement = new Agreement(vault, _feeCollector, _depositFee, _performanceFee, _maxSwapSlippage, _managers, _withdrawers, _customStrategies, _allowedStrategies);
         isAgreement[address(agreement)] = true;
         emit AgreementCreated(address(agreement), _name);
     }

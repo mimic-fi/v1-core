@@ -9,16 +9,15 @@ import AgreementDeployer from './AgreementDeployer'
 
 export default class Agreement {
   instance: Contract
-  name: string
   vault: Vault
+  feeCollector: Account
   depositFee: BigNumberish
   performanceFee: BigNumberish
-  feeCollector: Account
   maxSwapSlippage: BigNumberish
   managers: Account[]
   withdrawers: Account[]
-  allowedStrategies: AllowedStrategies
   strategies: Contract[]
+  allowedStrategies: AllowedStrategies
 
   static async create(params: RawAgreementDeployment = {}): Promise<Agreement> {
     return AgreementDeployer.deploy(params)
@@ -26,60 +25,30 @@ export default class Agreement {
 
   constructor(
     instance: Contract,
-    name: string,
     vault: Vault,
+    feeCollector: Account,
     depositFee: BigNumberish,
     performanceFee: BigNumberish,
-    feeCollector: Account,
     maxSwapSlippage: BigNumberish,
     managers: Account[],
     withdrawers: Account[],
-    allowedStrategies: AllowedStrategies,
-    strategies: Contract[]
+    strategies: Contract[],
+    allowedStrategies: AllowedStrategies
   ) {
     this.instance = instance
-    this.name = name
     this.vault = vault
+    this.feeCollector = feeCollector
     this.depositFee = depositFee
     this.performanceFee = performanceFee
-    this.feeCollector = feeCollector
     this.maxSwapSlippage = maxSwapSlippage
     this.managers = managers
     this.withdrawers = withdrawers
-    this.allowedStrategies = allowedStrategies
     this.strategies = strategies
+    this.allowedStrategies = allowedStrategies
   }
 
   get address(): string {
     return this.instance.address
-  }
-
-  get withdrawer0(): string {
-    return toAddress(this.withdrawers[0])
-  }
-
-  get withdrawer1(): string {
-    return toAddress(this.withdrawers[1])
-  }
-
-  get manager0(): string {
-    return toAddress(this.managers[0])
-  }
-
-  get manager1(): string {
-    return toAddress(this.managers[1])
-  }
-
-  async getWithdrawers(): Promise<string[]> {
-    const withdrawer0 = await this.instance.withdrawer0()
-    const withdrawer1 = await this.instance.withdrawer1()
-    return [withdrawer0, withdrawer1]
-  }
-
-  async getManagers(): Promise<string[]> {
-    const manager0 = await this.instance.manager0()
-    const manager1 = await this.instance.manager1()
-    return [manager0, manager1]
   }
 
   async areWithdrawers(accounts: Account[]): Promise<boolean> {

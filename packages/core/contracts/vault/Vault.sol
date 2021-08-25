@@ -204,7 +204,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
             accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
         }
 
-        emit Deposit(account.addr, tokens, amounts, depositFees, msg.sender);
+        emit Deposit(account.addr, tokens, amounts, depositFees);
     }
 
     function _withdraw(Accounts.Data memory account, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
@@ -232,7 +232,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
             }
         }
 
-        emit Withdraw(account.addr, tokens, amounts, fromVault, recipient, msg.sender);
+        emit Withdraw(account.addr, tokens, amounts, fromVault, recipient);
     }
 
     function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
@@ -265,7 +265,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
 
         accounting.balance[tokenIn] = currentBalance.sub(amountIn).add(remainingIn);
         accounting.balance[tokenOut] = accounting.balance[tokenOut].add(amountOut);
-        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data, msg.sender);
+        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
     }
 
     function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data) internal {
@@ -281,7 +281,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 shares = IStrategy(strategy).onJoin(amount, data);
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
         accounting.invested[strategy] = accounting.invested[strategy].add(amount);
-        emit Join(account.addr, strategy, amount, shares, msg.sender);
+        emit Join(account.addr, strategy, amount, shares);
     }
 
     function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bytes memory data) internal {
@@ -305,7 +305,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         accounting.invested[strategy] = invested.sub(deposited);
         uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
-        emit Exit(account.addr, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
+        emit Exit(account.addr, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount);
     }
 
     function _payExitFees(Accounts.Data memory account, address token, uint256 deposited, uint256 received)

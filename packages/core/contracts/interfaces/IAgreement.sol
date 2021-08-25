@@ -17,11 +17,9 @@ pragma solidity ^0.8.0;
 import "./IPortfolio.sol";
 
 interface IAgreement is IPortfolio {
-    event WithdrawersSet(address[] withdrawers);
     event ManagersSet(address[] managers);
+    event WithdrawersSet(address[] withdrawers);
     event StrategiesSet(uint256 allowedStrategies, address[] customStrategies);
-
-    function name() external view returns (string memory);
 
     function vault() external view returns (address);
 
@@ -30,6 +28,8 @@ interface IAgreement is IPortfolio {
     function depositFee() external view returns (uint256);
 
     function performanceFee() external view returns (uint256);
+
+    function maxSwapSlippage() external view returns (uint256);
 
     function isManager(address account) external view returns (bool);
 

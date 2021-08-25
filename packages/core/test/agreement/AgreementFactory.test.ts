@@ -15,36 +15,25 @@ describe('AgreementFactory', () => {
   })
 
   describe('create', () => {
-    let strategies: string[], feeCollector: string, withdrawer1: string, withdrawer2: string, manager1: string, manager2: string
-
-    const name = 'Test Agreement'
-    const depositFee = fp(0.00005)
-    const performanceFee = fp(0.00001)
-    const maxSwapSlippage = fp(0.1)
-    const allowedStrategies = 2
-
-    before('set up withdrawers and managers', async () => {
-      // eslint-disable-next-line prettier/prettier
-      [feeCollector, withdrawer1, withdrawer2, manager1, manager2] = toAddresses(await getSigners())
-    })
-
-    before('deploy strategies', async () => {
+    it('creates an agreement as expected', async () => {
+      const name = 'Test Agreement'
+      const depositFee = fp(0.00005)
+      const performanceFee = fp(0.00001)
+      const maxSwapSlippage = fp(0.1)
+      const allowedStrategies = 2
+      const [feeCollector, withdrawer1, withdrawer2, manager1, manager2] = toAddresses(await getSigners())
+      const managers = [manager1, manager2]
+      const withdrawers = [withdrawer1, withdrawer2]
       const tokens = await TokenList.create(2)
       const strategy1 = await deploy('StrategyMock', [tokens.first.address])
       const strategy2 = await deploy('StrategyMock', [tokens.second.address])
-      strategies = [strategy1.address, strategy2.address]
-    })
+      const strategies = [strategy1.address, strategy2.address]
 
-    it('creates an agreement as expected', async () => {
-      const managers = [manager1, manager2]
-      const withdrawers = [withdrawer1, withdrawer2]
-
-      const tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, managers, withdrawers, allowedStrategies, strategies)
+      const tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies)
 
       const { args } = await assertEvent(tx, 'AgreementCreated', { name })
       const agreement = await instanceAt('Agreement', args.agreement)
 
-      expect(await agreement.name()).to.equal(name)
       expect(await agreement.vault()).to.equal(await factory.vault())
       expect(await agreement.depositFee()).to.equal(depositFee)
       expect(await agreement.performanceFee()).to.equal(performanceFee)
@@ -58,15 +47,6 @@ describe('AgreementFactory', () => {
       expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
 
       expect(await factory.isAgreement(agreement.address)).to.be.true
-    })
-
-    it('costs at most 2.4M', async () => {
-      const managers = [manager1, manager2]
-      const withdrawers = [withdrawer1, withdrawer2]
-
-      const tx = await factory.create(name, depositFee, performanceFee, feeCollector, maxSwapSlippage, managers, withdrawers, allowedStrategies, strategies)
-      const { gasUsed } = await tx.wait()
-      expect(gasUsed).to.be.at.most(2.4e6)
     })
   })
 })

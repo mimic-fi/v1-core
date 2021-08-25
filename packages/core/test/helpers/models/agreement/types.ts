@@ -9,7 +9,6 @@ import { Account } from '../types'
 export type AllowedStrategies = 'any' | 'whitelisted' | 'none'
 
 export type RawAgreementDeployment = {
-  name?: string
   vault?: Vault | 'mocked'
   depositFee?: BigNumberish
   performanceFee?: BigNumberish
@@ -23,7 +22,6 @@ export type RawAgreementDeployment = {
 }
 
 export type AgreementDeployment = {
-  name: string
   vault: Vault
   depositFee: BigNumberish
   performanceFee: BigNumberish

@@ -20,7 +20,6 @@ describe('Agreement', () => {
         const withdrawers = await getSigners(2)
         const agreement = await Agreement.create({ withdrawers })
 
-        expect(await agreement.getWithdrawers()).to.have.members([withdrawers[0].address, withdrawers[1].address])
         expect(await agreement.areWithdrawers(withdrawers)).to.be.true
         expect(await agreement.areAllowedSenders(withdrawers)).to.be.true
       })
@@ -28,9 +27,17 @@ describe('Agreement', () => {
 
     context('when using a zero address', async () => {
       it('reverts', async () => {
-        const withdrawers = [ZERO_ADDRESS, ZERO_ADDRESS]
+        const withdrawers = [ZERO_ADDRESS]
 
         await expect(Agreement.create({ withdrawers })).to.be.revertedWith('WITHDRAWER_ZERO_ADDRESS')
+      })
+    })
+
+    context('when using an empty array', async () => {
+      it('reverts', async () => {
+        const withdrawers: string[] = []
+
+        await expect(Agreement.create({ withdrawers })).to.be.revertedWith('MISSING_WITHDRAWERS')
       })
     })
   })
@@ -41,7 +48,6 @@ describe('Agreement', () => {
         const managers = await getSigners(2)
         const agreement = await Agreement.create({ managers })
 
-        expect(await agreement.getManagers()).to.have.members([managers[0].address, managers[1].address])
         expect(await agreement.areManagers(managers)).to.be.true
         expect(await agreement.areAllowedSenders(managers)).to.be.true
       })
@@ -49,9 +55,17 @@ describe('Agreement', () => {
 
     context('when using a zero address', async () => {
       it('reverts', async () => {
-        const managers = [ZERO_ADDRESS, ZERO_ADDRESS]
+        const managers = [ZERO_ADDRESS]
 
         await expect(Agreement.create({ managers })).to.be.revertedWith('MANAGER_ZERO_ADDRESS')
+      })
+    })
+
+    context('when using an empty array', async () => {
+      it('reverts', async () => {
+        const managers: string[] = []
+
+        await expect(Agreement.create({ managers })).to.be.revertedWith('MISSING_MANAGERS')
       })
     })
   })
@@ -171,106 +185,97 @@ describe('Agreement', () => {
   })
 
   describe('strategies', () => {
-    let strategies: Contract[]
+    let vault: Vault, strategies: Contract[], whitelistedStrategy: Contract
 
-    context('when using up-to 10 custom strategies', () => {
-      let vault: Vault, whitelistedStrategy: Contract
+    beforeEach('deploy strategies', async () => {
+      strategies = []
+      for (let i = 0; i < 3; i++) strategies.push(await deploy('StrategyMock', [tokens.first.address]))
 
-      beforeEach('deploy strategies', async () => {
-        strategies = []
-        for (let i = 0; i < 3; i++) strategies.push(await deploy('StrategyMock', [tokens.first.address]))
+      whitelistedStrategy = await deploy('StrategyMock', [tokens.first.address])
+      vault = await Vault.create({ strategies: [whitelistedStrategy] })
+    })
 
-        whitelistedStrategy = await deploy('StrategyMock', [tokens.first.address])
-        vault = await Vault.create({ strategies: [whitelistedStrategy] })
-      })
+    context('when allowing any', () => {
+      const allowedStrategies = 'any'
 
-      context('when allowing any', () => {
-        const allowedStrategies = 'any'
+      context('without a custom set', () => {
+        it('allows any strategy', async () => {
+          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
 
-        context('without a custom set', () => {
-          it('allows any strategy', async () => {
-            const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
-
-            expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
-            expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
-          })
-        })
-
-        context('with a custom set', () => {
-          it('reverts', async () => {
-            await expect(Agreement.create({ vault, allowedStrategies, strategies })).to.be.revertedWith('ANY_WITH_CUSTOM_STRATEGIES')
-          })
+          expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
+          expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
         })
       })
 
-      context('when allowing none', () => {
-        const allowedStrategies = 'none'
+      context('with a custom set', () => {
+        it('allows any strategy', async () => {
+          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
 
-        context('without a custom set', () => {
-          it('does not any strategy', async () => {
-            const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
-
-            expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[0])).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[1])).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[2])).to.be.false
-            expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.false
-          })
-        })
-
-        context('with a custom set', () => {
-          it('allows only the custom strategies', async () => {
-            const agreement = await Agreement.create({ vault, allowedStrategies, strategies })
-
-            expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
-            expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.false
-          })
-        })
-      })
-
-      context('when allowing whitelisted', () => {
-        const allowedStrategies = 'whitelisted'
-
-        context('without a custom set', () => {
-          it('allows any whitelisted strategy', async () => {
-            const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
-
-            expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[0])).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[1])).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[2])).to.be.false
-            expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
-          })
-        })
-
-        context('with a custom set', () => {
-          it('allows any whitelisted and custom strategy', async () => {
-            const agreement = await Agreement.create({ vault, allowedStrategies, strategies })
-
-            expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
-            expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
-            expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
-            expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
-          })
+          expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
+          expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
         })
       })
     })
 
-    context('when using more than 8 custom strategies', () => {
-      beforeEach('deploy strategies', async () => {
-        strategies = []
-        for (let i = 0; i < 9; i++) strategies.push(await deploy('StrategyMock', [tokens.first.address]))
+    context('when allowing none', () => {
+      const allowedStrategies = 'none'
+
+      context('without a custom set', () => {
+        it('does not any strategy', async () => {
+          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
+
+          expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[0])).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[1])).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[2])).to.be.false
+          expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.false
+        })
       })
 
-      it('reverts', async () => {
-        await expect(Agreement.create({ strategies })).to.be.revertedWith('TOO_MANY_CUSTOM_STRATEGIES')
+      context('with a custom set', () => {
+        it('allows only the custom strategies', async () => {
+          const agreement = await Agreement.create({ vault, strategies, allowedStrategies })
+
+          expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
+          expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.false
+        })
+      })
+    })
+
+    context('when allowing whitelisted', () => {
+      const allowedStrategies = 'whitelisted'
+
+      context('without a custom set', () => {
+        it('allows any whitelisted strategy', async () => {
+          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
+
+          expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[0])).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[1])).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[2])).to.be.false
+          expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
+        })
+      })
+
+      context('with a custom set', () => {
+        it('allows any whitelisted and custom strategy', async () => {
+          const agreement = await Agreement.create({ vault, strategies, allowedStrategies })
+
+          expect(await agreement.isStrategyAllowed(ZERO_ADDRESS)).to.be.false
+          expect(await agreement.isStrategyAllowed(strategies[0])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[1])).to.be.true
+          expect(await agreement.isStrategyAllowed(strategies[2])).to.be.true
+          expect(await agreement.isStrategyAllowed(whitelistedStrategy)).to.be.true
+        })
       })
     })
   })
@@ -297,7 +302,7 @@ describe('Agreement', () => {
       const allowedStrategies = 'any'
 
       it('allows any token', async () => {
-        const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
+        const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
 
         expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.true
         expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
@@ -312,7 +317,7 @@ describe('Agreement', () => {
 
       context('without a custom set of strategies', () => {
         it('does not allow any token', async () => {
-          const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
+          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.false
@@ -324,7 +329,7 @@ describe('Agreement', () => {
 
       context('with a custom set of strategies', () => {
         it('allows only the tokens of the custom strategies', async () => {
-          const agreement = await Agreement.create({ vault, allowedStrategies, strategies })
+          const agreement = await Agreement.create({ vault, strategies, allowedStrategies })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
@@ -340,7 +345,7 @@ describe('Agreement', () => {
 
       context('without a custom set of strategies', () => {
         it('allows any token from a whitelisted strategy', async () => {
-          const agreement = await Agreement.create({ vault, allowedStrategies, strategies: [] })
+          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.false
@@ -352,7 +357,7 @@ describe('Agreement', () => {
 
       context('with a custom set of strategies', () => {
         it('allows any token from a whitelisted and custom strategy', async () => {
-          const agreement = await Agreement.create({ vault, allowedStrategies, strategies })
+          const agreement = await Agreement.create({ vault, strategies, allowedStrategies })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
@@ -465,7 +470,7 @@ describe('Agreement', () => {
     })
 
     context('when the sender is a manager', () => {
-      beforeEach('set sender', async () => (who = agreement.manager0))
+      beforeEach('set sender', async () => (who = agreement.managers[0]))
 
       context('when the target is the vault', () => {
         beforeEach('set target', () => (where = agreement.vault.address))
@@ -481,7 +486,7 @@ describe('Agreement', () => {
     })
 
     context('when the sender is a withdrawer', () => {
-      beforeEach('set sender', async () => (who = agreement.withdrawer1))
+      beforeEach('set sender', async () => (who = agreement.withdrawers[1]))
 
       context('when the target is the vault', () => {
         beforeEach('set target', () => (where = agreement.vault.address))

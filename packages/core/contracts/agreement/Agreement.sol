@@ -46,28 +46,18 @@ contract Agreement is IAgreement, ReentrancyGuard {
     uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
     uint256 internal constant MAX_SWAP_SLIPPAGE = 1e18; // 100%
 
-    string public override name;
-    address public immutable override vault;
-    address public immutable override feeCollector;
-    uint256 public immutable override depositFee;
-    uint256 public immutable override performanceFee;
+    address public override vault;
+    address public override feeCollector;
+    uint256 public override depositFee;
+    uint256 public override performanceFee;
+    uint256 public override maxSwapSlippage;
 
-    address public immutable manager0;
-    address public immutable manager1;
-    address public immutable withdrawer0;
-    address public immutable withdrawer1;
+    mapping (address => bool) public override isManager;
+    mapping (address => bool) public override isWithdrawer;
 
-    uint256 public immutable maxSwapSlippage;
-    uint256 public immutable customStrategies;
-    address public immutable customStrategy0;
-    address public immutable customStrategy1;
-    address public immutable customStrategy2;
-    address public immutable customStrategy3;
-    address public immutable customStrategy4;
-    address public immutable customStrategy5;
-    address public immutable customStrategy6;
-    address public immutable customStrategy7;
-    AllowedStrategies public immutable allowedStrategies;
+    address[] public customStrategies;
+    AllowedStrategies public allowedStrategies;
+    mapping (address => bool) public isCustomStrategy;
 
     modifier onlyVault() {
         require(msg.sender == vault, "SENDER_NOT_ALLOWED");
@@ -75,20 +65,16 @@ contract Agreement is IAgreement, ReentrancyGuard {
     }
 
     constructor(
-        string memory _name,
         address _vault,
+        address _feeCollector,
         uint256 _depositFee,
         uint256 _performanceFee,
-        address _feeCollector,
         uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
-        AllowedStrategies _allowedStrategies,
-        address[] memory _customStrategies
+        address[] memory _customStrategies,
+        AllowedStrategies _allowedStrategies
     ) {
-        require(bytes(_name).length > 0, "AGREEMENT_EMPTY_NAME");
-        name = _name;
-
         require(_vault.isContract(), "VAULT_NOT_CONTRACT");
         vault = _vault;
 
@@ -102,41 +88,29 @@ contract Agreement is IAgreement, ReentrancyGuard {
         feeCollector = _feeCollector;
         emit FeesConfigSet(_depositFee, _performanceFee, _feeCollector);
 
-        require(_managers.length == 2, "MUST_SPECIFY_2_MANAGERS");
-        require(_managers[0] != address(0) && _managers[1] != address(0), "MANAGER_ZERO_ADDRESS");
-        manager0 = _managers[0];
-        manager1 = _managers[1];
-        emit ManagersSet(_managers);
-
-        require(_withdrawers.length == 2, "MUST_SPECIFY_2_WITHDRAWERS");
-        require(_withdrawers[0] != address(0) && _withdrawers[1] != address(0), "WITHDRAWER_ZERO_ADDRESS");
-        withdrawer0 = _withdrawers[0];
-        withdrawer1 = _withdrawers[1];
-        emit WithdrawersSet(_withdrawers);
-
         require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
         maxSwapSlippage = _maxSwapSlippage;
 
-        uint256 length = _customStrategies.length;
-        require(length <= 8, "TOO_MANY_CUSTOM_STRATEGIES");
-
-        allowedStrategies = _allowedStrategies;
-        bool isAny = _allowedStrategies == AllowedStrategies.Any;
-        require(!isAny || length == 0, "ANY_WITH_CUSTOM_STRATEGIES");
-
-        for (uint256 i = 0; i < length; i++) {
-            require(_customStrategies[i].isContract(), "CUSTOM_STRATEGY_NOT_CONTRACT");
+        require(_managers.length > 0, "MISSING_MANAGERS");
+        for (uint256 i = 0; i < _managers.length; i++) {
+            require(_managers[i] != address(0), "MANAGER_ZERO_ADDRESS");
+            isManager[_managers[i]] = true;
         }
+        emit ManagersSet(_managers);
 
-        customStrategies = length;
-        customStrategy0 = isAny ? address(0) : (length > 0 ? _customStrategies[0] : address(0));
-        customStrategy1 = isAny ? address(0) : (length > 1 ? _customStrategies[1] : address(0));
-        customStrategy2 = isAny ? address(0) : (length > 2 ? _customStrategies[2] : address(0));
-        customStrategy3 = isAny ? address(0) : (length > 3 ? _customStrategies[3] : address(0));
-        customStrategy4 = isAny ? address(0) : (length > 4 ? _customStrategies[4] : address(0));
-        customStrategy5 = isAny ? address(0) : (length > 5 ? _customStrategies[5] : address(0));
-        customStrategy6 = isAny ? address(0) : (length > 6 ? _customStrategies[6] : address(0));
-        customStrategy7 = isAny ? address(0) : (length > 7 ? _customStrategies[7] : address(0));
+        require(_withdrawers.length > 0, "MISSING_WITHDRAWERS");
+        for (uint256 i = 0; i < _withdrawers.length; i++) {
+            require(_withdrawers[i] != address(0), "WITHDRAWER_ZERO_ADDRESS");
+            isWithdrawer[_withdrawers[i]] = true;
+        }
+        emit WithdrawersSet(_withdrawers);
+
+        for (uint256 i = 0; i < _customStrategies.length; i++) {
+            require(_customStrategies[i].isContract(), "CUSTOM_STRATEGY_NOT_CONTRACT");
+            isCustomStrategy[_customStrategies[i]] = true;
+            customStrategies.push(_customStrategies[i]);
+        }
+        allowedStrategies = _allowedStrategies;
         emit StrategiesSet(uint256(_allowedStrategies), _customStrategies);
     }
 
@@ -152,36 +126,16 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function isManager(address account) public override view returns (bool) {
-        return manager0 == account || manager1 == account;
-    }
-
-    function isWithdrawer(address account) public override view returns (bool) {
-        return withdrawer0 == account || withdrawer1 == account;
-    }
-
     function isSenderAllowed(address sender) public view returns (bool) {
-        return isWithdrawer(sender) || isManager(sender);
+        return isWithdrawer[sender] || isManager[sender];
     }
 
     function isStrategyAllowed(address strategy) public override view returns (bool) {
-        if (allowedStrategies == AllowedStrategies.Any || isCustomStrategy(strategy)) {
+        if (allowedStrategies == AllowedStrategies.Any || isCustomStrategy[strategy]) {
             return true;
         }
 
         return allowedStrategies == AllowedStrategies.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
-    }
-
-    function isCustomStrategy(address strategy) public view returns (bool) {
-        if (customStrategies > 0 && strategy == customStrategy0) return true;
-        if (customStrategies > 1 && strategy == customStrategy1) return true;
-        if (customStrategies > 2 && strategy == customStrategy2) return true;
-        if (customStrategies > 3 && strategy == customStrategy3) return true;
-        if (customStrategies > 4 && strategy == customStrategy4) return true;
-        if (customStrategies > 5 && strategy == customStrategy5) return true;
-        if (customStrategies > 6 && strategy == customStrategy6) return true;
-        if (customStrategies > 7 && strategy == customStrategy7) return true;
-        return false;
     }
 
     function isTokenAllowed(address token) public override view returns (bool) {
@@ -193,14 +147,9 @@ contract Agreement is IAgreement, ReentrancyGuard {
     }
 
     function isCustomToken(address token) public view returns (bool) {
-        if (customStrategies > 0 && token == IStrategy(customStrategy0).getToken()) return true;
-        if (customStrategies > 1 && token == IStrategy(customStrategy1).getToken()) return true;
-        if (customStrategies > 2 && token == IStrategy(customStrategy2).getToken()) return true;
-        if (customStrategies > 3 && token == IStrategy(customStrategy3).getToken()) return true;
-        if (customStrategies > 4 && token == IStrategy(customStrategy4).getToken()) return true;
-        if (customStrategies > 5 && token == IStrategy(customStrategy5).getToken()) return true;
-        if (customStrategies > 6 && token == IStrategy(customStrategy6).getToken()) return true;
-        if (customStrategies > 7 && token == IStrategy(customStrategy7).getToken()) return true;
+        for (uint256 i = 0; i < customStrategies.length; i++) {
+            if (token == IStrategy(customStrategies[i]).getToken()) return true;
+        }
         return false;
     }
 
@@ -223,7 +172,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         } else if (what.isJoinOrExit()) {
             return isStrategyAllowed(how.decodeAddress(0));
         } else if (what.isWithdraw()) {
-            return isWithdrawer(how.decodeAddress(0));
+            return isWithdrawer[how.decodeAddress(0)];
         } else {
             return what.isDeposit();
         }
