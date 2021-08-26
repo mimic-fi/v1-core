@@ -1,11 +1,12 @@
-import {expect} from 'chai'
-import {Contract} from 'ethers'
-import {deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS} from '@mimic-fi/v1-helpers'
+import { expect } from 'chai'
+import { Contract } from 'ethers'
+import { deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+
+import { Account, toAddress, toAddresses } from '../helpers/models/types'
 
 import Vault from '../helpers/models/vault/Vault'
 import TokenList from '../helpers/models/tokens/TokenList'
 import Agreement from '../helpers/models/agreement/Agreement'
-import {Account, toAddress, toAddresses} from '../helpers/models/types'
 
 describe('Agreement', () => {
   let tokens: TokenList
@@ -21,7 +22,6 @@ describe('Agreement', () => {
         const agreement = await Agreement.create({ withdrawers })
 
         expect(await agreement.areWithdrawers(withdrawers)).to.be.true
-        expect(await agreement.areAllowedSenders(withdrawers)).to.be.true
       })
     })
 
@@ -49,7 +49,6 @@ describe('Agreement', () => {
         const agreement = await Agreement.create({ managers })
 
         expect(await agreement.areManagers(managers)).to.be.true
-        expect(await agreement.areAllowedSenders(managers)).to.be.true
       })
     })
 
@@ -433,17 +432,17 @@ describe('Agreement', () => {
 
       it('accepts operating with allowed tokens', async () => {
         const unknownToken = tokens.addresses[3]
-        const whitelistedToken = tokens.second.address
-        await agreement.vault.setWhitelistedTokens(whitelistedToken)
+        const whitelistedToken = tokens.second
+        await agreement.vault.setWhitelistedTokens(new TokenList([whitelistedToken]))
 
         // valid token out, valid slippage
         expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken.address, fp(10), maxSwapSlippage] })).to.be.true
         // valid token out, invalid slippage
         expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1)] })).to.be.false
         // invalid token out, valid slippage
-        expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken, fp(10), maxSwapSlippage] })).to.be.false
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage] })).to.be.false
         // invalid token out, invalid slippage
-        expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage.add(1)] })).to.be.false
         // invalid token out, valid slippage
         expect(await agreement.canSwap({ who, where, how: [customToken.address, unknownToken, fp(10), maxSwapSlippage] })).to.be.false
         // invalid token out, invalid slippage
@@ -505,7 +504,7 @@ describe('Agreement', () => {
       context('when the target is the vault', () => {
         beforeEach('set target', () => (where = agreement.vault.address))
 
-        itAcceptsAllowedActions()
+        itDoesNotAcceptAnyAction()
       })
 
       context('when the target is not the vault', () => {

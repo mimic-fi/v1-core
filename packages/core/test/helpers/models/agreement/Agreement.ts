@@ -5,7 +5,6 @@ import { Account, toAddress, toAddresses } from '../types'
 import { Allowed, RawAgreementDeployment } from './types'
 
 import Vault from '../vault/Vault'
-import TokenList from '../tokens/TokenList'
 import AgreementDeployer from './AgreementDeployer'
 
 export default class Agreement {
@@ -67,12 +66,6 @@ export default class Agreement {
   async areManagers(accounts: Account[]): Promise<boolean> {
     const addresses = toAddresses(accounts)
     const results = await Promise.all(addresses.map(async (address) => await this.instance.isManager(address)))
-    return results.every(Boolean)
-  }
-
-  async areAllowedSenders(accounts: Account[]): Promise<boolean> {
-    const addresses = toAddresses(accounts)
-    const results = await Promise.all(addresses.map(async (address) => await this.instance.isSenderAllowed(address)))
     return results.every(Boolean)
   }
 

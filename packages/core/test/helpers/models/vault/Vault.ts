@@ -7,6 +7,7 @@ import { RawVaultDeployment } from './type'
 import { NAry, Account, TxParams, toAddresses, toAddress } from '../types'
 
 import Token from '../tokens/Token'
+import TokenList from '../tokens/TokenList'
 import VaultDeployer from './VaultDeployer'
 
 export default class Vault {
@@ -126,11 +127,10 @@ export default class Vault {
     return vault.setSwapConnector(toAddress(connector))
   }
 
-  async setWhitelistedTokens(tokens: NAry<Account>, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {
-    if (!Array.isArray(tokens)) tokens = [tokens]
+  async setWhitelistedTokens(tokens: TokenList, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {
     if (!whitelisted) whitelisted = Array(tokens.length).fill(true)
     const vault = this.instance.connect(from || this.admin)
-    return vault.setWhitelistedTokens(toAddresses(tokens), whitelisted)
+    return vault.setWhitelistedTokens(tokens.addresses, whitelisted)
   }
 
   async setWhitelistedStrategies(strategies: NAry<Account>, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {

@@ -3,7 +3,6 @@ import { assertEvent, deploy, fp, getSigner, getSigners, instanceAt, MAX_UINT256
 
 import { toAddresses } from '../test/helpers/models/types'
 
-import Vault from '../test/helpers/models/vault/Vault'
 import TokenList from '../test/helpers/models/tokens/TokenList'
 
 async function benchmark(): Promise<void> {

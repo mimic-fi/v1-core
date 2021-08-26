@@ -19,6 +19,7 @@ import "./IPortfolio.sol";
 interface IAgreement is IPortfolio {
     event ManagersSet(address[] managers);
     event WithdrawersSet(address[] withdrawers);
+    event ParamsSet(address feeCollector, uint256 depositFee, uint256 performanceFee, uint256 maxSwapSlippage);
     event AllowedTokensSet(uint256 allowedTokens, address[] customTokens);
     event AllowedStrategiesSet(uint256 allowedStrategies, address[] customStrategies);
 

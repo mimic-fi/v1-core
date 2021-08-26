@@ -15,8 +15,6 @@
 pragma solidity ^0.8.0;
 
 interface IPortfolio {
-    event FeesConfigSet(uint256 depositFee, uint256 performanceFee, address feeCollector);
-
     /**
      * @dev Supported callbacks are a 8-bit map with the following structure:
      * - Least significant bit #0: before deposit

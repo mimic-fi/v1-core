@@ -81,7 +81,6 @@ describe('Vault', () => {
                 tokens: tokens.addresses,
                 amounts: Array(tokens.length).fill(amount),
                 depositFees: Array(tokens.length).fill(fp(0)),
-                caller: from,
               })
             })
           })
@@ -172,7 +171,6 @@ describe('Vault', () => {
                 tokens: tokens.addresses,
                 amounts: Array(tokens.length).fill(amount),
                 depositFees: Array(tokens.length).fill(expectedFee),
-                caller: from,
               })
             })
 
@@ -328,7 +326,6 @@ describe('Vault', () => {
               tokens: tokens.addresses,
               amounts: Array(tokens.length).fill(amount),
               recipient: other,
-              caller: from,
             })
           })
         })
@@ -414,7 +411,6 @@ describe('Vault', () => {
                 amounts: Array(tokens.length).fill(amount),
                 fromVault: Array(tokens.length).fill(fp(0)),
                 recipient: other,
-                caller: from,
               })
             })
 
@@ -557,7 +553,6 @@ describe('Vault', () => {
                   amounts: Array(tokens.length).fill(amount),
                   fromVault: Array(tokens.length).fill(amount.div(2)),
                   recipient: other,
-                  caller: from,
                 })
               })
             })
@@ -632,7 +627,6 @@ describe('Vault', () => {
                 amounts: Array(tokens.length).fill(amount),
                 fromVault: Array(tokens.length).fill(amount),
                 recipient: other,
-                caller: from,
               })
             })
           }
@@ -788,7 +782,6 @@ describe('Vault', () => {
                 amountIn: amount,
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
-                caller: from,
                 data: '0x',
               })
             })
@@ -962,7 +955,6 @@ describe('Vault', () => {
                 amountIn: amount,
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
-                caller: from,
                 data: '0x',
               })
             })
@@ -1221,7 +1213,6 @@ describe('Vault', () => {
                 strategy,
                 amount,
                 shares: expectedShares,
-                caller: from,
               })
             })
           }
@@ -1344,7 +1335,6 @@ describe('Vault', () => {
                 strategy,
                 amount,
                 shares: expectedShares,
-                caller: from,
               })
             })
           }
@@ -1578,7 +1568,6 @@ describe('Vault', () => {
                   shares,
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   performanceFee: 0,
-                  caller: from,
                 })
               })
             }
@@ -1771,7 +1760,6 @@ describe('Vault', () => {
                   shares,
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   // performanceFee: expectedPerformanceFee, TODO: fix rounding
-                  caller: from,
                 })
               })
             }
@@ -1930,7 +1918,6 @@ describe('Vault', () => {
         tokens: [token.address],
         amounts: [depositedAmount],
         depositFees: [expectedFee],
-        caller: from,
       })
 
       await assertEvent(tx, 'Join', {
@@ -1938,7 +1925,6 @@ describe('Vault', () => {
         strategy,
         amount,
         shares: amount,
-        caller: from,
       })
 
       await assertEvent(tx, 'Exit', {
@@ -1949,7 +1935,6 @@ describe('Vault', () => {
         shares: amount.div(2),
         protocolFee: 0,
         performanceFee: 0,
-        caller: from,
       })
     })
   })
@@ -2090,6 +2075,59 @@ describe('Vault', () => {
     })
   })
 
+  describe('set whitelisted tokens', () => {
+    let from: SignerWithAddress
+
+    context('when the sender is the admin', () => {
+      beforeEach('set sender', async () => {
+        from = admin
+      })
+
+      context('when all the tokens are a contract', () => {
+        it('updates the whitelisted tokens', async () => {
+          await vault.setWhitelistedTokens(tokens, [true, false], { from })
+
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
+        })
+
+        it('emits an event for the whitelisted tokens only', async () => {
+          const tx = await vault.setWhitelistedTokens(tokens, [true, false], { from })
+
+          await assertEvent(tx, 'WhitelistedTokenSet', { token: tokens.first, whitelisted: true })
+        })
+
+        it('can be rolled back', async () => {
+          await vault.setWhitelistedTokens(tokens, [true, false], { from })
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
+
+          await vault.setWhitelistedTokens(tokens, [true, true], { from })
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.true
+
+          await vault.setWhitelistedTokens(tokens, [true, false], { from })
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
+
+          await vault.setWhitelistedTokens(tokens, [false, false], { from })
+          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.false
+          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
+        })
+      })
+    })
+
+    context('when the sender is not the admin', () => {
+      beforeEach('set sender', async () => {
+        from = other
+      })
+
+      it('reverts', async () => {
+        await expect(vault.setWhitelistedTokens(new TokenList(), [], { from })).to.be.revertedWith('Ownable: caller is not the owner')
+      })
+    })
+  })
+
   describe('set whitelisted strategies', () => {
     let from: SignerWithAddress
 
@@ -2107,9 +2145,6 @@ describe('Vault', () => {
 
           expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
           expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
-
-          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
-          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
         })
 
         it('emits an event for the whitelisted strategy only', async () => {
@@ -2127,27 +2162,19 @@ describe('Vault', () => {
 
           await vault.setWhitelistedStrategies([strategy1, strategy2], [true, false], { from })
           expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
-          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
           expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
-          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
 
           await vault.setWhitelistedStrategies([strategy1, strategy2], [true, true], { from })
           expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
-          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
           expect(await vault.isStrategyWhitelisted(strategy2)).to.be.true
-          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.true
 
           await vault.setWhitelistedStrategies([strategy1, strategy2], [true, false], { from })
           expect(await vault.isStrategyWhitelisted(strategy1)).to.be.true
-          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.true
           expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
-          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
 
           await vault.setWhitelistedStrategies([strategy1, strategy2], [false, false], { from })
           expect(await vault.isStrategyWhitelisted(strategy1)).to.be.false
-          expect(await vault.isTokenWhitelisted(tokens.first)).to.be.false
           expect(await vault.isStrategyWhitelisted(strategy2)).to.be.false
-          expect(await vault.isTokenWhitelisted(tokens.second)).to.be.false
         })
       })
 

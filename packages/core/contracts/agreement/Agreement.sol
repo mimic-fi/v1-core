@@ -87,20 +87,16 @@ contract Agreement is IAgreement, ReentrancyGuard {
         _setAllowedStrategies(_customStrategies, _allowedStrategies);
     }
 
+    function getBalance(address token) public view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
+    }
+
     function getDepositFee() external override view returns (uint256, address) {
         return (depositFee, feeCollector);
     }
 
     function getPerformanceFee() external override view returns (uint256, address) {
         return (performanceFee, feeCollector);
-    }
-
-    function getBalance(address token) public view returns (uint256) {
-        return IERC20(token).balanceOf(address(this));
-    }
-
-    function isSenderAllowed(address sender) public view returns (bool) {
-        return isWithdrawer[sender] || isManager[sender];
     }
 
     function isTokenAllowed(address token) public override view returns (bool) {
@@ -121,7 +117,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
 
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external override view returns (bool) {
         // If the sender is not allowed, then it cannot perform any actions
-        if (!isSenderAllowed(who)) {
+        if (!isManager[who]) {
             return false;
         }
 
@@ -252,7 +248,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
         maxSwapSlippage = _maxSwapSlippage;
 
-        emit FeesConfigSet(_depositFee, _performanceFee, _feeCollector);
+        emit ParamsSet(_feeCollector, _depositFee, _performanceFee, _maxSwapSlippage);
     }
 
     function _setVault(address _vault) private {

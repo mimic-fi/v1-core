@@ -22,6 +22,7 @@ contract Proxy {
     }
 
     fallback () external payable virtual {
+        // solhint-disable-previous-line no-complex-fallback
         // solhint-disable-next-line no-inline-assembly
         address impl = implementation;
         assembly {
