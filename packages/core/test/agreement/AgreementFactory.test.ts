@@ -20,16 +20,17 @@ describe('AgreementFactory', () => {
       const depositFee = fp(0.00005)
       const performanceFee = fp(0.00001)
       const maxSwapSlippage = fp(0.1)
-      const allowedStrategies = 2
       const [feeCollector, withdrawer1, withdrawer2, manager1, manager2] = toAddresses(await getSigners())
       const managers = [manager1, manager2]
       const withdrawers = [withdrawer1, withdrawer2]
+      const allowedTokens = 2
       const tokens = await TokenList.create(2)
+      const allowedStrategies = 2
       const strategy1 = await deploy('StrategyMock', [tokens.first.address])
       const strategy2 = await deploy('StrategyMock', [tokens.second.address])
       const strategies = [strategy1.address, strategy2.address]
 
-      const tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies)
+      const tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens.addresses, allowedTokens, strategies, allowedStrategies)
 
       const { args } = await assertEvent(tx, 'AgreementCreated', { name })
       const agreement = await instanceAt('Agreement', args.agreement)

@@ -14,6 +14,7 @@ export default class Vault {
   priceOracle: Contract
   swapConnector: Contract
   protocolFee: BigNumberish
+  tokens: Contract[]
   strategies: Contract[]
   admin: SignerWithAddress
 
@@ -21,11 +22,12 @@ export default class Vault {
     return VaultDeployer.deploy(params)
   }
 
-  constructor(instance: Contract, priceOracle: Contract, swapConnector: Contract, protocolFee: BigNumberish, strategies: Contract[], admin: SignerWithAddress) {
+  constructor(instance: Contract, priceOracle: Contract, swapConnector: Contract, protocolFee: BigNumberish, tokens: Contract[], strategies: Contract[], admin: SignerWithAddress) {
     this.instance = instance
     this.priceOracle = priceOracle
     this.swapConnector = swapConnector
     this.protocolFee = protocolFee
+    this.tokens = tokens
     this.strategies = strategies
     this.admin = admin
   }
@@ -122,6 +124,13 @@ export default class Vault {
   async setSwapConnector(connector: Account, { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = this.instance.connect(from || this.admin)
     return vault.setSwapConnector(toAddress(connector))
+  }
+
+  async setWhitelistedTokens(tokens: NAry<Account>, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {
+    if (!Array.isArray(tokens)) tokens = [tokens]
+    if (!whitelisted) whitelisted = Array(tokens.length).fill(true)
+    const vault = this.instance.connect(from || this.admin)
+    return vault.setWhitelistedTokens(toAddresses(tokens), whitelisted)
   }
 
   async setWhitelistedStrategies(strategies: NAry<Account>, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {

@@ -50,15 +50,16 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     uint256 public override protocolFee;
     address public override priceOracle;
     address public override swapConnector;
+    mapping (address => bool) public override isTokenWhitelisted;
     mapping (address => bool) public override isStrategyWhitelisted;
 
     mapping (address => Accounting) internal accountings;
-    mapping (address => uint256) internal tokenWhitelistedTimes;
 
-    constructor (uint256 _protocolFee, address _priceOracle, address _swapConnector, address[] memory _whitelistedStrategies) {
+    constructor (uint256 _protocolFee, address _priceOracle, address _swapConnector, address[] memory _whitelistedTokens, address[] memory _whitelistedStrategies) {
         setProtocolFee(_protocolFee);
         setPriceOracle(_priceOracle);
         setSwapConnector(_swapConnector);
+        setWhitelistedTokens(_whitelistedTokens, trues(_whitelistedTokens.length));
         setWhitelistedStrategies(_whitelistedStrategies, trues(_whitelistedStrategies.length));
     }
 
@@ -71,10 +72,6 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         Accounting storage accounting = accountings[accountAddress];
         invested = accounting.invested[strategy];
         shares = accounting.shares[strategy];
-    }
-
-    function isTokenWhitelisted(address token) external override view returns (bool) {
-        return tokenWhitelistedTimes[token] > 0;
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
@@ -95,28 +92,23 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         emit SwapConnectorSet(newSwapConnector);
     }
 
-    function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisteds)
-        public
-        override
-        nonReentrant
-        onlyOwner
-    {
-        require(strategies.length == whitelisteds.length, "INVALID_WHITELISTED_LENGTH");
+    function setWhitelistedTokens(address[] memory tokens, bool[] memory whitelisted) public override nonReentrant onlyOwner {
+        require(tokens.length == whitelisted.length, "INVALID_WHITELISTED_LENGTH");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            require(token != address(0), "TOKEN_ZERO_ADDRESS");
+            isTokenWhitelisted[token] = whitelisted[i];
+            emit WhitelistedTokenSet(token, whitelisted[i]);
+        }
+    }
 
+    function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisted) public override nonReentrant onlyOwner {
+        require(strategies.length == whitelisted.length, "INVALID_WHITELISTED_LENGTH");
         for (uint256 i = 0; i < strategies.length; i++) {
             address strategy = strategies[i];
             require(strategy != address(0), "STRATEGY_ZERO_ADDRESS");
-
-            bool whitelisted = whitelisteds[i];
-            bool wasWhitelisted = isStrategyWhitelisted[strategy];
-
-            if (wasWhitelisted != whitelisted) {
-                isStrategyWhitelisted[strategy] = whitelisted;
-                address token = IStrategy(strategy).getToken();
-                uint256 whitelistedTimes = tokenWhitelistedTimes[token];
-                tokenWhitelistedTimes[token] = whitelisted ? whitelistedTimes.add(1) : whitelistedTimes.sub(1);
-                emit WhitelistedStrategySet(strategy, whitelisted);
-            }
+            isStrategyWhitelisted[strategy] = whitelisted[i];
+            emit WhitelistedStrategySet(strategy, whitelisted[i]);
         }
     }
 

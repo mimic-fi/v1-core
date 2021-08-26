@@ -14,10 +14,10 @@ const ALLOWED_STRATEGIES = {
 
 const AgreementDeployer = {
   async deploy(params: RawAgreementDeployment = {}): Promise<Agreement> {
-    const { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies } = await this.parseParams(params)
+    const { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies } = await this.parseParams(params)
 
     const agreement = await deploy('Agreement', [], params.from)
-    await agreement.init(
+    await agreement.initialize(
       vault.address,
       toAddress(feeCollector),
       depositFee,
@@ -25,11 +25,13 @@ const AgreementDeployer = {
       maxSwapSlippage,
       toAddresses(managers),
       toAddresses(withdrawers),
+      toAddresses(tokens),
+      ALLOWED_STRATEGIES[allowedTokens],
       toAddresses(strategies),
       ALLOWED_STRATEGIES[allowedStrategies]
     )
 
-    return new Agreement(agreement, vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies)
+    return new Agreement(agreement, vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies)
   },
 
   async parseParams(params: RawAgreementDeployment): Promise<AgreementDeployment> {
@@ -44,9 +46,12 @@ const AgreementDeployer = {
     const managers = params.managers || [signer3, signer4]
     const withdrawers = params.withdrawers || [signer1, signer2]
 
+    const tokens = params.tokens ?? []
+    const allowedTokens = params.allowedTokens ?? 'any'
+
     const strategies = params.strategies ?? []
     const allowedStrategies = params.allowedStrategies ?? 'any'
-    return { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies }
+    return { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies }
   },
 }
 

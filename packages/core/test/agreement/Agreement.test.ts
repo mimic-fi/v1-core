@@ -1,11 +1,11 @@
-import { expect } from 'chai'
-import { Contract } from 'ethers'
-import { fp, deploy, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import {expect} from 'chai'
+import {Contract} from 'ethers'
+import {deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS} from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
 import TokenList from '../helpers/models/tokens/TokenList'
 import Agreement from '../helpers/models/agreement/Agreement'
-import { Account, toAddress, toAddresses } from '../helpers/models/types'
+import {Account, toAddress, toAddresses} from '../helpers/models/types'
 
 describe('Agreement', () => {
   let tokens: TokenList
@@ -281,43 +281,53 @@ describe('Agreement', () => {
   })
 
   describe('tokens', () => {
-    let vault: Vault, whitelistedStrategy: Contract, whitelistedToken: string, strategies: Contract[], customTokens: string[]
+    let vault: Vault, whitelistedToken: Contract, customTokens: Contract[]
 
-    beforeEach('deploy strategies', async () => {
-      strategies = []
+    beforeEach('deploy tokens', async () => {
       customTokens = []
 
       for (let i = 0; i < 3; i++) {
-        const token = tokens.addresses[i]
-        customTokens.push(token)
-        strategies.push(await deploy('StrategyMock', [token]))
+        customTokens.push(tokens.tokens[i].instance)
       }
 
-      whitelistedToken = tokens.addresses[3]
-      whitelistedStrategy = await deploy('StrategyMock', [whitelistedToken])
-      vault = await Vault.create({ strategies: [whitelistedStrategy] })
+      whitelistedToken = tokens.tokens[3].instance
+      vault = await Vault.create({ tokens: [whitelistedToken] })
     })
 
-    context('when allowing any strategy', () => {
-      const allowedStrategies = 'any'
+    context('when allowing any', () => {
+      const allowedTokens = 'any'
 
-      it('allows any token', async () => {
-        const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
+      context('without a custom set of tokens', () => {
+        it('allows any token', async () => {
+          const agreement = await Agreement.create({ vault, tokens: [], allowedTokens })
 
-        expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.true
-        expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
-        expect(await agreement.isTokenAllowed(customTokens[1])).to.be.true
-        expect(await agreement.isTokenAllowed(customTokens[2])).to.be.true
-        expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.true
+          expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[1])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[2])).to.be.true
+          expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.true
+        })
+      })
+
+      context('with a custom set of tokens', () => {
+        it('allows any token', async () => {
+          const agreement = await Agreement.create({ vault, tokens: customTokens, allowedTokens })
+
+          expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[1])).to.be.true
+          expect(await agreement.isTokenAllowed(customTokens[2])).to.be.true
+          expect(await agreement.isTokenAllowed(whitelistedToken)).to.be.true
+        })
       })
     })
 
-    context('when allowing no strategies', () => {
-      const allowedStrategies = 'none'
+    context('when allowing none', () => {
+      const allowedTokens = 'none'
 
-      context('without a custom set of strategies', () => {
+      context('without a custom set of tokens', () => {
         it('does not allow any token', async () => {
-          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
+          const agreement = await Agreement.create({ vault, tokens: [], allowedTokens })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.false
@@ -327,9 +337,9 @@ describe('Agreement', () => {
         })
       })
 
-      context('with a custom set of strategies', () => {
-        it('allows only the tokens of the custom strategies', async () => {
-          const agreement = await Agreement.create({ vault, strategies, allowedStrategies })
+      context('with a custom set of tokens', () => {
+        it('allows only the custom tokens', async () => {
+          const agreement = await Agreement.create({ vault, tokens: customTokens, allowedTokens })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
@@ -340,12 +350,12 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing whitelisted strategies', () => {
-      const allowedStrategies = 'whitelisted'
+    context('when allowing whitelisted', () => {
+      const allowedTokens = 'whitelisted'
 
-      context('without a custom set of strategies', () => {
-        it('allows any token from a whitelisted strategy', async () => {
-          const agreement = await Agreement.create({ vault, strategies: [], allowedStrategies })
+      context('without a custom set of tokens', () => {
+        it('allows any whitelisted token', async () => {
+          const agreement = await Agreement.create({ vault, tokens: [], allowedTokens })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.false
@@ -355,9 +365,9 @@ describe('Agreement', () => {
         })
       })
 
-      context('with a custom set of strategies', () => {
-        it('allows any token from a whitelisted and custom strategy', async () => {
-          const agreement = await Agreement.create({ vault, strategies, allowedStrategies })
+      context('with a custom set of tokens', () => {
+        it('allows any whitelisted and custom token', async () => {
+          const agreement = await Agreement.create({ vault, tokens: customTokens, allowedTokens })
 
           expect(await agreement.isTokenAllowed(ZERO_ADDRESS)).to.be.false
           expect(await agreement.isTokenAllowed(customTokens[0])).to.be.true
@@ -370,14 +380,14 @@ describe('Agreement', () => {
   })
 
   describe('can perform', () => {
-    let agreement: Agreement, who: Account, where: string, customStrategy: Contract, customToken: string
+    let agreement: Agreement, who: Account, where: string, customStrategy: Contract, customToken: Contract
 
     const maxSwapSlippage = fp(0.2)
 
     beforeEach('deploy agreement', async () => {
-      customToken = tokens.first.address
-      customStrategy = await deploy('StrategyMock', [customToken])
-      agreement = await Agreement.create({ allowedStrategies: 'none', strategies: [customStrategy], maxSwapSlippage })
+      customToken = tokens.first.instance
+      customStrategy = await deploy('StrategyMock', [customToken.address])
+      agreement = await Agreement.create({ allowedStrategies: 'none', strategies: [customStrategy], allowedTokens: 'none', tokens: [customToken], maxSwapSlippage })
     })
 
     const itDoesNotAcceptAnyAction = () => {
@@ -421,24 +431,28 @@ describe('Agreement', () => {
         expect(await agreement.canWithdraw({ who, where, how: [collector] })).to.be.false
       })
 
-      it('accepts operating with allowed strategies', async () => {
+      it('accepts operating with allowed tokens', async () => {
         const unknownToken = tokens.addresses[3]
         const whitelistedToken = tokens.second.address
-        const whitelistedStrategy = await deploy('StrategyMock', [whitelistedToken])
-        await agreement.vault.setWhitelistedStrategies(whitelistedStrategy)
+        await agreement.vault.setWhitelistedTokens(whitelistedToken)
 
         // valid token out, valid slippage
-        expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken, fp(10), maxSwapSlippage] })).to.be.true
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken.address, fp(10), maxSwapSlippage] })).to.be.true
         // valid token out, invalid slippage
-        expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
+        expect(await agreement.canSwap({ who, where, how: [unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1)] })).to.be.false
         // invalid token out, valid slippage
         expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken, fp(10), maxSwapSlippage] })).to.be.false
         // invalid token out, invalid slippage
         expect(await agreement.canSwap({ who, where, how: [unknownToken, whitelistedToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
         // invalid token out, valid slippage
-        expect(await agreement.canSwap({ who, where, how: [customToken, unknownToken, fp(10), maxSwapSlippage] })).to.be.false
+        expect(await agreement.canSwap({ who, where, how: [customToken.address, unknownToken, fp(10), maxSwapSlippage] })).to.be.false
         // invalid token out, invalid slippage
-        expect(await agreement.canSwap({ who, where, how: [customToken, unknownToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
+        expect(await agreement.canSwap({ who, where, how: [customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1)] })).to.be.false
+      })
+
+      it('accepts operating with allowed strategies', async () => {
+        const whitelistedStrategy = await deploy('StrategyMock', [tokens.second.address])
+        await agreement.vault.setWhitelistedStrategies(whitelistedStrategy)
 
         expect(await agreement.canJoin({ who, where, how: [customStrategy.address] })).to.be.true
         expect(await agreement.canJoin({ who, where, how: [whitelistedStrategy.address] })).to.be.false

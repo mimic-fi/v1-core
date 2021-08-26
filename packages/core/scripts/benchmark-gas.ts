@@ -15,10 +15,10 @@ async function benchmark(): Promise<void> {
   const strategy1 = await deploy('StrategyMock', [tokens.first.address])
   const strategy2 = await deploy('StrategyMock', [tokens.second.address])
   const strategies = [strategy1, strategy2]
-  const vault = await deploy('Vault', [protocolFee, priceOracle.address, swapConnector.address, toAddresses(strategies)])
+  const vault = await deploy('Vault', [protocolFee, priceOracle.address, swapConnector.address, tokens.addresses, toAddresses(strategies)])
 
   console.log('\n\n### Agreements ###')
-  const agreement = await benchmarkAgreement(vault, strategies)
+  const agreement = await benchmarkAgreement(vault, tokens.addresses, toAddresses(strategies))
 
   console.log('\n\n### Vault (agreement) ###')
   await benchmarkVault(vault, agreement.address, strategies, tokens)
@@ -29,26 +29,29 @@ async function benchmark(): Promise<void> {
   await benchmarkVault(vault, eoa.address, strategies, tokens)
 }
 
-async function benchmarkAgreement(vault: Contract, strategies: Contract[]): Promise<Contract> {
+async function benchmarkAgreement(vault: Contract, tokens: string[], strategies: string[]): Promise<Contract> {
   const factory = await deploy('AgreementFactory', [vault.address])
 
   const name = 'Test Agreement'
   const depositFee = fp(0.00005)
   const performanceFee = fp(0.00001)
   const maxSwapSlippage = fp(0.1)
-  const allowedStrategies = 2
   const [withdrawer1, withdrawer2, manager1, manager2, feeCollector] = toAddresses(await getSigners())
   const managers = [manager1, manager2]
   const withdrawers = [withdrawer1, withdrawer2]
-  const agreement1Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, toAddresses(strategies), allowedStrategies)
-  const agreement2Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], toAddresses(strategies), allowedStrategies)
-  const agreement3Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [strategies[0].address], allowedStrategies)
-  const agreement4Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [], allowedStrategies)
+  const allowedTokens = 2
+  const allowedStrategies = 2
+  const agreement1Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies)
+  const agreement2Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowedTokens, strategies, allowedStrategies)
+  const agreement3Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowedTokens, [strategies[0]], allowedStrategies)
+  const agreement4Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowedTokens, [], allowedStrategies)
+  const agreement5Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [], allowedTokens, [], allowedStrategies)
 
-  console.log(`- 2 managers, 2 withdrawers, 2 custom strategies: ${(await agreement1Tx.wait()).gasUsed}`)
-  console.log(`- 1 managers, 1 withdrawers, 2 custom strategies: ${(await agreement2Tx.wait()).gasUsed}`)
-  console.log(`- 1 managers, 1 withdrawers, 1 custom strategies: ${(await agreement3Tx.wait()).gasUsed}`)
-  console.log(`- 1 managers, 1 withdrawers, 0 custom strategies: ${(await agreement4Tx.wait()).gasUsed}`)
+  console.log(`- 2 managers, 2 withdrawers, 2 tokens, 2 strategies: ${(await agreement1Tx.wait()).gasUsed}`)
+  console.log(`- 1 managers, 1 withdrawers, 2 tokens, 2 strategies: ${(await agreement2Tx.wait()).gasUsed}`)
+  console.log(`- 1 managers, 1 withdrawers, 2 tokens, 1 strategy: ${(await agreement3Tx.wait()).gasUsed}`)
+  console.log(`- 1 managers, 1 withdrawers, 2 tokens, 0 strategy: ${(await agreement4Tx.wait()).gasUsed}`)
+  console.log(`- 1 managers, 1 withdrawers, 0 tokens, 0 strategy: ${(await agreement5Tx.wait()).gasUsed}`)
 
   const { args } = await assertEvent(agreement1Tx, 'AgreementCreated', { name })
   return instanceAt('Agreement', args.agreement)

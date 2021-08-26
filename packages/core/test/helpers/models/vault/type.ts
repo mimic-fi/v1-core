@@ -7,6 +7,7 @@ export type RawVaultDeployment = {
   protocolFee?: BigNumberish
   priceOracle?: Contract
   swapConnector?: Contract
+  tokens?: Contract[]
   strategies?: Contract[]
   from?: SignerWithAddress
 }
@@ -16,6 +17,7 @@ export type VaultDeployment = {
   protocolFee: BigNumberish
   priceOracle: Contract
   swapConnector: Contract
+  tokens: Contract[]
   strategies: Contract[]
   admin: SignerWithAddress
 }

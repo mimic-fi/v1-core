@@ -6,7 +6,7 @@ import { BigNumberish } from '@mimic-fi/v1-helpers'
 import Vault from '../vault/Vault'
 import { Account } from '../types'
 
-export type AllowedStrategies = 'any' | 'whitelisted' | 'none'
+export type Allowed = 'any' | 'whitelisted' | 'none'
 
 export type RawAgreementDeployment = {
   vault?: Vault | 'mocked'
@@ -16,7 +16,9 @@ export type RawAgreementDeployment = {
   maxSwapSlippage?: BigNumberish
   managers?: Account[]
   withdrawers?: Account[]
-  allowedStrategies?: AllowedStrategies
+  allowedTokens?: Allowed
+  tokens?: Contract[]
+  allowedStrategies?: Allowed
   strategies?: Contract[]
   from?: SignerWithAddress
 }
@@ -29,7 +31,9 @@ export type AgreementDeployment = {
   maxSwapSlippage: BigNumberish
   managers: Account[]
   withdrawers: Account[]
-  allowedStrategies: AllowedStrategies
+  allowedTokens: Allowed
+  tokens: Contract[]
+  allowedStrategies: Allowed
   strategies: Contract[]
   from?: SignerWithAddress
 }

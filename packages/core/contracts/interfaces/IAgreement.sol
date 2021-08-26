@@ -19,7 +19,8 @@ import "./IPortfolio.sol";
 interface IAgreement is IPortfolio {
     event ManagersSet(address[] managers);
     event WithdrawersSet(address[] withdrawers);
-    event StrategiesSet(uint256 allowedStrategies, address[] customStrategies);
+    event AllowedTokensSet(uint256 allowedTokens, address[] customTokens);
+    event AllowedStrategiesSet(uint256 allowedStrategies, address[] customStrategies);
 
     function vault() external view returns (address);
 

@@ -23,6 +23,7 @@ interface IVault {
     event ProtocolFeeSet(uint256 protocolFee);
     event PriceOracleSet(address priceOracle);
     event SwapConnectorSet(address swapConnector);
+    event WhitelistedTokenSet(address indexed token, bool whitelisted);
     event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
 
     function protocolFee() external view returns (uint256);
@@ -56,6 +57,8 @@ interface IVault {
     function setPriceOracle(address newPriceOracle) external;
 
     function setSwapConnector(address newSwapConnector) external;
+
+    function setWhitelistedTokens(address[] memory tokens, bool[] memory whitelisted) external;
 
     function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisted) external;
 }

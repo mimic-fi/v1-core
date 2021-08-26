@@ -36,7 +36,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     using BytesHelpers for bytes32;
     using BytesHelpers for bytes32[];
 
-    enum AllowedStrategies {
+    enum Allowed {
         Any,
         None,
         Whitelisted
@@ -55,8 +55,10 @@ contract Agreement is IAgreement, ReentrancyGuard {
     mapping (address => bool) public override isManager;
     mapping (address => bool) public override isWithdrawer;
 
-    address[] public customStrategies;
-    AllowedStrategies public allowedStrategies;
+    Allowed public allowedTokens;
+    mapping (address => bool) public isCustomToken;
+
+    Allowed public allowedStrategies;
     mapping (address => bool) public isCustomStrategy;
 
     modifier onlyVault() {
@@ -64,7 +66,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         _;
     }
 
-    function init(
+    function initialize(
         address _vault,
         address _feeCollector,
         uint256 _depositFee,
@@ -72,47 +74,17 @@ contract Agreement is IAgreement, ReentrancyGuard {
         uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
+        address[] memory _customTokens,
+        Allowed _allowedTokens,
         address[] memory _customStrategies,
-        AllowedStrategies _allowedStrategies
+        Allowed _allowedStrategies
     ) external {
-        require(vault == address(0), "ALREADY_INIT");
-        require(_vault.isContract(), "VAULT_NOT_CONTRACT");
-        vault = _vault;
-
-        require(_depositFee <= MAX_DEPOSIT_FEE, "DEPOSIT_FEE_TOO_HIGH");
-        depositFee = _depositFee;
-
-        require(_performanceFee <= MAX_PERFORMANCE_FEE, "PERFORMANCE_FEE_TOO_HIGH");
-        performanceFee = _performanceFee;
-
-        require(_feeCollector != address(0), "FEE_COLLECTOR_ZERO_ADDRESS");
-        feeCollector = _feeCollector;
-        emit FeesConfigSet(_depositFee, _performanceFee, _feeCollector);
-
-        require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
-        maxSwapSlippage = _maxSwapSlippage;
-
-        require(_managers.length > 0, "MISSING_MANAGERS");
-        for (uint256 i = 0; i < _managers.length; i++) {
-            require(_managers[i] != address(0), "MANAGER_ZERO_ADDRESS");
-            isManager[_managers[i]] = true;
-        }
-        emit ManagersSet(_managers);
-
-        require(_withdrawers.length > 0, "MISSING_WITHDRAWERS");
-        for (uint256 i = 0; i < _withdrawers.length; i++) {
-            require(_withdrawers[i] != address(0), "WITHDRAWER_ZERO_ADDRESS");
-            isWithdrawer[_withdrawers[i]] = true;
-        }
-        emit WithdrawersSet(_withdrawers);
-
-        for (uint256 i = 0; i < _customStrategies.length; i++) {
-            require(_customStrategies[i].isContract(), "CUSTOM_STRATEGY_NOT_CONTRACT");
-            isCustomStrategy[_customStrategies[i]] = true;
-            customStrategies.push(_customStrategies[i]);
-        }
-        allowedStrategies = _allowedStrategies;
-        emit StrategiesSet(uint256(_allowedStrategies), _customStrategies);
+        _setVault(_vault);
+        _setParams(_feeCollector, _depositFee, _performanceFee, _maxSwapSlippage);
+        _setManagers(_managers);
+        _setWithdrawers(_withdrawers);
+        _setAllowedTokens(_customTokens, _allowedTokens);
+        _setAllowedStrategies(_customStrategies, _allowedStrategies);
     }
 
     function getDepositFee() external override view returns (uint256, address) {
@@ -131,27 +103,20 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return isWithdrawer[sender] || isManager[sender];
     }
 
-    function isStrategyAllowed(address strategy) public override view returns (bool) {
-        if (allowedStrategies == AllowedStrategies.Any || isCustomStrategy[strategy]) {
-            return true;
-        }
-
-        return allowedStrategies == AllowedStrategies.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
-    }
-
     function isTokenAllowed(address token) public override view returns (bool) {
-        if (allowedStrategies == AllowedStrategies.Any || isCustomToken(token)) {
+        if (allowedTokens == Allowed.Any || isCustomToken[token]) {
             return true;
         }
 
-        return allowedStrategies == AllowedStrategies.Whitelisted && IVault(vault).isTokenWhitelisted(token);
+        return allowedTokens == Allowed.Whitelisted && IVault(vault).isTokenWhitelisted(token);
     }
 
-    function isCustomToken(address token) public view returns (bool) {
-        for (uint256 i = 0; i < customStrategies.length; i++) {
-            if (token == IStrategy(customStrategies[i]).getToken()) return true;
+    function isStrategyAllowed(address strategy) public override view returns (bool) {
+        if (allowedStrategies == Allowed.Any || isCustomStrategy[strategy]) {
+            return true;
         }
-        return false;
+
+        return allowedStrategies == Allowed.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
     }
 
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external override view returns (bool) {
@@ -236,5 +201,63 @@ contract Agreement is IAgreement, ReentrancyGuard {
                 token.safeApprove(vault, FixedPoint.MAX_UINT256);
             }
         }
+    }
+
+    function _setAllowedTokens(address[] memory tokens, Allowed allowed) private {
+        allowedTokens = allowed;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i].isContract(), "CUSTOM_TOKEN_NOT_CONTRACT");
+            isCustomToken[tokens[i]] = true;
+        }
+        emit AllowedTokensSet(uint256(allowed), tokens);
+    }
+
+    function _setAllowedStrategies(address[] memory strategies, Allowed allowed) private {
+        allowedStrategies = allowed;
+        for (uint256 i = 0; i < strategies.length; i++) {
+            require(strategies[i].isContract(), "CUSTOM_STRATEGY_NOT_CONTRACT");
+            isCustomStrategy[strategies[i]] = true;
+        }
+        emit AllowedStrategiesSet(uint256(allowed), strategies);
+    }
+
+    function _setManagers(address[] memory managers) private {
+        require(managers.length > 0, "MISSING_MANAGERS");
+        for (uint256 i = 0; i < managers.length; i++) {
+            require(managers[i] != address(0), "MANAGER_ZERO_ADDRESS");
+            isManager[managers[i]] = true;
+        }
+        emit ManagersSet(managers);
+    }
+
+    function _setWithdrawers(address[] memory withdrawers) private {
+        require(withdrawers.length > 0, "MISSING_WITHDRAWERS");
+        for (uint256 i = 0; i < withdrawers.length; i++) {
+            require(withdrawers[i] != address(0), "WITHDRAWER_ZERO_ADDRESS");
+            isWithdrawer[withdrawers[i]] = true;
+        }
+        emit WithdrawersSet(withdrawers);
+    }
+
+    function _setParams(address _feeCollector, uint256 _depositFee, uint256 _performanceFee, uint256 _maxSwapSlippage) private {
+        require(_feeCollector != address(0), "FEE_COLLECTOR_ZERO_ADDRESS");
+        feeCollector = _feeCollector;
+
+        require(_depositFee <= MAX_DEPOSIT_FEE, "DEPOSIT_FEE_TOO_HIGH");
+        depositFee = _depositFee;
+
+        require(_performanceFee <= MAX_PERFORMANCE_FEE, "PERFORMANCE_FEE_TOO_HIGH");
+        performanceFee = _performanceFee;
+
+        require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
+        maxSwapSlippage = _maxSwapSlippage;
+
+        emit FeesConfigSet(_depositFee, _performanceFee, _feeCollector);
+    }
+
+    function _setVault(address _vault) private {
+        require(vault == address(0), "ALREADY_INIT");
+        require(_vault.isContract(), "VAULT_NOT_CONTRACT");
+        vault = _vault;
     }
 }

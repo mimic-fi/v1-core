@@ -2,9 +2,10 @@ import { BigNumber, Contract, utils } from 'ethers'
 import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import { Account, toAddress, toAddresses } from '../types'
-import { AllowedStrategies, RawAgreementDeployment } from './types'
+import { Allowed, RawAgreementDeployment } from './types'
 
 import Vault from '../vault/Vault'
+import TokenList from '../tokens/TokenList'
 import AgreementDeployer from './AgreementDeployer'
 
 export default class Agreement {
@@ -16,8 +17,10 @@ export default class Agreement {
   maxSwapSlippage: BigNumberish
   managers: Account[]
   withdrawers: Account[]
+  tokens: Contract[]
+  allowedTokens: Allowed
   strategies: Contract[]
-  allowedStrategies: AllowedStrategies
+  allowedStrategies: Allowed
 
   static async create(params: RawAgreementDeployment = {}): Promise<Agreement> {
     return AgreementDeployer.deploy(params)
@@ -32,8 +35,10 @@ export default class Agreement {
     maxSwapSlippage: BigNumberish,
     managers: Account[],
     withdrawers: Account[],
+    tokens: Contract[],
+    allowedTokens: Allowed,
     strategies: Contract[],
-    allowedStrategies: AllowedStrategies
+    allowedStrategies: Allowed
   ) {
     this.instance = instance
     this.vault = vault
@@ -43,6 +48,8 @@ export default class Agreement {
     this.maxSwapSlippage = maxSwapSlippage
     this.managers = managers
     this.withdrawers = withdrawers
+    this.tokens = tokens
+    this.allowedTokens = allowedTokens
     this.strategies = strategies
     this.allowedStrategies = allowedStrategies
   }
