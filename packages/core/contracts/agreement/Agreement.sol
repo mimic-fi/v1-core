@@ -64,7 +64,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         _;
     }
 
-    constructor(
+    function init(
         address _vault,
         address _feeCollector,
         uint256 _depositFee,
@@ -74,7 +74,8 @@ contract Agreement is IAgreement, ReentrancyGuard {
         address[] memory _withdrawers,
         address[] memory _customStrategies,
         AllowedStrategies _allowedStrategies
-    ) {
+    ) external {
+        require(vault == address(0), "ALREADY_INIT");
         require(_vault.isContract(), "VAULT_NOT_CONTRACT");
         vault = _vault;
 

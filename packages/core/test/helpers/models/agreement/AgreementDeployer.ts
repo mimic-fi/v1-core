@@ -16,20 +16,17 @@ const AgreementDeployer = {
   async deploy(params: RawAgreementDeployment = {}): Promise<Agreement> {
     const { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies } = await this.parseParams(params)
 
-    const agreement = await deploy(
-      'Agreement',
-      [
-        vault.address,
-        toAddress(feeCollector),
-        depositFee,
-        performanceFee,
-        maxSwapSlippage,
-        toAddresses(managers),
-        toAddresses(withdrawers),
-        toAddresses(strategies),
-        ALLOWED_STRATEGIES[allowedStrategies],
-      ],
-      params.from
+    const agreement = await deploy('Agreement', [], params.from)
+    await agreement.init(
+      vault.address,
+      toAddress(feeCollector),
+      depositFee,
+      performanceFee,
+      maxSwapSlippage,
+      toAddresses(managers),
+      toAddresses(withdrawers),
+      toAddresses(strategies),
+      ALLOWED_STRATEGIES[allowedStrategies]
     )
 
     return new Agreement(agreement, vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, strategies, allowedStrategies)
