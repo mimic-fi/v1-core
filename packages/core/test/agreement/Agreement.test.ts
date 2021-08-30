@@ -546,7 +546,7 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, [], [])).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, [], [])).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
     })
@@ -570,7 +570,7 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeWithdraw(ZERO_ADDRESS, [], [], ZERO_ADDRESS)).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(agreement.instance.beforeWithdraw(ZERO_ADDRESS, [], [], ZERO_ADDRESS)).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
     })

@@ -107,7 +107,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.deposit(account, tokens.addresses, fp(10), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.deposit(account, tokens.addresses, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -268,7 +268,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.deposit(portfolio, tokens.addresses, fp(10), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.deposit(portfolio, tokens.addresses, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -345,7 +345,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.withdraw(account, tokens.addresses, amount, other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.withdraw(account, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -680,7 +680,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.withdraw(portfolio, tokens.addresses, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -866,7 +866,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.swap(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.swap(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1122,7 +1122,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, fp(1), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1248,7 +1248,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.join(account, strategy, fp(10), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.join(account, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1440,7 +1440,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1617,7 +1617,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.exit(account, strategy, fp(1), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.exit(account, strategy, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1882,7 +1882,7 @@ describe('Vault', () => {
         })
 
         it('reverts', async () => {
-          await expect(vault.exit(portfolio, strategy, fp(1), { from })).to.be.revertedWith('SENDER_NOT_ALLOWED')
+          await expect(vault.exit(portfolio, strategy, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })

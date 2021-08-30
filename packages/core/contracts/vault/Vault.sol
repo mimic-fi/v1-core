@@ -335,6 +335,6 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         // on its behalf. Note that this will never apply for accounts trying to operate on behalf of foreign EOAs.
         account = Accounts.parse(accountAddress);
         bool allowed = account.isSender() || account.canPerform(msg.sender, address(this), msg.sig.toBytes32(), params);
-        require(allowed, "SENDER_NOT_ALLOWED");
+        require(allowed, "ACTION_NOT_ALLOWED");
     }
 }

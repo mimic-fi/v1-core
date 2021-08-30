@@ -62,7 +62,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     mapping (address => bool) public isCustomStrategy;
 
     modifier onlyVault() {
-        require(msg.sender == vault, "SENDER_NOT_ALLOWED");
+        require(msg.sender == vault, "SENDER_NOT_VAULT");
         _;
     }
 
