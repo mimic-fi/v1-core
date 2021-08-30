@@ -35,7 +35,7 @@ async function benchmarkAgreement(vault: Contract, tokens: string[], strategies:
   const depositFee = fp(0.00005)
   const performanceFee = fp(0.00001)
   const maxSwapSlippage = fp(0.1)
-  const [withdrawer1, withdrawer2, manager1, manager2, feeCollector] = toAddresses(await getSigners())
+  const [manager1, manager2, withdrawer1, withdrawer2, feeCollector] = toAddresses(await getSigners())
   const managers = [manager1, manager2]
   const withdrawers = [withdrawer1, withdrawer2]
   const allowedTokens = 2
@@ -81,9 +81,9 @@ async function benchmarkVault(vault: Contract, account: string, strategies: Cont
   console.log(`- Half exit: \t\t${(await exit1Tx.wait()).gasUsed}`)
   console.log(`- Full exit: \t\t${(await exit2Tx.wait()).gasUsed}`)
 
-  const recipient = await getSigner()
-  const withdraw1Tx = await vault.withdraw(account, [token.address], [fp(100)], recipient.address)
-  const withdraw2Tx = await vault.withdraw(account, [token.address], [fp(100)], recipient.address)
+  const withdrawer = await getSigner(2)
+  const withdraw1Tx = await vault.withdraw(account, [token.address], [fp(100)], withdrawer.address)
+  const withdraw2Tx = await vault.withdraw(account, [token.address], [fp(100)], withdrawer.address)
   console.log(`- First withdraw: \t${(await withdraw1Tx.wait()).gasUsed}`)
   console.log(`- Second withdraw: \t${(await withdraw2Tx.wait()).gasUsed}`)
 }

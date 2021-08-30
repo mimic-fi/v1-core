@@ -17,8 +17,8 @@
     "lint:typescript": "eslint . --ext .ts",
     "test": "hardhat test",
     "benchmark": "yarn benchmark:gas && yarn benchmark:bytecode",
-    "benchmark:gas": "yarn ts-node scripts/benchmark-gas.ts",
-    "benchmark:bytecode": "yarn ts-node scripts/benchmark-bytecode.ts",
+    "benchmark:gas": "hardhat run ./scripts/benchmark-gas.ts",
+    "benchmark:bytecode": "hardhat run ./scripts/benchmark-bytecode.ts",
     "prepublish": "yarn build"
   },
   "dependencies": {
