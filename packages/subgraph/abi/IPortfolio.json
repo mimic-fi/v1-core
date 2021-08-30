@@ -1,30 +1,5 @@
 [
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "depositFee",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "performanceFee",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "feeCollector",
-        "type": "address"
-      }
-    ],
-    "name": "FeesConfigSet",
-    "type": "event"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -99,6 +74,44 @@
       }
     ],
     "name": "afterJoin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenOut",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "slippage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "afterSwap",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -218,6 +231,44 @@
         "type": "address"
       },
       {
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenOut",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "slippage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "beforeSwap",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
         "internalType": "address[]",
         "name": "tokens",
         "type": "address[]"
@@ -313,9 +364,9 @@
     "name": "getSupportedCallbacks",
     "outputs": [
       {
-        "internalType": "bytes1",
+        "internalType": "bytes2",
         "name": "",
-        "type": "bytes1"
+        "type": "bytes2"
       }
     ],
     "stateMutability": "view",

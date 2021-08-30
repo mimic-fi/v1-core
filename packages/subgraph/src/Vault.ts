@@ -3,9 +3,8 @@ import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
 import { loadOrCreateERC20 } from './ERC20';
 import { loadOrCreateStrategy, createLastRate } from './Strategy';
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
-import { ERC20 as ERC20Contract } from '../types/Vault/ERC20'
 
-import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedStrategySet } from '../types/Vault/Vault'
+import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
 import {
   Vault as VaultEntity,
   Strategy as StrategyEntity,
@@ -100,6 +99,12 @@ export function handleProtocolFeeSet(event: ProtocolFeeSet): void {
   let vault = loadOrCreateVault(event.address)
   vault.protocolFee = event.params.protocolFee
   vault.save()
+}
+
+export function handleWhitelistedTokenSet(event: WhitelistedTokenSet): void {
+  let token = loadOrCreateERC20(event.params.token)
+  token.whitelisted = event.params.whitelisted
+  token.save();
 }
 
 export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): void {

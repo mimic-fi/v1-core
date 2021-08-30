@@ -1,6 +1,6 @@
 import { BigInt, Address } from '@graphprotocol/graph-ts'
 
-import { ManagersSet, StrategiesSet, WithdrawersSet, FeesConfigSet } from '../types/templates/Agreement/Agreement'
+import { ManagersSet, AllowedTokensSet, AllowedStrategiesSet, WithdrawersSet, ParamsSet } from '../types/templates/Agreement/Agreement'
 import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as PortfolioEntity } from '../types/schema'
 
 export function handleWithdrawersSet(event: WithdrawersSet): void {
@@ -31,7 +31,22 @@ export function handleManagersSet(event: ManagersSet): void {
   agreement.save()
 }
 
-export function handleStrategiesSet(event: StrategiesSet): void {
+export function handleAllowedTokensSet(event: AllowedTokensSet): void {
+  let agreement = loadOrCreateAgreement(event.address)
+  let customTokens = agreement.customStrategies
+  let eventTokens = event.params.customTokens
+
+  for (let i: i32 = 0; i < eventTokens.length; i++) {
+    let token = eventTokens[i]
+    customTokens.push(token.toHexString())
+  }
+
+  agreement.customTokens = customTokens
+  agreement.allowedTokens = parseAllowed(event.params.allowedTokens)
+  agreement.save()
+}
+
+export function handleAllowedStrategiesSet(event: AllowedStrategiesSet): void {
   let agreement = loadOrCreateAgreement(event.address)
   let customStrategies = agreement.customStrategies
   let eventStrategies = event.params.customStrategies
@@ -42,11 +57,11 @@ export function handleStrategiesSet(event: StrategiesSet): void {
   }
 
   agreement.customStrategies = customStrategies
-  agreement.allowedStrategies = parseAllowedStrategies(event.params.allowedStrategies)
+  agreement.allowedStrategies = parseAllowed(event.params.allowedStrategies)
   agreement.save()
 }
 
-export function handleFeesConfigSet(event: FeesConfigSet): void {
+export function handleParamsSet(event: ParamsSet): void {
   let id = event.address.toHexString()
   let portfolio = PortfolioEntity.load(id) || new PortfolioEntity(id)
   portfolio.depositFee = event.params.depositFee
@@ -65,6 +80,8 @@ export function loadOrCreateAgreement(address: Address): AgreementEntity {
     agreement.name = ''
     agreement.managers = []
     agreement.withdrawers = []
+    agreement.customTokens = []
+    agreement.allowedTokens = 'None'
     agreement.customStrategies = []
     agreement.allowedStrategies = 'None'
     agreement.save()
@@ -85,7 +102,7 @@ function loadOrCreateManager(managerAddress: Address): ManagerEntity {
   return manager!
 }
 
-function parseAllowedStrategies(allowedStrategies: BigInt): string {
+function parseAllowed(allowedStrategies: BigInt): string {
   if (allowedStrategies.equals(BigInt.fromI32(0))) return 'Any'
   if (allowedStrategies.equals(BigInt.fromI32(1))) return 'None'
   if (allowedStrategies.equals(BigInt.fromI32(2))) return 'Whitelisted'

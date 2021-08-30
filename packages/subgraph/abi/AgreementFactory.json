@@ -37,6 +37,11 @@
         "type": "string"
       },
       {
+        "internalType": "address",
+        "name": "_feeCollector",
+        "type": "address"
+      },
+      {
         "internalType": "uint256",
         "name": "_depositFee",
         "type": "uint256"
@@ -47,9 +52,9 @@
         "type": "uint256"
       },
       {
-        "internalType": "address",
-        "name": "_feeCollector",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_maxSwapSlippage",
+        "type": "uint256"
       },
       {
         "internalType": "address[]",
@@ -62,19 +67,42 @@
         "type": "address[]"
       },
       {
-        "internalType": "enum Agreement.AllowedStrategies",
-        "name": "_allowedStrategies",
+        "internalType": "address[]",
+        "name": "_customTokens",
+        "type": "address[]"
+      },
+      {
+        "internalType": "enum Agreement.Allowed",
+        "name": "_allowedTokens",
         "type": "uint8"
       },
       {
         "internalType": "address[]",
         "name": "_customStrategies",
         "type": "address[]"
+      },
+      {
+        "internalType": "enum Agreement.Allowed",
+        "name": "_allowedStrategies",
+        "type": "uint8"
       }
     ],
     "name": "create",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "implementation",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

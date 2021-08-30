@@ -12,6 +12,7 @@ export function loadOrCreateERC20(address: Address): ERC20Entity {
     erc20.name = getERC20Name(address)
     erc20.symbol = getERC20Symbol(address)
     erc20.decimals = getERC20Decimals(address)
+    erc20.whitelisted = false
     erc20.save()
   }
 

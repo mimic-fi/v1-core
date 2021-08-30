@@ -64,7 +64,9 @@ type Agreement @entity {
   portfolio: Portfolio!
   withdrawers: [String!]!
   managers: [Manager!]!
-  allowedStrategies: AllowedStrategies!
+  allowedTokens: Allowed!
+  customTokens: [ERC20!]!
+  allowedStrategies: Allowed!
   customStrategies: [Strategy!]!
 }
 
@@ -73,7 +75,7 @@ type Manager @entity {
   agreements: [Agreement!]! @derivedFrom(field: "managers")
 }
 
-enum AllowedStrategies {
+enum Allowed {
   Any
   None
   Whitelisted
@@ -84,4 +86,5 @@ type ERC20 @entity {
   name: String!
   symbol: String!
   decimals: Int!
+  whitelisted: Boolean!
 }

@@ -5,23 +5,36 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "depositFee",
+        "name": "allowedStrategies",
         "type": "uint256"
       },
+      {
+        "indexed": false,
+        "internalType": "address[]",
+        "name": "customStrategies",
+        "type": "address[]"
+      }
+    ],
+    "name": "AllowedStrategiesSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "performanceFee",
+        "name": "allowedTokens",
         "type": "uint256"
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "feeCollector",
-        "type": "address"
+        "internalType": "address[]",
+        "name": "customTokens",
+        "type": "address[]"
       }
     ],
-    "name": "FeesConfigSet",
+    "name": "AllowedTokensSet",
     "type": "event"
   },
   {
@@ -42,18 +55,30 @@
     "inputs": [
       {
         "indexed": false,
+        "internalType": "address",
+        "name": "feeCollector",
+        "type": "address"
+      },
+      {
+        "indexed": false,
         "internalType": "uint256",
-        "name": "allowedStrategies",
+        "name": "depositFee",
         "type": "uint256"
       },
       {
         "indexed": false,
-        "internalType": "address[]",
-        "name": "customStrategies",
-        "type": "address[]"
+        "internalType": "uint256",
+        "name": "performanceFee",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "maxSwapSlippage",
+        "type": "uint256"
       }
     ],
-    "name": "StrategiesSet",
+    "name": "ParamsSet",
     "type": "event"
   },
   {
@@ -144,6 +169,44 @@
       }
     ],
     "name": "afterJoin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenOut",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "slippage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "afterSwap",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -251,6 +314,44 @@
       }
     ],
     "name": "beforeJoin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenOut",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "slippage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "beforeSwap",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -384,9 +485,9 @@
     "name": "getSupportedCallbacks",
     "outputs": [
       {
-        "internalType": "bytes1",
+        "internalType": "bytes2",
         "name": "",
-        "type": "bytes1"
+        "type": "bytes2"
       }
     ],
     "stateMutability": "view",
@@ -434,6 +535,25 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "isTokenAllowed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "account",
         "type": "address"
       }
@@ -451,12 +571,12 @@
   },
   {
     "inputs": [],
-    "name": "name",
+    "name": "maxSwapSlippage",
     "outputs": [
       {
-        "internalType": "string",
+        "internalType": "uint256",
         "name": "",
-        "type": "string"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
