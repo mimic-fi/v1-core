@@ -14,53 +14,42 @@
 
 pragma solidity ^0.8.0;
 
-import "../interfaces/IPriceOracle.sol";
-
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+import "../interfaces/IPriceOracle.sol";
 
 contract ChainLinkPriceOracle is IPriceOracle {
     mapping(address => AggregatorV3Interface) internal ethPriceFeeds;
 
-    constructor(
-        address[] memory _tokens,
-        AggregatorV3Interface[] memory _ethPriceFeeds
-    ) {
-        require(
-            _tokens.length == _ethPriceFeeds.length,
-            "INVALID_FEEDS_LENGTH"
-        );
+    constructor(address[] memory _tokens, AggregatorV3Interface[] memory _ethPriceFeeds) {
+        require(_tokens.length == _ethPriceFeeds.length, "INVALID_FEEDS_LENGTH");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             ethPriceFeeds[_tokens[i]] = _ethPriceFeeds[i];
         }
     }
 
-    function getTokenPrice(address token, address base)
-        external
-        view
-        override
-        returns (uint256)
-    {
-        require(address(ethPriceFeeds[token]) != address(0), "INVALID_TOKEN");
-        require(address(ethPriceFeeds[base]) != address(0), "INVALID_BASE");
-
-        //Prices are expressed in ETH/TOKEN and ETH/BASE
-        (, int256 tokenPrice, , , ) = ethPriceFeeds[token].latestRoundData();
-        (, int256 basePrice, , , ) = ethPriceFeeds[base].latestRoundData();
-
-        //Returns TOKEN/BASE
-        return uint256(basePrice / tokenPrice);
-    }
-
-    function hasFeed(address token) external view returns (bool) {
+    function hasFeed(address token) public view returns (bool) {
         return address(ethPriceFeeds[token]) != address(0);
     }
 
-    function getFeed(address token)
-        external
-        view
-        returns (AggregatorV3Interface)
-    {
+    function getFeed(address token) public view returns (AggregatorV3Interface) {
         return ethPriceFeeds[token];
+    }
+    
+    function getTokenPrice(address token, address base) external view override returns (uint256) {
+        AggregatorV3Interface tokenPriceFeed = getFeed(token);
+        require(address(tokenPriceFeed) != address(0), "MISSING_PRICE_FEED_FOR_TOKEN");
+
+        AggregatorV3Interface basePriceFeed = getFeed(token);
+        require(address(basePriceFeed) != address(0), "MISSING_PRICE_FEED_FOR_BASE");
+
+        // Prices are expressed in ETH/token and ETH/base
+        (, int256 tokenPrice, , , ) = tokenPriceFeed.latestRoundData();
+        (, int256 basePrice, , , ) = basePriceFeed.latestRoundData();
+
+        // Returns token/base
+        return SafeCast.toUint256(basePrice / tokenPrice);
     }
 }
