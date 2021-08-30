@@ -1,22 +1,25 @@
-import { BigNumber, Contract } from 'ethers'
+import { BigNumber, Contract, utils } from 'ethers'
 import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+
+import { Account, toAddress, toAddresses } from '../types'
+import { Allowed, RawAgreementDeployment } from './types'
 
 import Vault from '../vault/Vault'
 import AgreementDeployer from './AgreementDeployer'
-import { Account, toAddress, toAddresses } from '../types'
-import { AllowedStrategies, RawAgreementDeployment } from './types'
 
 export default class Agreement {
   instance: Contract
-  name: string
   vault: Vault
+  feeCollector: Account
   depositFee: BigNumberish
   performanceFee: BigNumberish
-  feeCollector: Account
+  maxSwapSlippage: BigNumberish
   managers: Account[]
   withdrawers: Account[]
-  allowedStrategies: AllowedStrategies
+  tokens: Contract[]
+  allowedTokens: Allowed
   strategies: Contract[]
+  allowedStrategies: Allowed
 
   static async create(params: RawAgreementDeployment = {}): Promise<Agreement> {
     return AgreementDeployer.deploy(params)
@@ -24,58 +27,34 @@ export default class Agreement {
 
   constructor(
     instance: Contract,
-    name: string,
     vault: Vault,
+    feeCollector: Account,
     depositFee: BigNumberish,
     performanceFee: BigNumberish,
-    feeCollector: Account,
+    maxSwapSlippage: BigNumberish,
     managers: Account[],
     withdrawers: Account[],
-    allowedStrategies: AllowedStrategies,
-    strategies: Contract[]
+    tokens: Contract[],
+    allowedTokens: Allowed,
+    strategies: Contract[],
+    allowedStrategies: Allowed
   ) {
     this.instance = instance
-    this.name = name
     this.vault = vault
+    this.feeCollector = feeCollector
     this.depositFee = depositFee
     this.performanceFee = performanceFee
-    this.feeCollector = feeCollector
+    this.maxSwapSlippage = maxSwapSlippage
     this.managers = managers
     this.withdrawers = withdrawers
-    this.allowedStrategies = allowedStrategies
+    this.tokens = tokens
+    this.allowedTokens = allowedTokens
     this.strategies = strategies
+    this.allowedStrategies = allowedStrategies
   }
 
   get address(): string {
     return this.instance.address
-  }
-
-  get withdrawer0(): string {
-    return toAddress(this.withdrawers[0])
-  }
-
-  get withdrawer1(): string {
-    return toAddress(this.withdrawers[1])
-  }
-
-  get manager0(): string {
-    return toAddress(this.managers[0])
-  }
-
-  get manager1(): string {
-    return toAddress(this.managers[1])
-  }
-
-  async getWithdrawers(): Promise<string[]> {
-    const withdrawer0 = await this.instance.withdrawer0()
-    const withdrawer1 = await this.instance.withdrawer1()
-    return [withdrawer0, withdrawer1]
-  }
-
-  async getManagers(): Promise<string[]> {
-    const manager0 = await this.instance.manager0()
-    const manager1 = await this.instance.manager1()
-    return [manager0, manager1]
   }
 
   async areWithdrawers(accounts: Account[]): Promise<boolean> {
@@ -90,14 +69,12 @@ export default class Agreement {
     return results.every(Boolean)
   }
 
-  async areAllowedSenders(accounts: Account[]): Promise<boolean> {
-    const addresses = toAddresses(accounts)
-    const results = await Promise.all(addresses.map(async (address) => await this.instance.isSenderAllowed(address)))
-    return results.every(Boolean)
-  }
-
   async isStrategyAllowed(strategy: Account): Promise<boolean> {
     return this.instance.isStrategyAllowed(toAddress(strategy))
+  }
+
+  async isTokenAllowed(token: Account): Promise<boolean> {
+    return this.instance.isTokenAllowed(toAddress(token))
   }
 
   async getDepositFee(): Promise<{ fee: BigNumber; collector: string }> {
@@ -114,6 +91,10 @@ export default class Agreement {
     return this.instance.feeCollector()
   }
 
+  async getMaxSwapSlippage(): Promise<BigNumber> {
+    return this.instance.maxSwapSlippage()
+  }
+
   async getSupportedCallbacks(): Promise<string> {
     return this.instance.getSupportedCallbacks()
   }
@@ -126,8 +107,9 @@ export default class Agreement {
     return this.canPerform({ who, where, what: this.vault.getSighash('withdraw'), how })
   }
 
-  async canJoinSwap({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('joinSwap'), how })
+  async canSwap({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
+    const parsedHow = how ? how.map((h) => (typeof h === 'string' ? h : utils.hexZeroPad(utils.hexlify(h), 32))) : []
+    return this.canPerform({ who, where, what: this.vault.getSighash('swap'), how: parsedHow })
   }
 
   async canJoin({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {

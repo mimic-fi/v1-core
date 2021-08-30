@@ -14,7 +14,7 @@ type Strategy @entity {
   whitelisted: Boolean!
   deposited: BigInt!
   shares: BigInt!
-  lastRate: Rate!
+  lastRate: Rate
   rates: [Rate!] @derivedFrom(field: "strategy")
   accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
 }

@@ -5,7 +5,9 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 export type RawVaultDeployment = {
   mocked?: boolean
   protocolFee?: BigNumberish
+  priceOracle?: Contract
   swapConnector?: Contract
+  tokens?: Contract[]
   strategies?: Contract[]
   from?: SignerWithAddress
 }
@@ -13,7 +15,9 @@ export type RawVaultDeployment = {
 export type VaultDeployment = {
   mocked: boolean
   protocolFee: BigNumberish
+  priceOracle: Contract
   swapConnector: Contract
+  tokens: Contract[]
   strategies: Contract[]
   admin: SignerWithAddress
 }

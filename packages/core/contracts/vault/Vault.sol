@@ -29,6 +29,7 @@ import "../libraries/BytesHelpers.sol";
 
 import "../interfaces/IStrategy.sol";
 import "../interfaces/ISwapConnector.sol";
+import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IVault.sol";
 
 contract Vault is IVault, Ownable, ReentrancyGuard {
@@ -37,6 +38,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
+    uint256 private constant _MAX_SLIPPAGE = 1e18; // 100%
     uint256 private constant _MAX_PROTOCOL_FEE = 0.05e16; // 5%
 
     struct Accounting {
@@ -46,14 +48,18 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     }
 
     uint256 public override protocolFee;
+    address public override priceOracle;
     address public override swapConnector;
+    mapping (address => bool) public override isTokenWhitelisted;
     mapping (address => bool) public override isStrategyWhitelisted;
 
     mapping (address => Accounting) internal accountings;
 
-    constructor (uint256 _protocolFee, address _swapConnector, address[] memory _whitelistedStrategies) {
+    constructor (uint256 _protocolFee, address _priceOracle, address _swapConnector, address[] memory _whitelistedTokens, address[] memory _whitelistedStrategies) {
         setProtocolFee(_protocolFee);
+        setPriceOracle(_priceOracle);
         setSwapConnector(_swapConnector);
+        setWhitelistedTokens(_whitelistedTokens, trues(_whitelistedTokens.length));
         setWhitelistedStrategies(_whitelistedStrategies, trues(_whitelistedStrategies.length));
     }
 
@@ -74,20 +80,30 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         emit ProtocolFeeSet(newProtocolFee);
     }
 
+    function setPriceOracle(address newPriceOracle) public override nonReentrant onlyOwner {
+        require(newPriceOracle != address(0), "PRICE_ORACLE_ZERO_ADDRESS");
+        priceOracle = newPriceOracle;
+        emit PriceOracleSet(newPriceOracle);
+    }
+
     function setSwapConnector(address newSwapConnector) public override nonReentrant onlyOwner {
         require(newSwapConnector != address(0), "SWAP_CONNECTOR_ZERO_ADDRESS");
         swapConnector = newSwapConnector;
         emit SwapConnectorSet(newSwapConnector);
     }
 
-    function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisted)
-        public
-        override
-        nonReentrant
-        onlyOwner
-    {
-        require(strategies.length == whitelisted.length, "INVALID_WHITELISTED_LENGTH");
+    function setWhitelistedTokens(address[] memory tokens, bool[] memory whitelisted) public override nonReentrant onlyOwner {
+        require(tokens.length == whitelisted.length, "INVALID_WHITELISTED_LENGTH");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            require(token != address(0), "TOKEN_ZERO_ADDRESS");
+            isTokenWhitelisted[token] = whitelisted[i];
+            emit WhitelistedTokenSet(token, whitelisted[i]);
+        }
+    }
 
+    function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisted) public override nonReentrant onlyOwner {
+        require(strategies.length == whitelisted.length, "INVALID_WHITELISTED_LENGTH");
         for (uint256 i = 0; i < strategies.length; i++) {
             address strategy = strategies[i];
             require(strategy != address(0), "STRATEGY_ZERO_ADDRESS");
@@ -125,16 +141,15 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         account.afterWithdraw(msg.sender, tokens, amounts, recipient);
     }
 
-    function joinSwap(address accountAddress, address strategy, address tokenIn, uint256 amountIn, uint256 minAmountOut, bytes memory data)
+    function swap(address accountAddress, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data)
         external
         override
         nonReentrant
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(strategy, tokenIn, amountIn));
-        uint256 amountOut = _swap(account, strategy, tokenIn, amountIn, minAmountOut, data);
-        account.beforeJoin(msg.sender, strategy, amountOut, data);
-        _join(account, strategy, amountOut, data);
-        account.afterJoin(msg.sender, strategy, amountOut, data);
+        Accounts.Data memory account = _authenticate(accountAddress, arr(tokenIn, tokenOut, amountIn, slippage));
+        account.beforeSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
+        _swap(account, tokenIn, tokenOut, amountIn, slippage, data);
+        account.afterSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
     }
 
     function join(address accountAddress, address strategy, uint256 amount, bytes memory data)
@@ -173,18 +188,15 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
             address token = tokens[i];
             _safeTransferFrom(token, account.addr, address(this), amount);
 
-            uint256 depositFeeAmount;
-            if (depositFee > 0) {
-                depositFeeAmount = amount.mulDown(depositFee);
-                _safeTransfer(token, feeCollector, depositFeeAmount);
-            }
+            uint256 depositFeeAmount = amount.mulDown(depositFee);
+            _safeTransfer(token, feeCollector, depositFeeAmount);
 
             depositFees[i] = depositFeeAmount;
             uint256 amountAfterFees = amount.sub(depositFeeAmount);
             accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
         }
 
-        emit Deposit(account.addr, tokens, amounts, depositFees, msg.sender);
+        emit Deposit(account.addr, tokens, amounts, depositFees);
     }
 
     function _withdraw(Accounts.Data memory account, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
@@ -203,9 +215,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
             require(vaultBalance.add(accountBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
 
             uint256 fromAccount = Math.min(accountBalance, amount);
-            if (account.isPortfolio) {
-                _safeTransferFrom(token, account.addr, recipient, fromAccount);
-            }
+            _safeTransferFrom(token, account.addr, recipient, fromAccount);
 
             if (fromAccount < amount) {
                 fromVault[i] = amount - fromAccount;
@@ -214,12 +224,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
             }
         }
 
-        emit Withdraw(account.addr, tokens, amounts, fromVault, recipient, msg.sender);
+        emit Withdraw(account.addr, tokens, amounts, fromVault, recipient);
     }
 
-    function _swap(Accounts.Data memory account, address strategy, address tokenIn, uint256 amountIn, uint256 minAmountOut, bytes memory data) internal returns (uint256) {
-        address tokenOut = IStrategy(strategy).getToken();
-        require(tokenIn != tokenOut, "JOIN_SWAP_SAME_TOKEN");
+    function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
+        require(tokenIn != tokenOut, "SWAP_SAME_TOKEN");
+        require(slippage <= _MAX_SLIPPAGE, "SWAP_MAX_SLIPPAGE");
 
         Accounting storage accounting = accountings[account.addr];
         uint256 currentBalance = accounting.balance[tokenIn];
@@ -228,6 +238,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 amountOut;
         uint256 remainingIn;
         { // scope to avoid stack too deep
+            uint256 price = IPriceOracle(priceOracle).getTokenPrice(tokenIn, tokenOut);
+            uint256 minAmountOut = amountIn.mulUp(price).mulUp(FixedPoint.ONE - slippage);
             require(ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn) >= minAmountOut, "EXPECTED_SWAP_MIN_AMOUNT");
 
             _safeTransfer(tokenIn, swapConnector, amountIn);
@@ -246,7 +258,6 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         accounting.balance[tokenIn] = currentBalance.sub(amountIn).add(remainingIn);
         accounting.balance[tokenOut] = accounting.balance[tokenOut].add(amountOut);
         emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
-        return amountOut;
     }
 
     function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data) internal {
@@ -262,7 +273,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 shares = IStrategy(strategy).onJoin(amount, data);
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
         accounting.invested[strategy] = accounting.invested[strategy].add(amount);
-        emit Join(account.addr, strategy, amount, shares, msg.sender);
+        emit Join(account.addr, strategy, amount, shares);
     }
 
     function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bytes memory data) internal {
@@ -286,7 +297,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         accounting.invested[strategy] = invested.sub(deposited);
         uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
-        emit Exit(account.addr, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount, msg.sender);
+        emit Exit(account.addr, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount);
     }
 
     function _payExitFees(Accounts.Data memory account, address token, uint256 deposited, uint256 received)

@@ -24,6 +24,7 @@ import "../libraries/FixedPoint.sol";
 import "../libraries/BytesHelpers.sol";
 
 import "../interfaces/IAgreement.sol";
+import "../interfaces/IStrategy.sol";
 import "../interfaces/IVault.sol";
 
 contract Agreement is IAgreement, ReentrancyGuard {
@@ -35,7 +36,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     using BytesHelpers for bytes32;
     using BytesHelpers for bytes32[];
 
-    enum AllowedStrategies {
+    enum Allowed {
         Any,
         None,
         Whitelisted
@@ -43,94 +44,51 @@ contract Agreement is IAgreement, ReentrancyGuard {
 
     uint256 internal constant MAX_DEPOSIT_FEE = 1e18; // 100%
     uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
+    uint256 internal constant MAX_SWAP_SLIPPAGE = 1e18; // 100%
 
-    string public override name;
-    address public immutable override vault;
-    address public immutable override feeCollector;
-    uint256 public immutable override depositFee;
-    uint256 public immutable override performanceFee;
+    address public override vault;
+    address public override feeCollector;
+    uint256 public override depositFee;
+    uint256 public override performanceFee;
+    uint256 public override maxSwapSlippage;
 
-    address public immutable manager0;
-    address public immutable manager1;
-    address public immutable withdrawer0;
-    address public immutable withdrawer1;
+    mapping (address => bool) public override isManager;
+    mapping (address => bool) public override isWithdrawer;
 
-    uint256 public immutable customStrategies;
-    address public immutable customStrategy0;
-    address public immutable customStrategy1;
-    address public immutable customStrategy2;
-    address public immutable customStrategy3;
-    address public immutable customStrategy4;
-    address public immutable customStrategy5;
-    address public immutable customStrategy6;
-    address public immutable customStrategy7;
-    AllowedStrategies public immutable allowedStrategies;
+    Allowed public allowedTokens;
+    mapping (address => bool) public isCustomToken;
+
+    Allowed public allowedStrategies;
+    mapping (address => bool) public isCustomStrategy;
 
     modifier onlyVault() {
         require(msg.sender == vault, "SENDER_NOT_ALLOWED");
         _;
     }
 
-    constructor(
-        string memory _name,
+    function initialize(
         address _vault,
+        address _feeCollector,
         uint256 _depositFee,
         uint256 _performanceFee,
-        address _feeCollector,
+        uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
-        AllowedStrategies _allowedStrategies,
-        address[] memory _customStrategies
-    ) {
-        require(bytes(_name).length > 0, "AGREEMENT_EMPTY_NAME");
-        name = _name;
+        address[] memory _customTokens,
+        Allowed _allowedTokens,
+        address[] memory _customStrategies,
+        Allowed _allowedStrategies
+    ) external {
+        _setVault(_vault);
+        _setParams(_feeCollector, _depositFee, _performanceFee, _maxSwapSlippage);
+        _setManagers(_managers);
+        _setWithdrawers(_withdrawers);
+        _setAllowedTokens(_customTokens, _allowedTokens);
+        _setAllowedStrategies(_customStrategies, _allowedStrategies);
+    }
 
-        require(_vault.isContract(), "VAULT_NOT_CONTRACT");
-        vault = _vault;
-
-        require(_depositFee <= MAX_DEPOSIT_FEE, "DEPOSIT_FEE_TOO_HIGH");
-        depositFee = _depositFee;
-
-        require(_performanceFee <= MAX_PERFORMANCE_FEE, "PERFORMANCE_FEE_TOO_HIGH");
-        performanceFee = _performanceFee;
-
-        require(_feeCollector != address(0), "FEE_COLLECTOR_ZERO_ADDRESS");
-        feeCollector = _feeCollector;
-        emit FeesConfigSet(_depositFee, _performanceFee, _feeCollector);
-
-        require(_managers.length == 2, "MUST_SPECIFY_2_MANAGERS");
-        require(_managers[0] != address(0) && _managers[1] != address(0), "MANAGER_ZERO_ADDRESS");
-        manager0 = _managers[0];
-        manager1 = _managers[1];
-        emit ManagersSet(_managers);
-
-        require(_withdrawers.length == 2, "MUST_SPECIFY_2_WITHDRAWERS");
-        require(_withdrawers[0] != address(0) && _withdrawers[1] != address(0), "WITHDRAWER_ZERO_ADDRESS");
-        withdrawer0 = _withdrawers[0];
-        withdrawer1 = _withdrawers[1];
-        emit WithdrawersSet(_withdrawers);
-
-        uint256 length = _customStrategies.length;
-        require(length <= 8, "TOO_MANY_CUSTOM_STRATEGIES");
-
-        allowedStrategies = _allowedStrategies;
-        bool isAny = _allowedStrategies == AllowedStrategies.Any;
-        require(!isAny || length == 0, "ANY_WITH_CUSTOM_STRATEGIES");
-
-        for (uint256 i = 0; i < length; i++) {
-            require(_customStrategies[i].isContract(), "CUSTOM_STRATEGY_NOT_CONTRACT");
-        }
-
-        customStrategies = length;
-        customStrategy0 = isAny ? address(0) : (length > 0 ? _customStrategies[0] : address(0));
-        customStrategy1 = isAny ? address(0) : (length > 1 ? _customStrategies[1] : address(0));
-        customStrategy2 = isAny ? address(0) : (length > 2 ? _customStrategies[2] : address(0));
-        customStrategy3 = isAny ? address(0) : (length > 3 ? _customStrategies[3] : address(0));
-        customStrategy4 = isAny ? address(0) : (length > 4 ? _customStrategies[4] : address(0));
-        customStrategy5 = isAny ? address(0) : (length > 5 ? _customStrategies[5] : address(0));
-        customStrategy6 = isAny ? address(0) : (length > 6 ? _customStrategies[6] : address(0));
-        customStrategy7 = isAny ? address(0) : (length > 7 ? _customStrategies[7] : address(0));
-        emit StrategiesSet(uint256(_allowedStrategies), _customStrategies);
+    function getBalance(address token) public view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
     }
 
     function getDepositFee() external override view returns (uint256, address) {
@@ -141,45 +99,25 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return (performanceFee, feeCollector);
     }
 
-    function getBalance(address token) public view returns (uint256) {
-        return IERC20(token).balanceOf(address(this));
-    }
-
-    function isManager(address account) public override view returns (bool) {
-        return manager0 == account || manager1 == account;
-    }
-
-    function isWithdrawer(address account) public override view returns (bool) {
-        return withdrawer0 == account || withdrawer1 == account;
-    }
-
-    function isSenderAllowed(address sender) public view returns (bool) {
-        return isWithdrawer(sender) || isManager(sender);
-    }
-
-    function isStrategyAllowed(address strategy) public override view returns (bool) {
-        if (allowedStrategies == AllowedStrategies.Any || isCustomStrategy(strategy)) {
+    function isTokenAllowed(address token) public override view returns (bool) {
+        if (allowedTokens == Allowed.Any || isCustomToken[token]) {
             return true;
         }
 
-        return allowedStrategies == AllowedStrategies.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
+        return allowedTokens == Allowed.Whitelisted && IVault(vault).isTokenWhitelisted(token);
     }
 
-    function isCustomStrategy(address strategy) public view returns (bool) {
-        if (customStrategies > 0 && strategy == customStrategy0) return true;
-        if (customStrategies > 1 && strategy == customStrategy1) return true;
-        if (customStrategies > 2 && strategy == customStrategy2) return true;
-        if (customStrategies > 3 && strategy == customStrategy3) return true;
-        if (customStrategies > 4 && strategy == customStrategy4) return true;
-        if (customStrategies > 5 && strategy == customStrategy5) return true;
-        if (customStrategies > 6 && strategy == customStrategy6) return true;
-        if (customStrategies > 7 && strategy == customStrategy7) return true;
-        return false;
+    function isStrategyAllowed(address strategy) public override view returns (bool) {
+        if (allowedStrategies == Allowed.Any || isCustomStrategy[strategy]) {
+            return true;
+        }
+
+        return allowedStrategies == Allowed.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
     }
 
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external override view returns (bool) {
         // If the sender is not allowed, then it cannot perform any actions
-        if (!isSenderAllowed(who)) {
+        if (!isManager[who]) {
             return false;
         }
 
@@ -189,18 +127,22 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
 
         // Eval different actions and parameters
-        if (what.isJoinOrExit()) {
+        if (what.isSwap()) {
+            address tokenOut = how.decodeAddress(1);
+            uint256 slippage = how.decodeUint256(3);
+            return isTokenAllowed(tokenOut) && slippage <= maxSwapSlippage;
+        } else if (what.isJoinOrExit()) {
             return isStrategyAllowed(how.decodeAddress(0));
         } else if (what.isWithdraw()) {
-            return isWithdrawer(how.decodeAddress(0));
+            return isWithdrawer[how.decodeAddress(0)];
         } else {
             return what.isDeposit();
         }
     }
 
-    function getSupportedCallbacks() external override pure returns (bytes1) {
-        // Supported callbacks are "before deposit" and "before withdraw": 00000101 (0x05).
-        return bytes1(0x05);
+    function getSupportedCallbacks() external override pure returns (bytes2) {
+        // Supported callbacks are "before deposit" and "before withdraw": 0000000101 (0x0005).
+        return bytes2(0x0005);
     }
 
     function beforeDeposit(address /* sender */, address[] memory tokens, uint256[] memory /* amounts */) external override onlyVault {
@@ -216,6 +158,14 @@ contract Agreement is IAgreement, ReentrancyGuard {
     }
 
     function afterWithdraw(address /* sender */, address[] memory /* tokens */, uint256[] memory /* amounts */, address /* recipient */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function beforeSwap(address /* sender */, address /* tokenIn */, address /* tokenOut */, uint256 /* amountIn */, uint256 /* slippage */, bytes memory /* data */) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function afterSwap(address /* sender */, address /* tokenIn */, address /* tokenOut */, uint256 /* amountIn */, uint256 /* slippage */, bytes memory /* data */) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -247,5 +197,63 @@ contract Agreement is IAgreement, ReentrancyGuard {
                 token.safeApprove(vault, FixedPoint.MAX_UINT256);
             }
         }
+    }
+
+    function _setAllowedTokens(address[] memory tokens, Allowed allowed) private {
+        allowedTokens = allowed;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i].isContract(), "CUSTOM_TOKEN_NOT_CONTRACT");
+            isCustomToken[tokens[i]] = true;
+        }
+        emit AllowedTokensSet(uint256(allowed), tokens);
+    }
+
+    function _setAllowedStrategies(address[] memory strategies, Allowed allowed) private {
+        allowedStrategies = allowed;
+        for (uint256 i = 0; i < strategies.length; i++) {
+            require(strategies[i].isContract(), "CUSTOM_STRATEGY_NOT_CONTRACT");
+            isCustomStrategy[strategies[i]] = true;
+        }
+        emit AllowedStrategiesSet(uint256(allowed), strategies);
+    }
+
+    function _setManagers(address[] memory managers) private {
+        require(managers.length > 0, "MISSING_MANAGERS");
+        for (uint256 i = 0; i < managers.length; i++) {
+            require(managers[i] != address(0), "MANAGER_ZERO_ADDRESS");
+            isManager[managers[i]] = true;
+        }
+        emit ManagersSet(managers);
+    }
+
+    function _setWithdrawers(address[] memory withdrawers) private {
+        require(withdrawers.length > 0, "MISSING_WITHDRAWERS");
+        for (uint256 i = 0; i < withdrawers.length; i++) {
+            require(withdrawers[i] != address(0), "WITHDRAWER_ZERO_ADDRESS");
+            isWithdrawer[withdrawers[i]] = true;
+        }
+        emit WithdrawersSet(withdrawers);
+    }
+
+    function _setParams(address _feeCollector, uint256 _depositFee, uint256 _performanceFee, uint256 _maxSwapSlippage) private {
+        require(_feeCollector != address(0), "FEE_COLLECTOR_ZERO_ADDRESS");
+        feeCollector = _feeCollector;
+
+        require(_depositFee <= MAX_DEPOSIT_FEE, "DEPOSIT_FEE_TOO_HIGH");
+        depositFee = _depositFee;
+
+        require(_performanceFee <= MAX_PERFORMANCE_FEE, "PERFORMANCE_FEE_TOO_HIGH");
+        performanceFee = _performanceFee;
+
+        require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
+        maxSwapSlippage = _maxSwapSlippage;
+
+        emit ParamsSet(_feeCollector, _depositFee, _performanceFee, _maxSwapSlippage);
+    }
+
+    function _setVault(address _vault) private {
+        require(vault == address(0), "ALREADY_INIT");
+        require(_vault.isContract(), "VAULT_NOT_CONTRACT");
+        vault = _vault;
     }
 }

@@ -15,22 +15,23 @@
 pragma solidity ^0.8.0;
 
 interface IPortfolio {
-    event FeesConfigSet(uint256 depositFee, uint256 performanceFee, address feeCollector);
-
     /**
      * @dev Supported callbacks are a 8-bit map with the following structure:
      * - Least significant bit #0: before deposit
      * - Least significant bit #1: after deposit
      * - Least significant bit #2: before withdraw
      * - Least significant bit #3: after withdraw
-     * - Least significant bit #4: before join
-     * - Least significant bit #5: after join
-     * - Least significant bit #6: before exit
-     * - Least significant bit #7: after exit
+     * - Least significant bit #4: before swap
+     * - Least significant bit #5: after swap
+     * - Least significant bit #6: before join
+     * - Least significant bit #7: after join
+     * - Least significant bit #8: before exit
+     * - Least significant bit #9: after exit
+     * - Remaining most significant 6 bits are ignored
      *
-     * For example, if a Portfolio supports "before join" and "after exit" it should respond "10010000" (0x90).
+     * For example, if a Portfolio supports "before join" and "after exit" it should respond "1001000000" (0x240).
      */
-    function getSupportedCallbacks() external view returns (bytes1);
+    function getSupportedCallbacks() external view returns (bytes2);
 
     function getPerformanceFee() external view returns (uint256 fee, address collector);
 
@@ -45,6 +46,10 @@ interface IPortfolio {
     function beforeWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external;
 
     function afterWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external;
+
+    function beforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
+
+    function afterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
 
     function beforeJoin(address sender, address strategy, uint256 amount, bytes memory data) external;
 

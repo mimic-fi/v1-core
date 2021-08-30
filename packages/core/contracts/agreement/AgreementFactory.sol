@@ -14,30 +14,38 @@
 
 pragma solidity ^0.8.0;
 
+import "../libraries/Proxy.sol";
+
 import "./Agreement.sol";
 
 contract AgreementFactory  {
     address public immutable vault;
+    address public immutable implementation;
     mapping (address => bool) public isAgreement;
 
     event AgreementCreated(address indexed agreement, string name);
 
     constructor(address _vault) {
         vault = _vault;
+        implementation = address(new Agreement());
     }
 
     function create(
         string memory _name,
+        address _feeCollector,
         uint256 _depositFee,
         uint256 _performanceFee,
-        address _feeCollector,
+        uint256 _maxSwapSlippage,
         address[] memory _managers,
         address[] memory _withdrawers,
-        Agreement.AllowedStrategies _allowedStrategies,
-        address[] memory _customStrategies
+        address[] memory _customTokens,
+        Agreement.Allowed _allowedTokens,
+        address[] memory _customStrategies,
+        Agreement.Allowed _allowedStrategies
     ) external {
-        Agreement agreement = new Agreement(_name, vault, _depositFee, _performanceFee, _feeCollector, _managers, _withdrawers, _allowedStrategies, _customStrategies);
-        isAgreement[address(agreement)] = true;
-        emit AgreementCreated(address(agreement), _name);
+        address agreement = address(new Proxy(implementation));
+        Agreement(agreement).initialize(vault, _feeCollector, _depositFee, _performanceFee, _maxSwapSlippage, _managers, _withdrawers, _customTokens, _allowedTokens, _customStrategies, _allowedStrategies);
+        isAgreement[agreement] = true;
+        emit AgreementCreated(agreement, _name);
     }
 }
