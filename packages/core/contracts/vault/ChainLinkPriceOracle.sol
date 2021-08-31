@@ -42,7 +42,7 @@ contract ChainLinkPriceOracle is IPriceOracle {
         AggregatorV3Interface tokenPriceFeed = getFeed(token);
         require(address(tokenPriceFeed) != address(0), "MISSING_PRICE_FEED_FOR_TOKEN");
 
-        AggregatorV3Interface basePriceFeed = getFeed(token);
+        AggregatorV3Interface basePriceFeed = getFeed(base);
         require(address(basePriceFeed) != address(0), "MISSING_PRICE_FEED_FOR_BASE");
 
         // Prices are expressed in ETH/token and ETH/base
