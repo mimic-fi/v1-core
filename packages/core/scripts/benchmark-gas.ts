@@ -6,7 +6,7 @@ import { toAddresses } from '../test/helpers/models/types'
 import TokenList from '../test/helpers/models/tokens/TokenList'
 
 async function benchmark(): Promise<void> {
-  const protocolFee = fp(0.0001)
+  const protocolFee = fp(0.01)
   const priceOracle = await deploy('PriceOracleMock')
   const swapConnector = await deploy('SwapConnectorMock')
   const tokens = await TokenList.create(2)

@@ -12,7 +12,7 @@ describe('Vault', () => {
   let account: SignerWithAddress, other: SignerWithAddress, admin: SignerWithAddress, feeCollector: SignerWithAddress
 
   const depositFee = fp(0.01)
-  const protocolFee = fp(0.0005)
+  const protocolFee = fp(0.05)
   const performanceFee = fp(0.2)
 
   before('setup signers', async () => {
@@ -1697,7 +1697,9 @@ describe('Vault', () => {
                   await vault.exit(portfolio, strategy, ratio, { from })
 
                   const currentCollectorBalance = await token.balanceOf(feeCollector)
-                  expect(currentCollectorBalance).to.be.equal(previousCollectorBalance.add(expectedPerformanceFee))
+                  const expectedCollectorBalance = previousCollectorBalance.add(expectedPerformanceFee)
+                  expect(currentCollectorBalance).to.be.at.least(expectedCollectorBalance.sub(1))
+                  expect(currentCollectorBalance).to.be.at.most(expectedCollectorBalance.add(1))
                 })
               } else {
                 it('does not pay protocol fees', async () => {
@@ -1948,7 +1950,7 @@ describe('Vault', () => {
       })
 
       context('when the new protocol fee is below the max', () => {
-        const newProtocolFee = fp(0.0004)
+        const newProtocolFee = fp(0.04)
 
         it('updates the protocol fee', async () => {
           await vault.setProtocolFee(newProtocolFee, { from })
@@ -1964,7 +1966,7 @@ describe('Vault', () => {
       })
 
       context('when the new protocol fee is above the max', () => {
-        const newProtocolFee = fp(0.0005).add(1)
+        const newProtocolFee = fp(0.05).add(1)
 
         it('reverts', async () => {
           await expect(vault.setProtocolFee(newProtocolFee, { from })).to.be.revertedWith('PROTOCOL_FEE_TOO_HIGH')

@@ -39,7 +39,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     using Accounts for Accounts.Data;
 
     uint256 private constant _MAX_SLIPPAGE = 1e18; // 100%
-    uint256 private constant _MAX_PROTOCOL_FEE = 0.05e16; // 5%
+    uint256 private constant _MAX_PROTOCOL_FEE = 5e16; // 5%
 
     struct Accounting {
         mapping (address => uint256) balance;

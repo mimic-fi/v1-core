@@ -29,6 +29,7 @@ export function createLastRate(strategy: StrategyEntity, timestamp: BigInt): voi
   let value = shares.isZero() ? BigInt.fromI32(0) : strategyContract.getTokenBalance().div(shares)
 
   let rateId = strategy.id + '-' + timestamp.toString()
+  log.warning('timestamp: {}', [timestamp.toString()])
   let rate = new RateEntity(rateId)
   rate.value = value
   rate.strategy = strategy.id

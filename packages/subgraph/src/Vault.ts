@@ -119,6 +119,7 @@ export function handleBlock(block: ethereum.Block): void {
   if (vault !== null && Array.isArray(vault.strategies)) {
     let strategies = vault.strategies!;
     for (let i: i32 = 0; i < strategies.length; i++) {
+      log.warning('strategy: {}', [strategies[i]])
       let strategy = StrategyEntity.load(strategies[i])
       if (strategy !== null) createLastRate(strategy!, block.timestamp)
     }
