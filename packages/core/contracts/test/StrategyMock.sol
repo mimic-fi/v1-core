@@ -42,13 +42,13 @@ contract StrategyMock is IStrategy {
     }
 
     function onJoin(uint256 amount, bytes memory) external override returns (uint256 shares) {
-        shares = amount.mul(mockedRate);
+        shares = amount.div(mockedRate);
         getTotalShares += shares;
     }
 
     function onExit(uint256 shares, bytes memory) external override returns (address, uint256) {
         getTotalShares -= shares;
-        uint256 amount = shares.div(mockedRate);
+        uint256 amount = shares.mul(mockedRate);
         IERC20(getToken).approve(msg.sender, amount);
         return (getToken, amount);
     }

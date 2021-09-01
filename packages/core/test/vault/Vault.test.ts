@@ -1154,7 +1154,7 @@ describe('Vault', () => {
           })
 
           const itJoinsAsExpected = (rate: BigNumberish) => {
-            const expectedShares = amount.mul(rate).div(fp(1))
+            const expectedShares = amount.mul(fp(1)).div(rate)
 
             beforeEach('mock strategy rate', async () => {
               await strategy.mockRate(rate)
@@ -1218,7 +1218,7 @@ describe('Vault', () => {
           }
 
           context('with a rate lower than one', async () => {
-            const rate = fp(0.99)
+            const rate = fp(0.95)
             itJoinsAsExpected(rate)
           })
 
@@ -1228,7 +1228,7 @@ describe('Vault', () => {
           })
 
           context('with a rate higher to one', async () => {
-            const rate = fp(1.01)
+            const rate = fp(1.05)
             itJoinsAsExpected(rate)
           })
         })
@@ -1276,7 +1276,7 @@ describe('Vault', () => {
           })
 
           const itJoinsAsExpected = (rate: BigNumberish) => {
-            const expectedShares = amount.mul(rate).div(fp(1))
+            const expectedShares = amount.mul(fp(1)).div(rate)
 
             beforeEach('mock strategy rate', async () => {
               await strategy.mockRate(rate)
@@ -1340,7 +1340,7 @@ describe('Vault', () => {
           }
 
           context('with a rate lower than one', async () => {
-            const rate = fp(0.99)
+            const rate = fp(0.95)
 
             itJoinsAsExpected(rate)
 
@@ -1422,7 +1422,7 @@ describe('Vault', () => {
           })
 
           context('with a rate higher to one', async () => {
-            const rate = fp(1.01)
+            const rate = fp(1.05)
             itJoinsAsExpected(rate)
           })
         })
@@ -1477,7 +1477,7 @@ describe('Vault', () => {
             const ratio = fp(1)
 
             const itExitsAsExpected = (rate: BigNumber) => {
-              const expectedAmount = shares.mul(fp(1)).div(rate)
+              const expectedAmount = shares.mul(rate).div(fp(1))
               const gains = expectedAmount.gt(shares) ? expectedAmount.sub(shares) : fp(0)
               const expectedProtocolFee = gains.gt(0) ? gains.mul(protocolFee).div(fp(1)) : fp(0)
               const expectedAmountAfterFees = expectedAmount.sub(expectedProtocolFee)
@@ -1573,7 +1573,7 @@ describe('Vault', () => {
             }
 
             context('when the user gain sth', async () => {
-              const rate = fp(0.95)
+              const rate = fp(1.05)
 
               beforeEach('fund strategy with gains', async () => {
                 await token.mint(strategy, shares)
@@ -1588,7 +1588,7 @@ describe('Vault', () => {
             })
 
             context('when the user losses', async () => {
-              const rate = fp(1.05)
+              const rate = fp(0.95)
               itExitsAsExpected(rate)
             })
           })
@@ -1650,7 +1650,7 @@ describe('Vault', () => {
             const ratio = fp(1)
 
             const itExitsAsExpected = (rate: BigNumber) => {
-              const expectedAmount = shares.mul(fp(1)).div(rate)
+              const expectedAmount = shares.mul(rate).div(fp(1))
               const gains = expectedAmount.gt(shares) ? expectedAmount.sub(shares) : fp(0)
               const expectedProtocolFee = gains.gt(0) ? gains.mul(protocolFee).div(fp(1)) : fp(0)
               const expectedPerformanceFee = gains.gt(0) ? gains.sub(expectedProtocolFee).mul(performanceFee).div(fp(1)) : fp(0)
@@ -1767,7 +1767,7 @@ describe('Vault', () => {
             }
 
             context('when the user gain sth', async () => {
-              const rate = fp(0.95)
+              const rate = fp(1.05)
 
               beforeEach('fund strategy with gains', async () => {
                 await token.mint(strategy, shares)
@@ -1857,7 +1857,7 @@ describe('Vault', () => {
             })
 
             context('when the user losses', async () => {
-              const rate = fp(1.05)
+              const rate = fp(0.95)
               itExitsAsExpected(rate)
             })
           })
