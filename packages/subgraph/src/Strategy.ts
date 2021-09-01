@@ -35,16 +35,18 @@ export function createLastRate(strategy: StrategyEntity, timestamp: BigInt): voi
   let shares = strategyContract.getTotalShares()
   let value = shares.isZero() ? BigInt.fromI32(0) : strategyContract.getTokenBalance().times(ONE).div(shares)
 
-  let rateId = strategy.id + '-' + timestamp.toString()
-  let rate = new RateEntity(rateId)
-  rate.value = value
-  rate.strategy = strategy.id
-  rate.timestamp = timestamp
-  rate.save()
+  if (strategy.lastRate === null || RateEntity.load(strategy.lastRate)!.value.notEqual(value)) {
+    let rateId = strategy.id + '-' + timestamp.toString()
+    let rate = new RateEntity(rateId)
+    rate.value = value
+    rate.strategy = strategy.id
+    rate.timestamp = timestamp
+    rate.save()
 
-  strategy.lastRate = rateId
-  strategy.deposited = shares.isZero() ? BigInt.fromI32(0) : shares.times(value).div(ONE)
-  strategy.save()
+    strategy.lastRate = rateId
+    strategy.deposited = shares.isZero() ? BigInt.fromI32(0) : shares.times(value).div(ONE)
+    strategy.save()
+  }
 }
 
 export function getStrategyMetadata(address: Address): string {
