@@ -1,4 +1,4 @@
-import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
+import { BigInt, Address, ethereum } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20';
 import { loadOrCreateStrategy, createLastRate } from './Strategy';
@@ -57,7 +57,7 @@ export function handleJoin(event: Join): void {
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
   accountStrategy.shares = accountStrategy.shares.plus(event.params.shares)
-  accountStrategy.invested = accountStrategy.shares.plus(event.params.amount)
+  accountStrategy.invested = accountStrategy.invested.plus(event.params.amount)
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
@@ -75,7 +75,7 @@ export function handleExit(event: Exit): void {
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
   accountStrategy.shares = accountStrategy.shares.minus(event.params.shares)
-  accountStrategy.invested = accountStrategy.shares.minus(event.params.amountInvested)
+  accountStrategy.invested = accountStrategy.invested.minus(event.params.amountInvested)
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
@@ -116,10 +116,9 @@ export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): voi
 
 export function handleBlock(block: ethereum.Block): void {
   let vault = VaultEntity.load(VAULT_ID)
-  if (vault !== null && Array.isArray(vault.strategies)) {
-    let strategies = vault.strategies!;
+  if (vault !== null && vault.strategies !== null) {
+    let strategies = vault.strategies;
     for (let i: i32 = 0; i < strategies.length; i++) {
-      log.warning('strategy: {}', [strategies[i]])
       let strategy = StrategyEntity.load(strategies[i])
       if (strategy !== null) createLastRate(strategy!, block.timestamp)
     }
@@ -131,6 +130,7 @@ function loadOrCreateVault(vaultAddress: Address): VaultEntity {
 
   if (vault === null) {
     vault = new VaultEntity(VAULT_ID)
+    vault.strategies = []
     vault.address = vaultAddress.toHexString()
     vault.protocolFee = BigInt.fromI32(0)
     vault.save()
@@ -154,7 +154,7 @@ function loadOrCreateAccount(accountAddress: Address, vaultAddress: Address): Ac
 }
 
 function loadOrCreateAccountBalance(accountAddress: Address, tokenAddress: Address): AccountBalanceEntity {
-  let id = accountAddress.toHexString() + "-" + tokenAddress.toString()
+  let id = accountAddress.toHexString() + "-" + tokenAddress.toHexString()
   let accountBalance = AccountBalanceEntity.load(id)
 
   if (accountBalance === null) {
@@ -169,7 +169,7 @@ function loadOrCreateAccountBalance(accountAddress: Address, tokenAddress: Addre
 }
 
 function loadOrCreateAccountStrategy(accountAddress: Address, strategyAddress: Address): AccountStrategyEntity {
-  let id = accountAddress.toHexString() + "-" + strategyAddress.toString()
+  let id = accountAddress.toHexString() + "-" + strategyAddress.toHexString()
   let accountStrategy = AccountStrategyEntity.load(id)
 
   if (accountStrategy === null) {
