@@ -44,7 +44,7 @@ describe('ChainLinkPriceOracle', () => {
       await feedToken1.setPrice(price1)
 
       const price = await oracle.getTokenPrice(tokens.first.address, tokens.third.address)
-      expect(price).to.be.equal(price1)
+      expect(price).to.be.equal(fp(1).mul(fp(1)).div(price1))
     })
 
     it('token two & base three', async () => {
@@ -53,7 +53,7 @@ describe('ChainLinkPriceOracle', () => {
       await feedToken2.setPrice(price2)
 
       const price = await oracle.getTokenPrice(tokens.second.address, tokens.third.address)
-      expect(price).to.be.equal(price2)
+      expect(price).to.be.equal(fp(1).mul(fp(1)).div(price2))
     })
 
     it('token three & base one', async () => {
@@ -62,7 +62,7 @@ describe('ChainLinkPriceOracle', () => {
       await feedToken1.setPrice(price1)
 
       const price = await oracle.getTokenPrice(tokens.third.address, tokens.first.address)
-      expect(price).to.be.equal(fp(1).mul(fp(1)).div(price1))
+      expect(price).to.be.equal(price1)
     })
 
     it('token one & base two', async () => {
@@ -71,7 +71,7 @@ describe('ChainLinkPriceOracle', () => {
       await feedToken2.setPrice(price2)
 
       const price = await oracle.getTokenPrice(tokens.third.address, tokens.second.address)
-      expect(price).to.be.equal(fp(1).mul(fp(1)).div(price2))
+      expect(price).to.be.equal(price2)
     })
 
     it('token one & base second', async () => {
@@ -82,7 +82,7 @@ describe('ChainLinkPriceOracle', () => {
       await feedToken2.setPrice(price2)
 
       const price = await oracle.getTokenPrice(tokens.first.address, tokens.second.address)
-      expect(price).to.be.equal(price1.mul(fp(1)).div(price2))
+      expect(price).to.be.equal(price2.mul(fp(1)).div(price1))
     })
 
     it('token one & base second', async () => {
@@ -93,7 +93,7 @@ describe('ChainLinkPriceOracle', () => {
       await feedToken2.setPrice(price2)
 
       const price = await oracle.getTokenPrice(tokens.second.address, tokens.first.address)
-      expect(price).to.be.equal(price2.mul(fp(1)).div(price1))
+      expect(price).to.be.equal(price1.mul(fp(1)).div(price2))
     })
 
     it('fails when invalid token', async () => {

@@ -83,7 +83,7 @@ contract ChainLinkPriceOracle is IPriceOracle {
             basePrice = SafeCast.toUint256(basePriceIInt);
         }
 
-        // Returns token/base = ETH/token / ETH/base
-        return tokenPrice.div(basePrice);
+        // Returns token/base = (ETH/base) / (ETH/token)
+        return basePrice.div(tokenPrice);
     }
 }
