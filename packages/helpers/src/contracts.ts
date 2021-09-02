@@ -27,7 +27,7 @@ export async function instanceAt(nameOrArtifact: string | any, address: string):
 }
 
 export async function getArtifact(contractName: string): Promise<Artifact> {
-  const artifactsPath = !contractName.includes('/') ? path.resolve('./artifacts') : path.resolve(process.cwd(), '../../node_modules', contractName.split('/').slice(0, -1).join('/'))
+  const artifactsPath = !contractName.includes('/') ? path.resolve('./artifacts') : path.dirname(require.resolve(`${contractName}.json`))
   const artifacts = new Artifacts(artifactsPath)
   return artifacts.readArtifact(contractName.split('/').slice(-1)[0])
 }
