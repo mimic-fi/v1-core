@@ -32,6 +32,10 @@ export default class TokenList {
     return this.tokens[1]
   }
 
+  get third(): Token {
+    return this.tokens[2]
+  }
+
   async balanceOf(account: Account): Promise<BigNumber[]> {
     return Promise.all(this.tokens.map((token) => token.balanceOf(account)))
   }
