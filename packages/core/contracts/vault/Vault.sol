@@ -119,26 +119,26 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function deposit(address accountAddress, address[] memory tokens, uint256[] memory amounts)
+    function deposit(address accountAddress, address token, uint256 amount)
         external
         override
         nonReentrant
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr());
-        account.beforeDeposit(msg.sender, tokens, amounts);
-        _deposit(account, tokens, amounts);
-        account.afterDeposit(msg.sender, tokens, amounts);
+        Accounts.Data memory account = _authenticate(accountAddress, arr(token, amount));
+        account.beforeDeposit(msg.sender, token, amount);
+        _deposit(account, token, amount);
+        account.afterDeposit(msg.sender, token, amount);
     }
 
-    function withdraw(address accountAddress, address[] memory tokens, uint256[] memory amounts, address recipient)
+    function withdraw(address accountAddress, address token, uint256 amount, address recipient)
         external
         override
         nonReentrant
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(recipient));
-        account.beforeWithdraw(msg.sender, tokens, amounts, recipient);
-        _withdraw(account, tokens, amounts, recipient);
-        account.afterWithdraw(msg.sender, tokens, amounts, recipient);
+        Accounts.Data memory account = _authenticate(accountAddress, arr(token, amount, recipient));
+        account.beforeWithdraw(msg.sender, token, amount, recipient);
+        _withdraw(account, token, amount, recipient);
+        account.afterWithdraw(msg.sender, token, amount, recipient);
     }
 
     function swap(address accountAddress, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data)
@@ -174,57 +174,36 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         account.afterExit(msg.sender, strategy, ratio, data);
     }
 
-    function _deposit(Accounts.Data memory account, address[] memory tokens, uint256[] memory amounts) internal {
-        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
-        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
+    function _deposit(Accounts.Data memory account, address token, uint256 amount) internal {
+        require(amount > 0, "DEPOSIT_AMOUNT_ZERO");
 
         (uint256 depositFee, address feeCollector) = account.getDepositFee();
+        _safeTransferFrom(token, account.addr, address(this), amount);
+
+        uint256 depositFeeAmount = amount.mulDown(depositFee);
+        _safeTransfer(token, feeCollector, depositFeeAmount);
+
+        uint256 amountAfterFees = amount.sub(depositFeeAmount);
         Accounting storage accounting = accountings[account.addr];
-        uint256[] memory depositFees = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 amount = amounts[i];
-            require(amount > 0, "DEPOSIT_AMOUNT_ZERO");
-
-            address token = tokens[i];
-            _safeTransferFrom(token, account.addr, address(this), amount);
-
-            uint256 depositFeeAmount = amount.mulDown(depositFee);
-            _safeTransfer(token, feeCollector, depositFeeAmount);
-
-            depositFees[i] = depositFeeAmount;
-            uint256 amountAfterFees = amount.sub(depositFeeAmount);
-            accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
-        }
-
-        emit Deposit(account.addr, tokens, amounts, depositFees);
+        accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
+        emit Deposit(account.addr, token, amount, depositFeeAmount);
     }
 
-    function _withdraw(Accounts.Data memory account, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
-        require(tokens.length > 0, "INVALID_TOKENS_LENGTH");
-        require(tokens.length == amounts.length, "INVALID_AMOUNTS_LENGTH");
+    function _withdraw(Accounts.Data memory account, address token, uint256 amount, address recipient) internal {
+        require(amount > 0, "WITHDRAW_AMOUNT_ZERO");
 
         Accounting storage accounting = accountings[account.addr];
-        uint256[] memory fromVault = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 amount = amounts[i];
-            require(amount > 0, "WITHDRAW_AMOUNT_ZERO");
+        uint256 vaultBalance = accounting.balance[token];
+        uint256 accountBalance = account.isPortfolio ? IERC20(token).balanceOf(account.addr) : 0;
+        require(vaultBalance.add(accountBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
 
-            address token = tokens[i];
-            uint256 vaultBalance = accounting.balance[token];
-            uint256 accountBalance = account.isPortfolio ? IERC20(token).balanceOf(account.addr) : 0;
-            require(vaultBalance.add(accountBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
+        uint256 fromAccount = Math.min(accountBalance, amount);
+        _safeTransferFrom(token, account.addr, recipient, fromAccount);
 
-            uint256 fromAccount = Math.min(accountBalance, amount);
-            _safeTransferFrom(token, account.addr, recipient, fromAccount);
-
-            if (fromAccount < amount) {
-                fromVault[i] = amount - fromAccount;
-                _safeTransfer(token, recipient, fromVault[i]);
-                accounting.balance[token] = vaultBalance.sub(fromVault[i]);
-            }
-        }
-
-        emit Withdraw(account.addr, tokens, amounts, fromVault, recipient);
+        uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
+        _safeTransfer(token, recipient, fromVault);
+        accounting.balance[token] = vaultBalance.sub(fromVault);
+        emit Withdraw(account.addr, token, amount, fromVault, recipient);
     }
 
     function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {

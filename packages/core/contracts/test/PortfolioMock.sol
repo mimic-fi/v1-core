@@ -12,10 +12,10 @@ import "../interfaces/IPortfolio.sol";
 contract PortfolioMock is IPortfolio {
     using SafeMath for uint256;
 
-    event BeforeDeposit(address sender, address[] tokens, uint256[] amounts);
-    event AfterDeposit(address sender, address[] tokens, uint256[] amounts);
-    event BeforeWithdraw(address sender, address[] tokens, uint256[] amounts, address recipient);
-    event AfterWithdraw(address sender, address[] tokens, uint256[] amounts, address recipient);
+    event BeforeDeposit(address sender, address token, uint256 amount);
+    event AfterDeposit(address sender, address token, uint256 amount);
+    event BeforeWithdraw(address sender, address token, uint256 amount, address recipient);
+    event AfterWithdraw(address sender, address token, uint256 amount, address recipient);
     event BeforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes data);
     event AfterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes data);
     event BeforeJoin(address sender, address strategy, uint256 amount, bytes data);
@@ -46,10 +46,8 @@ contract PortfolioMock is IPortfolio {
         mockedSupportedCallbacks = newMockedSupportedCallbacks;
     }
 
-    function mockApproveTokens(address[] memory tokens, uint256 amount) external {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20(tokens[i]).approve(vault, amount);
-        }
+    function mockApproveTokens(address token, uint256 amount) external {
+        IERC20(token).approve(vault, amount);
     }
 
     function getPerformanceFee() external override view returns (uint256 fee, address collector) {
@@ -68,16 +66,20 @@ contract PortfolioMock is IPortfolio {
         return mockedSupportedCallbacks;
     }
 
-    function beforeDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external override {
-        emit BeforeDeposit(sender, tokens, amounts);
+    function beforeDeposit(address sender, address token, uint256 amount) external override {
+        emit BeforeDeposit(sender, token, amount);
     }
 
-    function afterDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external override {
-        emit AfterDeposit(sender, tokens, amounts);
+    function afterDeposit(address sender, address token, uint256 amount) external override {
+        emit AfterDeposit(sender, token, amount);
     }
 
-    function beforeWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external override {
-        emit BeforeWithdraw(sender, tokens, amounts, recipient);
+    function beforeWithdraw(address sender, address token, uint256 amount, address recipient) external override {
+        emit BeforeWithdraw(sender, token, amount, recipient);
+    }
+
+    function afterWithdraw(address sender, address token, uint256 amount, address recipient) external override {
+        emit AfterWithdraw(sender, token, amount, recipient);
     }
 
     function beforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external override {
@@ -86,10 +88,6 @@ contract PortfolioMock is IPortfolio {
 
     function afterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external override {
         emit AfterSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
-    }
-
-    function afterWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external override {
-        emit AfterWithdraw(sender, tokens, amounts, recipient);
     }
 
     function beforeJoin(address sender, address strategy, uint256 amount, bytes memory data) external override {

@@ -18,33 +18,20 @@ export const VAULT_ID = 'VAULT_ID'
 
 export function handleDeposit(event: Deposit): void {
   loadOrCreateVault(event.address)
+  loadOrCreateERC20(event.params.token)
   loadOrCreateAccount(event.params.account, event.address)
-
-  let tokens = event.params.tokens;
-  let amounts = event.params.amounts;
-  let depositFees = event.params.depositFees;
-
-  for (let i: i32 = 0; i < tokens.length; i++) {
-    loadOrCreateERC20(tokens[i])
-    let balance = loadOrCreateAccountBalance(event.params.account, tokens[i])
-    balance.amount = balance.amount.plus(amounts[i]).minus(depositFees[i])
-    balance.save()
-  }
+  let balance = loadOrCreateAccountBalance(event.params.account, event.params.token)
+  balance.amount = balance.amount.plus(event.params.amount).minus(event.params.depositFee)
+  balance.save()
 }
 
 export function handleWithdraw(event: Withdraw): void {
   loadOrCreateVault(event.address)
+  loadOrCreateERC20(event.params.token)
   loadOrCreateAccount(event.params.account, event.address)
-
-  let tokens = event.params.tokens;
-  let amounts = event.params.fromVault;
-
-  for (let i: i32 = 0; i < tokens.length; i++) {
-    loadOrCreateERC20(tokens[i])
-    let balance = loadOrCreateAccountBalance(event.params.account, tokens[i])
-    balance.amount = balance.amount.minus(amounts[i])
-    balance.save()
-  }
+  let balance = loadOrCreateAccountBalance(event.params.account, event.params.token)
+  balance.amount = balance.amount.minus(event.params.amount)
+  balance.save()
 }
 
 export function handleJoin(event: Join): void {

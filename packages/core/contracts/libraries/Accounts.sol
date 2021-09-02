@@ -57,27 +57,27 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).canPerform(who, where, what, how) : false;
     }
 
-    function beforeDeposit(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts) internal {
+    function beforeDeposit(Data memory self, address sender, address token, uint256 amount) internal {
         if (self.callbacks.supportsBeforeDeposit()) {
-            IPortfolio(self.addr).beforeDeposit(sender, tokens, amounts);
+            IPortfolio(self.addr).beforeDeposit(sender, token, amount);
         }
     }
 
-    function afterDeposit(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts) internal {
+    function afterDeposit(Data memory self, address sender, address token, uint256 amount) internal {
         if (self.callbacks.supportsAfterDeposit()) {
-            IPortfolio(self.addr).afterDeposit(sender, tokens, amounts);
+            IPortfolio(self.addr).afterDeposit(sender, token, amount);
         }
     }
 
-    function beforeWithdraw(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
+    function beforeWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient) internal {
         if (self.callbacks.supportsBeforeWithdraw()) {
-            IPortfolio(self.addr).beforeWithdraw(sender, tokens, amounts, recipient);
+            IPortfolio(self.addr).beforeWithdraw(sender, token, amount, recipient);
         }
     }
 
-    function afterWithdraw(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
+    function afterWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient) internal {
         if (self.callbacks.supportsAfterWithdraw()) {
-            IPortfolio(self.addr).afterWithdraw(sender, tokens, amounts, recipient);
+            IPortfolio(self.addr).afterWithdraw(sender, token, amount, recipient);
         }
     }
 

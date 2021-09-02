@@ -134,7 +134,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         } else if (what.isJoinOrExit()) {
             return isStrategyAllowed(how.decodeAddress(0));
         } else if (what.isWithdraw()) {
-            return isWithdrawer[how.decodeAddress(0)];
+            return isWithdrawer[how.decodeAddress(2)];
         } else {
             return what.isDeposit();
         }
@@ -145,19 +145,19 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return bytes2(0x0005);
     }
 
-    function beforeDeposit(address /* sender */, address[] memory tokens, uint256[] memory /* amounts */) external override onlyVault {
-        _approveTokens(tokens);
+    function beforeDeposit(address /* sender */, address token, uint256 /* amount */) external override onlyVault {
+        _approveToken(token);
     }
 
-    function afterDeposit(address /* sender */, address[] memory /* tokens */, uint256[] memory /* amounts */) external override onlyVault {
+    function afterDeposit(address /* sender */, address /* token */, uint256 /* amount */) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function beforeWithdraw(address /* sender */, address[] memory tokens, uint256[] memory /* amounts */, address /* recipient */) external override onlyVault {
-        _approveTokens(tokens);
+    function beforeWithdraw(address /* sender */, address token, uint256 /* amount */, address /* recipient */) external override onlyVault {
+        _approveToken(token);
     }
 
-    function afterWithdraw(address /* sender */, address[] memory /* tokens */, uint256[] memory /* amounts */, address /* recipient */) external override onlyVault {
+    function afterWithdraw(address /* sender */, address /* token */, uint256 /* amount */, address /* recipient */) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -185,17 +185,14 @@ contract Agreement is IAgreement, ReentrancyGuard {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function _approveTokens(address[] memory tokens) internal {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20 token = IERC20(tokens[i]);
-            uint256 allowance = token.allowance(address(this), vault);
-            if (allowance < FixedPoint.MAX_UINT256) {
-                if (allowance > 0) {
-                    // Some tokens revert when changing non-zero approvals
-                    token.safeApprove(vault, 0);
-                }
-                token.safeApprove(vault, FixedPoint.MAX_UINT256);
+    function _approveToken(address token) internal {
+        uint256 allowance = IERC20(token).allowance(address(this), vault);
+        if (allowance < FixedPoint.MAX_UINT256) {
+            if (allowance > 0) {
+                // Some tokens revert when changing non-zero approvals
+                IERC20(token).safeApprove(vault, 0);
             }
+            IERC20(token).safeApprove(vault, FixedPoint.MAX_UINT256);
         }
     }
 
