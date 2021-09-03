@@ -39,13 +39,13 @@ interface IPortfolio {
 
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external view returns (bool);
 
-    function beforeDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external;
+    function beforeDeposit(address sender, address token, uint256 amount) external;
 
-    function afterDeposit(address sender, address[] memory tokens, uint256[] memory amounts) external;
+    function afterDeposit(address sender, address token, uint256 amount) external;
 
-    function beforeWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external;
+    function beforeWithdraw(address sender, address token, uint256 amount, address recipient) external;
 
-    function afterWithdraw(address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external;
+    function afterWithdraw(address sender, address token, uint256 amount, address recipient) external;
 
     function beforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
 

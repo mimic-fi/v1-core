@@ -9,11 +9,11 @@ contract VaultMock is Vault {
         Vault(_protocolFee, _priceOracle, _swapConnector, _whitelistedTokens, _whitelistedStrategies)
     {}
 
-    function mockBeforeDeposit(address portfolio, address sender, address[] memory tokens, uint256[] memory amounts) external {
-        IPortfolio(portfolio).beforeDeposit(sender, tokens, amounts);
+    function mockBeforeDeposit(address portfolio, address sender, address token, uint256 amount) external {
+        IPortfolio(portfolio).beforeDeposit(sender, token, amount);
     }
 
-    function mockBeforeWithdraw(address portfolio, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) external {
-        IPortfolio(portfolio).beforeWithdraw(sender, tokens, amounts, recipient);
+    function mockBeforeWithdraw(address portfolio, address sender, address token, uint256 amount, address recipient) external {
+        IPortfolio(portfolio).beforeWithdraw(sender, token, amount, recipient);
     }
 }

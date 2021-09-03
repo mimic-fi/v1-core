@@ -56,7 +56,7 @@ async function benchmark(): Promise<void> {
   // Deposit 100k DAI => 98k (2% deposit fee)
   console.log('depositing DAI...')
   await DAI.mint(agreement, fp(100e3))
-  await vault.connect(manager1).deposit(agreement, [DAI.address], [fp(100e3)])
+  await vault.connect(manager1).deposit(agreement, DAI.address, fp(100e3))
 
   // Swap 50k DAI for USDC => 50.5k USDC (1% swap rate)
   console.log('swapping DAI for USDC...')
@@ -85,7 +85,7 @@ async function benchmark(): Promise<void> {
 
   // Withdraw USDC earnings 458.541 => 18k USDC
   console.log('withdrawing USDC strategy...')
-  await vault.connect(manager1).withdraw(agreement, [USDC.address], [fp(458.541)], withdrawer1.address)
+  await vault.connect(manager1).withdraw(agreement, USDC.address, fp(458.541), withdrawer1.address)
 
   // Increase strategy rates by 1%
   console.log('mocking swap rates...')

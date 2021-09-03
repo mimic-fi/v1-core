@@ -99,25 +99,24 @@ export default class Agreement {
     return this.instance.getSupportedCallbacks()
   }
 
-  async canDeposit({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('deposit'), how })
+  async canDeposit({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
+    return this.canPerform({ who, where, what: this.vault.getSighash('deposit'), how: this.parseHow(how) })
   }
 
-  async canWithdraw({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('withdraw'), how })
+  async canWithdraw({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
+    return this.canPerform({ who, where, what: this.vault.getSighash('withdraw'), how: this.parseHow(how) })
   }
 
   async canSwap({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
-    const parsedHow = how ? how.map((h) => (typeof h === 'string' ? h : utils.hexZeroPad(utils.hexlify(h), 32))) : []
-    return this.canPerform({ who, where, what: this.vault.getSighash('swap'), how: parsedHow })
+    return this.canPerform({ who, where, what: this.vault.getSighash('swap'), how: this.parseHow(how) })
   }
 
-  async canJoin({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('join'), how })
+  async canJoin({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
+    return this.canPerform({ who, where, what: this.vault.getSighash('join'), how: this.parseHow(how) })
   }
 
-  async canExit({ who, where, how }: { who: Account; where: Account; how?: string[] }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('exit'), how })
+  async canExit({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
+    return this.canPerform({ who, where, what: this.vault.getSighash('exit'), how: this.parseHow(how) })
   }
 
   async canPerform({ who, where, what, how }: { who: Account; where: Account; what?: string; how?: string[] }): Promise<boolean> {
@@ -125,5 +124,9 @@ export default class Agreement {
     what = padRight(what ?? ZERO_ADDRESS)
     how = (how ?? []).map(padRight)
     return this.instance.canPerform(toAddress(who), toAddress(where), what, how)
+  }
+
+  private parseHow(how?: Array<string | BigNumberish>): string[] {
+    return how ? how.map((h) => (typeof h === 'string' ? h : utils.hexZeroPad(utils.hexlify(h), 32))) : []
   }
 }

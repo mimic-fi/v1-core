@@ -15,8 +15,8 @@
 pragma solidity ^0.8.0;
 
 interface IVault {
-    event Deposit(address indexed account, address[] tokens, uint256[] amounts, uint256[] depositFees);
-    event Withdraw(address indexed account, address[] tokens, uint256[] amounts, uint256[] fromVault, address recipient);
+    event Deposit(address indexed account, address token, uint256 amount, uint256 depositFee);
+    event Withdraw(address indexed account, address token, uint256 amount, uint256 fromVault, address recipient);
     event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares);
     event Exit(address indexed account, address indexed strategy, uint256 amountInvested, uint256 amountReceived, uint256 shares, uint256 protocolFee, uint256 performanceFee);
     event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut, bytes data);
@@ -40,17 +40,17 @@ interface IVault {
 
     function getAccountInvestment(address account, address strategy) external view returns (uint256 invested, uint256 shares);
 
-    function batch(bytes[] memory data) external returns (bytes[] memory results);
+    function batch(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
-    function deposit(address account, address[] memory tokens, uint256[] memory amounts) external;
+    function deposit(address account, address token, uint256 amount) external returns (uint256);
 
-    function withdraw(address account, address[] memory tokens, uint256[] memory amounts, address recipient) external;
+    function withdraw(address account, address token, uint256 amount, address recipient) external returns (uint256 );
 
-    function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
+    function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external returns (uint256 amountOut);
 
-    function join(address account, address strategy, uint256 amount, bytes memory data) external;
+    function join(address account, address strategy, uint256 amount, bytes memory data) external returns (uint256 shares);
 
-    function exit(address account, address strategy, uint256 ratio, bytes memory data) external;
+    function exit(address account, address strategy, uint256 ratio, bytes memory data) external returns (uint256 received);
 
     function setProtocolFee(uint256 newProtocolFee) external;
 

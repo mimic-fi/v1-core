@@ -69,18 +69,14 @@ export default class Vault {
     return this.instance.getAccountInvestment(toAddress(account), toAddress(strategy))
   }
 
-  async deposit(account: Account, tokens: NAry<Account>, amounts: NAry<BigNumberish>, { from }: TxParams = {}): Promise<ContractTransaction> {
-    if (!Array.isArray(tokens)) tokens = [tokens]
-    amounts = !Array.isArray(amounts) ? Array(tokens.length).fill(amounts) : amounts
+  async deposit(account: Account, token: Account, amount: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
-    return vault.deposit(toAddress(account), toAddresses(tokens), amounts)
+    return vault.deposit(toAddress(account), toAddress(token), amount)
   }
 
-  async withdraw(account: Account, tokens: NAry<Account>, amounts: NAry<BigNumberish>, recipient: Account, { from }: TxParams = {}): Promise<ContractTransaction> {
-    if (!Array.isArray(tokens)) tokens = [tokens]
-    amounts = !Array.isArray(amounts) ? Array(tokens.length).fill(amounts) : amounts
+  async withdraw(account: Account, token: Account, amount: BigNumberish, recipient: Account, { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
-    return vault.withdraw(toAddress(account), toAddresses(tokens), amounts, toAddress(recipient))
+    return vault.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
   }
 
   async join(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {

@@ -57,63 +57,103 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).canPerform(who, where, what, how) : false;
     }
 
-    function beforeDeposit(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts) internal {
-        if (self.callbacks.supportsBeforeDeposit()) {
-            IPortfolio(self.addr).beforeDeposit(sender, tokens, amounts);
+    function beforeDeposit(Data memory self, address sender, address token, uint256 amount) internal {
+        if (supportsBeforeDeposit(self.callbacks)) {
+            IPortfolio(self.addr).beforeDeposit(sender, token, amount);
         }
     }
 
-    function afterDeposit(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts) internal {
-        if (self.callbacks.supportsAfterDeposit()) {
-            IPortfolio(self.addr).afterDeposit(sender, tokens, amounts);
+    function afterDeposit(Data memory self, address sender, address token, uint256 amount) internal {
+        if (supportsAfterDeposit(self.callbacks)) {
+            IPortfolio(self.addr).afterDeposit(sender, token, amount);
         }
     }
 
-    function beforeWithdraw(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
-        if (self.callbacks.supportsBeforeWithdraw()) {
-            IPortfolio(self.addr).beforeWithdraw(sender, tokens, amounts, recipient);
+    function beforeWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient) internal {
+        if (supportsBeforeWithdraw(self.callbacks)) {
+            IPortfolio(self.addr).beforeWithdraw(sender, token, amount, recipient);
         }
     }
 
-    function afterWithdraw(Data memory self, address sender, address[] memory tokens, uint256[] memory amounts, address recipient) internal {
-        if (self.callbacks.supportsAfterWithdraw()) {
-            IPortfolio(self.addr).afterWithdraw(sender, tokens, amounts, recipient);
+    function afterWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient) internal {
+        if (supportsAfterWithdraw(self.callbacks)) {
+            IPortfolio(self.addr).afterWithdraw(sender, token, amount, recipient);
         }
     }
 
     function beforeSwap(Data memory self, address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
-        if (self.callbacks.supportsBeforeSwap()) {
+        if (supportsBeforeSwap(self.callbacks)) {
             IPortfolio(self.addr).beforeSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
         }
     }
 
     function afterSwap(Data memory self, address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
-        if (self.callbacks.supportsAfterSwap()) {
+        if (supportsAfterSwap(self.callbacks)) {
             IPortfolio(self.addr).afterSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
         }
     }
 
     function beforeJoin(Data memory self, address sender, address strategy, uint256 amount, bytes memory data) internal {
-        if (self.callbacks.supportsBeforeJoin()) {
+        if (supportsBeforeJoin(self.callbacks)) {
             IPortfolio(self.addr).beforeJoin(sender, strategy, amount, data);
         }
     }
 
     function afterJoin(Data memory self, address sender, address strategy, uint256 amount, bytes memory data) internal {
-        if (self.callbacks.supportsAfterJoin()) {
+        if (supportsAfterJoin(self.callbacks)) {
             IPortfolio(self.addr).afterJoin(sender, strategy, amount, data);
         }
     }
 
     function beforeExit(Data memory self, address sender, address strategy, uint256 ratio, bytes memory data) internal {
-        if (self.callbacks.supportsBeforeExit()) {
+        if (supportsBeforeExit(self.callbacks)) {
             IPortfolio(self.addr).beforeExit(sender, strategy, ratio, data);
         }
     }
 
     function afterExit(Data memory self, address sender, address strategy, uint256 ratio, bytes memory data) internal {
-        if (self.callbacks.supportsAfterExit()) {
+        if (supportsAfterExit(self.callbacks)) {
             IPortfolio(self.addr).afterExit(sender, strategy, ratio, data);
         }
+    }
+
+    function supportsBeforeDeposit(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(0);
+    }
+
+    function supportsAfterDeposit(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(1);
+    }
+
+    function supportsBeforeWithdraw(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(2);
+    }
+
+    function supportsAfterWithdraw(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(3);
+    }
+
+    function supportsBeforeSwap(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(4);
+    }
+
+    function supportsAfterSwap(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(5);
+    }
+
+    function supportsBeforeJoin(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(6);
+    }
+
+    function supportsAfterJoin(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(7);
+    }
+
+    function supportsBeforeExit(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(8);
+    }
+
+    function supportsAfterExit(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(9);
     }
 }

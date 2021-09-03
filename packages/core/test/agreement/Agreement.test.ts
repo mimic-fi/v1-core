@@ -5,6 +5,7 @@ import { deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@m
 import { Account, toAddress, toAddresses } from '../helpers/models/types'
 
 import Vault from '../helpers/models/vault/Vault'
+import Token from '../helpers/models/tokens/Token'
 import TokenList from '../helpers/models/tokens/TokenList'
 import Agreement from '../helpers/models/agreement/Agreement'
 
@@ -414,20 +415,20 @@ describe('Agreement', () => {
     const itAcceptsAllowedActions = () => {
       it('accepts any deposit', async () => {
         expect(await agreement.canDeposit({ who, where })).to.be.true
-        expect(await agreement.canDeposit({ who, where, how: [ZERO_ADDRESS] })).to.be.true
+        expect(await agreement.canDeposit({ who, where, how: [ZERO_ADDRESS, fp(1)] })).to.be.true
       })
 
       it('accepts withdrawals to allowed recipients', async () => {
         const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
-        expect(await agreement.canWithdraw({ who, where, how: [withdrawer0] })).to.be.true
-        expect(await agreement.canWithdraw({ who, where, how: [withdrawer1] })).to.be.true
+        expect(await agreement.canWithdraw({ who, where, how: [ZERO_ADDRESS, fp(1), withdrawer0] })).to.be.true
+        expect(await agreement.canWithdraw({ who, where, how: [ZERO_ADDRESS, fp(1), withdrawer1] })).to.be.true
 
         const [manager0, manager1] = toAddresses(agreement.managers)
-        expect(await agreement.canWithdraw({ who, where, how: [manager0] })).to.be.false
-        expect(await agreement.canWithdraw({ who, where, how: [manager1] })).to.be.false
+        expect(await agreement.canWithdraw({ who, where, how: [ZERO_ADDRESS, fp(1), manager0] })).to.be.false
+        expect(await agreement.canWithdraw({ who, where, how: [ZERO_ADDRESS, fp(1), manager1] })).to.be.false
 
         const collector = toAddress(agreement.feeCollector)
-        expect(await agreement.canWithdraw({ who, where, how: [collector] })).to.be.false
+        expect(await agreement.canWithdraw({ who, where, how: [ZERO_ADDRESS, fp(1), collector] })).to.be.false
       })
 
       it('accepts operating with allowed tokens', async () => {
@@ -516,9 +517,10 @@ describe('Agreement', () => {
   })
 
   describe('callbacks', () => {
-    let agreement: Agreement
+    let agreement: Agreement, token: Token
 
     beforeEach('deploy agreement', async () => {
+      token = tokens.first
       agreement = await Agreement.create({ vault: 'mocked' })
     })
 
@@ -529,14 +531,14 @@ describe('Agreement', () => {
 
     describe('before deposit', () => {
       context('when the sender is the vault', () => {
-        it('grants infinite allowance for all tokens', async () => {
-          const previousTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
-          previousTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(0))
+        it('grants infinite allowance for the given token', async () => {
+          const previousTokenAllowance = await token.allowance(agreement.address, agreement.vault.address)
+          expect(previousTokenAllowance).to.be.equal(0)
 
-          await agreement.vault.instance.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, tokens.addresses, [])
+          await agreement.vault.instance.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, token.address, 0)
 
-          const currentTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
-          currentTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(MAX_UINT256))
+          const currentTokenAllowance = await token.allowance(agreement.address, agreement.vault.address)
+          expect(currentTokenAllowance).to.be.equal(MAX_UINT256)
         })
       })
 
@@ -546,21 +548,21 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, [], [])).to.be.revertedWith('SENDER_NOT_VAULT')
+          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
     })
 
     describe('before withdraw', () => {
       context('when the sender is the vault', () => {
-        it('grants infinite allowance for all tokens', async () => {
-          const previousTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
-          previousTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(0))
+        it('grants infinite allowance for the given token', async () => {
+          const previousTokenAllowance = await token.allowance(agreement.address, agreement.vault.address)
+          expect(previousTokenAllowance).to.be.equal(0)
 
-          await agreement.vault.instance.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, tokens.addresses, [], ZERO_ADDRESS)
+          await agreement.vault.instance.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, 0, ZERO_ADDRESS)
 
-          const currentTokenAllowances = await tokens.allowance(agreement.address, agreement.vault.address)
-          currentTokenAllowances.forEach((allowance) => expect(allowance).to.be.equal(MAX_UINT256))
+          const currentTokenAllowance = await token.allowance(agreement.address, agreement.vault.address)
+          expect(currentTokenAllowance).to.be.equal(MAX_UINT256)
         })
       })
 
@@ -570,7 +572,7 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeWithdraw(ZERO_ADDRESS, [], [], ZERO_ADDRESS)).to.be.revertedWith('SENDER_NOT_VAULT')
+          await expect(agreement.instance.beforeWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS)).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
     })

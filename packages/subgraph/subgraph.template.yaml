@@ -28,9 +28,9 @@ dataSources:
         - name: ERC20
           file: ./abi/IERC20.json
       eventHandlers:
-        - event: Deposit(indexed address,address[],uint256[],uint256[])
+        - event: Deposit(indexed address,address,uint256,uint256)
           handler: handleDeposit
-        - event: Withdraw(indexed address,address[],uint256[],uint256[],address)
+        - event: Withdraw(indexed address,address,uint256,uint256,address)
           handler: handleWithdraw
         - event: Join(indexed address,indexed address,uint256,uint256)
           handler: handleJoin
