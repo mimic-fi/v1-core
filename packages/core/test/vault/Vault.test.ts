@@ -1877,40 +1877,469 @@ describe('Vault', () => {
       await portfolio.mockCanPerform(true)
     })
 
-    it('allows batching actions', async () => {
-      const amount = fp(500)
-      const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-      const expectedFee = depositedAmount.sub(amount)
-      await token.mint(portfolio, depositedAmount)
-      await portfolio.mockApproveTokens(token.address, depositedAmount)
+    context('without reading output', () => {
+      it('allows batching actions', async () => {
+        const amount = fp(500)
+        const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+        const expectedFee = depositedAmount.sub(amount)
+        await token.mint(portfolio, depositedAmount)
+        await portfolio.mockApproveTokens(token.address, depositedAmount)
 
-      const deposit = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, depositedAmount)
-      const join = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, amount, '0x')
-      const exit = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, fp(0.5), '0x')
-      const tx = await vault.instance.connect(from).batch([deposit, join, exit].map((tx) => tx.data))
+        const { data: deposit } = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, depositedAmount)
+        const { data: join } = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, amount, '0x')
+        const { data: exit } = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, fp(0.5), '0x')
 
-      await assertEvent(tx, 'Deposit', {
-        account: portfolio,
-        token,
-        amount: depositedAmount,
-        depositFee: expectedFee,
+        const tx = await vault.instance.connect(from).batch([deposit, join, exit], [])
+
+        await assertEvent(tx, 'Deposit', {
+          account: portfolio,
+          token,
+          amount: depositedAmount,
+          depositFee: expectedFee,
+        })
+
+        await assertEvent(tx, 'Join', {
+          account: portfolio,
+          strategy,
+          amount,
+          shares: amount,
+        })
+
+        await assertEvent(tx, 'Exit', {
+          account: portfolio,
+          strategy,
+          amountInvested: amount.div(2),
+          amountReceived: amount.div(2),
+          shares: amount.div(2),
+          protocolFee: 0,
+          performanceFee: 0,
+        })
+      })
+    })
+
+    context('when reading output', () => {
+      context('when reading from a deposit', () => {
+        let deposit: string
+
+        const readsOutput = [false, true]
+        const depositedAmount = fp(500)
+        const expectedDepositFee = depositedAmount.mul(depositFee).div(fp(1))
+
+        beforeEach('populate deposit', async () => {
+          await tokens.first.mint(portfolio, depositedAmount)
+          await portfolio.mockApproveTokens(token.address, depositedAmount)
+          const tx = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, depositedAmount)
+          deposit = tx.data || ''
+        })
+
+        context('when appending it to a swap', () => {
+          let tokenIn: Token, tokenOut: Token, swap: string
+
+          const swapRate = fp(1.05)
+
+          beforeEach('populate swap', async () => {
+            tokenIn = tokens.first
+            tokenOut = tokens.second
+            await vault.swapConnector.mockRate(swapRate)
+            await tokenOut.mint(vault.swapConnector.address, fp(10000))
+            const tx = await vault.instance.populateTransaction.swap(portfolio.address, tokenIn.address, tokenOut.address, MAX_UINT256, fp(0.1), '0xaa')
+            swap = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, swap], readsOutput)
+
+            const expectedAmountIn = depositedAmount.sub(expectedDepositFee)
+            const expectedAmountOut = expectedAmountIn.mul(swapRate).div(fp(1))
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+              amount: depositedAmount,
+              depositFee: expectedDepositFee,
+            })
+
+            await assertEvent(tx, 'Swap', {
+              account: portfolio,
+              tokenIn,
+              tokenOut,
+              amountIn: expectedAmountIn,
+              remainingIn: 0,
+              amountOut: expectedAmountOut,
+              data: '0xaa',
+            })
+          })
+        })
+
+        context('when appending it to a join', () => {
+          let join: string
+
+          const strategyRate = fp(0.95)
+
+          beforeEach('populate swap', async () => {
+            await strategy.mockRate(strategyRate)
+            const tx = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, MAX_UINT256, '0x99')
+            join = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, join], readsOutput)
+
+            const expectedJoinAmount = depositedAmount.sub(expectedDepositFee)
+            const expectedShares = expectedJoinAmount.mul(fp(1)).div(strategyRate)
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+              amount: depositedAmount,
+              depositFee: expectedDepositFee,
+            })
+
+            await assertEvent(tx, 'Join', {
+              account: portfolio,
+              strategy,
+              amount: expectedJoinAmount,
+              shares: expectedShares,
+            })
+          })
+        })
+
+        context('when appending it to a withdraw', () => {
+          let withdraw: string
+
+          beforeEach('populate withdraw', async () => {
+            const tx = await vault.instance.populateTransaction.withdraw(portfolio.address, token.address, MAX_UINT256, other.address)
+            withdraw = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, withdraw], readsOutput)
+
+            const expectedDepositFee = depositedAmount.mul(depositFee).div(fp(1))
+            const expectedWithdrawnAmount = depositedAmount.sub(expectedDepositFee)
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+              amount: depositedAmount,
+              depositFee: expectedDepositFee,
+            })
+
+            await assertEvent(tx, 'Withdraw', {
+              account: portfolio,
+              token,
+              amount: expectedWithdrawnAmount,
+              recipient: other,
+            })
+          })
+        })
       })
 
-      await assertEvent(tx, 'Join', {
-        account: portfolio,
-        strategy,
-        amount,
-        shares: amount,
+      context('when reading from a swap', () => {
+        let tokenIn: Token, tokenOut: Token, swap: string, deposit: string
+
+        const readsOutput = [false, false, true]
+        const amountIn = fp(100)
+        const swapRate = fp(1.05)
+        const expectedAmountOut = amountIn.mul(swapRate).div(fp(1))
+
+        beforeEach('populate deposit', async () => {
+          await token.mint(portfolio, fp(10000))
+          await portfolio.mockApproveTokens(token.address, fp(10000))
+          const tx = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, fp(10000))
+          deposit = tx.data || ''
+        })
+
+        beforeEach('populate swap', async () => {
+          tokenIn = tokens.first
+          tokenOut = tokens.second
+          await vault.swapConnector.mockRate(swapRate)
+          await tokenOut.mint(vault.swapConnector.address, fp(10000))
+          const tx = await vault.instance.populateTransaction.swap(portfolio.address, tokenIn.address, tokenOut.address, amountIn, fp(0.1), '0xaa')
+          swap = tx.data || ''
+        })
+
+        context('when appending it to a swap', () => {
+          let secondTokenIn: Token, secondTokenOut: Token, secondSwap: string
+
+          beforeEach('populate second swap', async () => {
+            secondTokenIn = tokenOut
+            secondTokenOut = await Token.create('MKR')
+            await secondTokenOut.mint(vault.swapConnector.address, fp(10000))
+            const tx = await vault.instance.populateTransaction.swap(portfolio.address, secondTokenIn.address, secondTokenOut.address, MAX_UINT256, fp(0.1), '0xbb')
+            secondSwap = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, swap, secondSwap], readsOutput)
+
+            const expectedSecondAmountOut = expectedAmountOut.mul(swapRate).div(fp(1))
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+            })
+
+            await assertEvent(tx, 'Swap', {
+              account: portfolio,
+              tokenIn,
+              tokenOut,
+              amountIn,
+              amountOut: expectedAmountOut,
+              remainingIn: 0,
+              data: '0xaa',
+            })
+
+            await assertEvent(tx, 'Swap', {
+              account: portfolio,
+              tokenIn: secondTokenIn,
+              tokenOut: secondTokenOut,
+              amountIn: expectedAmountOut,
+              amountOut: expectedSecondAmountOut,
+              remainingIn: 0,
+              data: '0xbb',
+            })
+          })
+        })
+
+        context('when appending it to a join', () => {
+          let join: string
+
+          const strategyRate = fp(0.95)
+
+          beforeEach('populate swap', async () => {
+            await strategy.mockRate(strategyRate)
+            const tx = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, MAX_UINT256, '0x99')
+            join = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, swap, join], readsOutput)
+
+            const expectedShares = expectedAmountOut.mul(fp(1)).div(strategyRate).add(1) // rounding error
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+            })
+
+            await assertEvent(tx, 'Swap', {
+              account: portfolio,
+              tokenIn,
+              tokenOut,
+              amountIn,
+              amountOut: expectedAmountOut,
+              remainingIn: 0,
+              data: '0xaa',
+            })
+
+            await assertEvent(tx, 'Join', {
+              account: portfolio,
+              strategy,
+              amount: expectedAmountOut,
+              shares: expectedShares,
+            })
+          })
+        })
+
+        context('when appending it to a withdraw', () => {
+          let withdraw: string
+
+          beforeEach('populate withdraw', async () => {
+            const tx = await vault.instance.populateTransaction.withdraw(portfolio.address, token.address, MAX_UINT256, other.address)
+            withdraw = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, swap, withdraw], readsOutput)
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+            })
+
+            await assertEvent(tx, 'Swap', {
+              account: portfolio,
+              tokenIn,
+              tokenOut,
+              amountIn,
+              amountOut: expectedAmountOut,
+              remainingIn: 0,
+              data: '0xaa',
+            })
+
+            await assertEvent(tx, 'Withdraw', {
+              account: portfolio,
+              token,
+              amount: expectedAmountOut,
+              recipient: other,
+            })
+          })
+        })
       })
 
-      await assertEvent(tx, 'Exit', {
-        account: portfolio,
-        strategy,
-        amountInvested: amount.div(2),
-        amountReceived: amount.div(2),
-        shares: amount.div(2),
-        protocolFee: 0,
-        performanceFee: 0,
+      context('when reading from an exit', () => {
+        let deposit: string, join: string, exit: string
+
+        const readsOutput = [false, true, false, true]
+        const ratio = fp(0.5)
+        const strategyRate = fp(1.05)
+        const depositedAmount = fp(10000)
+        const expectedDepositFees = depositedAmount.mul(depositFee).div(fp(1))
+        const expectedJoinedAmount = depositedAmount.sub(expectedDepositFees)
+        const expectedReceivedAmount = expectedJoinedAmount.div(2)
+
+        beforeEach('populate deposit', async () => {
+          await token.mint(portfolio, fp(10000))
+          await portfolio.mockApproveTokens(token.address, fp(10000))
+          const tx = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, fp(10000))
+          deposit = tx.data || ''
+        })
+
+        beforeEach('populate join', async () => {
+          await strategy.mockRate(strategyRate)
+          const tx = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, MAX_UINT256, '0x99')
+          join = tx.data || ''
+        })
+
+        beforeEach('populate exit', async () => {
+          const tx = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, ratio, '0xee')
+          exit = tx.data || ''
+        })
+
+        context('when appending it to a swap', () => {
+          let tokenIn: Token, tokenOut: Token, swap: string
+
+          const swapRate = fp(1.02)
+
+          beforeEach('populate second swap', async () => {
+            tokenIn = tokens.first
+            tokenOut = tokens.second
+            await vault.swapConnector.mockRate(swapRate)
+            await tokenOut.mint(vault.swapConnector.address, fp(10000))
+            const tx = await vault.instance.populateTransaction.swap(portfolio.address, tokenIn.address, tokenOut.address, MAX_UINT256, fp(0.1), '0xaa')
+            swap = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, join, exit, swap], readsOutput)
+
+            const expectedAmountOut = expectedReceivedAmount.mul(swapRate).div(fp(1))
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+              depositFee: expectedDepositFees,
+            })
+
+            await assertEvent(tx, 'Join', {
+              account: portfolio,
+              strategy,
+              amount: expectedJoinedAmount,
+            })
+
+            await assertEvent(tx, 'Exit', {
+              account: portfolio,
+              strategy,
+              amountInvested: expectedJoinedAmount.div(2),
+              amountReceived: expectedReceivedAmount,
+            })
+
+            await assertEvent(tx, 'Swap', {
+              account: portfolio,
+              tokenIn,
+              tokenOut,
+              amountIn: expectedReceivedAmount,
+              amountOut: expectedAmountOut,
+              remainingIn: 0,
+              data: '0xaa',
+            })
+          })
+        })
+
+        context('when appending it to a join', () => {
+          let secondJoin: string, secondStrategy: Contract
+
+          const secondStrategyRate = fp(0.7)
+
+          beforeEach('populate second join', async () => {
+            secondStrategy = await deploy('StrategyMock', [token.address])
+            await secondStrategy.mockRate(secondStrategyRate)
+            const tx = await vault.instance.populateTransaction.join(portfolio.address, secondStrategy.address, MAX_UINT256, '0x99')
+            secondJoin = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, join, exit, secondJoin], readsOutput)
+
+            const expectedShares = expectedReceivedAmount.mul(fp(1)).div(secondStrategyRate) // rounding error
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+              depositFee: expectedDepositFees,
+            })
+
+            await assertEvent(tx, 'Join', {
+              account: portfolio,
+              strategy,
+              amount: expectedJoinedAmount,
+            })
+
+            await assertEvent(tx, 'Exit', {
+              account: portfolio,
+              strategy,
+              amountInvested: expectedJoinedAmount.div(2),
+              amountReceived: expectedReceivedAmount,
+            })
+
+            await assertEvent(tx, 'Join', {
+              account: portfolio,
+              strategy: secondStrategy,
+              amount: expectedReceivedAmount,
+              shares: expectedShares,
+            })
+          })
+        })
+
+        context('when appending it to a withdraw', () => {
+          let withdraw: string
+
+          beforeEach('populate withdraw', async () => {
+            const tx = await vault.instance.populateTransaction.withdraw(portfolio.address, token.address, MAX_UINT256, other.address)
+            withdraw = tx.data || ''
+          })
+
+          it('batches actions correctly', async () => {
+            const tx = await vault.instance.connect(from).batch([deposit, join, exit, withdraw], readsOutput)
+
+            await assertEvent(tx, 'Deposit', {
+              account: portfolio,
+              token,
+              depositFee: expectedDepositFees,
+            })
+
+            await assertEvent(tx, 'Join', {
+              account: portfolio,
+              strategy,
+              amount: expectedJoinedAmount,
+            })
+
+            await assertEvent(tx, 'Exit', {
+              account: portfolio,
+              strategy,
+              amountInvested: expectedJoinedAmount.div(2),
+              amountReceived: expectedReceivedAmount,
+            })
+
+            await assertEvent(tx, 'Withdraw', {
+              account: portfolio,
+              token,
+              amount: expectedReceivedAmount,
+              recipient: other,
+            })
+          })
+        })
       })
     })
   })

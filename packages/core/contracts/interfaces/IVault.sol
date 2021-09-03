@@ -40,17 +40,17 @@ interface IVault {
 
     function getAccountInvestment(address account, address strategy) external view returns (uint256 invested, uint256 shares);
 
-    function batch(bytes[] memory data) external returns (bytes[] memory results);
+    function batch(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
-    function deposit(address account, address token, uint256 amount) external;
+    function deposit(address account, address token, uint256 amount) external returns (uint256);
 
-    function withdraw(address account, address token, uint256 amount, address recipient) external;
+    function withdraw(address account, address token, uint256 amount, address recipient) external returns (uint256 );
 
-    function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
+    function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external returns (uint256 amountOut);
 
-    function join(address account, address strategy, uint256 amount, bytes memory data) external;
+    function join(address account, address strategy, uint256 amount, bytes memory data) external returns (uint256 shares);
 
-    function exit(address account, address strategy, uint256 ratio, bytes memory data) external;
+    function exit(address account, address strategy, uint256 ratio, bytes memory data) external returns (uint256 received);
 
     function setProtocolFee(uint256 newProtocolFee) external;
 
