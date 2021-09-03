@@ -33,9 +33,11 @@ interface IPortfolio {
      */
     function getSupportedCallbacks() external view returns (bytes2);
 
-    function getPerformanceFee() external view returns (uint256 fee, address collector);
-
     function getDepositFee() external view returns (uint256 fee, address collector);
+
+    function getWithdrawFee() external view returns (uint256 fee, address collector);
+
+    function getPerformanceFee() external view returns (uint256 fee, address collector);
 
     function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external view returns (bool);
 

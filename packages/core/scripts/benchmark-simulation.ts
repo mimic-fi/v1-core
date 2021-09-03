@@ -11,10 +11,10 @@ const PROTOCOL_FEE = fp(0.001) // 0.1 %
 // Agreement config
 const AGREEMENT_NAME = 'Test Agreement'
 const DEPOSIT_FEE = fp(0.02) // 2%
+const WITHDRAW_FEE = fp(0.01) // 2%
 const PERFORMANCE_FEE = fp(0.15) // 15%
 const MAX_SWAP_SLIPPAGE = fp(0.1) // 10%
-const ALLOWED_TOKENS = 0 // any
-const ALLOWED_STRATEGIES = 0 // any
+const ALLOWED = 0 // any
 
 // Strategies config
 const DAI_STRATEGY_RATE = fp(1.02)
@@ -48,7 +48,7 @@ async function benchmark(): Promise<void> {
   await vault.connect(admin).setWhitelistedStrategies(toAddresses(strategies), [true, true])
 
   // Deploy agreement
-  const agreementTx = await factory.create(AGREEMENT_NAME, feeCollector.address, DEPOSIT_FEE, PERFORMANCE_FEE, MAX_SWAP_SLIPPAGE, managers, withdrawers, [], ALLOWED_TOKENS, [], ALLOWED_STRATEGIES)
+  const agreementTx = await factory.create(AGREEMENT_NAME, feeCollector.address, DEPOSIT_FEE, WITHDRAW_FEE, PERFORMANCE_FEE, MAX_SWAP_SLIPPAGE, managers, withdrawers, [], ALLOWED, [], ALLOWED)
   const { args } = await assertEvent(agreementTx, 'AgreementCreated', { name: AGREEMENT_NAME })
   const agreement = args.agreement
   console.log('agreement:', agreement)

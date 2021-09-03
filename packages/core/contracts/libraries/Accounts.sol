@@ -41,12 +41,16 @@ library Accounts {
         return self.addr == msg.sender;
     }
 
-    function getPerformanceFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getPerformanceFee() : (0, address(0));
-    }
-
     function getDepositFee(Data memory self) internal view returns (uint256 fee, address collector) {
         return self.isPortfolio ? IPortfolio(self.addr).getDepositFee() : (0, address(0));
+    }
+
+    function getWithdrawFee(Data memory self) internal view returns (uint256 fee, address collector) {
+        return self.isPortfolio ? IPortfolio(self.addr).getWithdrawFee() : (0, address(0));
+    }
+
+    function getPerformanceFee(Data memory self) internal view returns (uint256 fee, address collector) {
+        return self.isPortfolio ? IPortfolio(self.addr).getPerformanceFee() : (0, address(0));
     }
 
     function getSupportedCallbacks(Data memory self) internal view returns (bytes2) {

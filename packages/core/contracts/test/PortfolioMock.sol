@@ -28,12 +28,14 @@ contract PortfolioMock is IPortfolio {
 
     address public vault;
     uint256 public depositFee;
+    uint256 public withdrawFee;
     uint256 public performanceFee;
     address public feeCollector;
 
-    constructor(address _vault, uint256 _depositFee, uint256 _performanceFee, address _feeCollector) {
+    constructor(address _vault, uint256 _depositFee, uint256 _withdrawFee, uint256 _performanceFee, address _feeCollector) {
         vault = _vault;
         depositFee = _depositFee;
+        withdrawFee = _withdrawFee;
         performanceFee = _performanceFee;
         feeCollector = _feeCollector;
     }
@@ -50,12 +52,16 @@ contract PortfolioMock is IPortfolio {
         IERC20(token).approve(vault, amount);
     }
 
-    function getPerformanceFee() external override view returns (uint256 fee, address collector) {
-        return (performanceFee, feeCollector);
-    }
-
     function getDepositFee() external override view returns (uint256 fee, address collector) {
         return (depositFee, feeCollector);
+    }
+
+    function getWithdrawFee() external override view returns (uint256 fee, address collector) {
+        return (withdrawFee, feeCollector);
+    }
+
+    function getPerformanceFee() external override view returns (uint256 fee, address collector) {
+        return (performanceFee, feeCollector);
     }
 
     function canPerform(address, address, bytes32, bytes32[] memory) external override view returns (bool) {

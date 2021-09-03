@@ -309,6 +309,12 @@
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "withdrawFee",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "address",
         "name": "recipient",
         "type": "address"

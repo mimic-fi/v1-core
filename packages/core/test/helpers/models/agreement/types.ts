@@ -11,6 +11,7 @@ export type Allowed = 'any' | 'whitelisted' | 'none'
 export type RawAgreementDeployment = {
   vault?: Vault | 'mocked'
   depositFee?: BigNumberish
+  withdrawFee?: BigNumberish
   performanceFee?: BigNumberish
   feeCollector?: Account
   maxSwapSlippage?: BigNumberish
@@ -26,6 +27,7 @@ export type RawAgreementDeployment = {
 export type AgreementDeployment = {
   vault: Vault
   depositFee: BigNumberish
+  withdrawFee: BigNumberish
   performanceFee: BigNumberish
   feeCollector: Account
   maxSwapSlippage: BigNumberish

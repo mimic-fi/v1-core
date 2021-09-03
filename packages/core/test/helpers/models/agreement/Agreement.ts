@@ -12,6 +12,7 @@ export default class Agreement {
   vault: Vault
   feeCollector: Account
   depositFee: BigNumberish
+  withdrawFee: BigNumberish
   performanceFee: BigNumberish
   maxSwapSlippage: BigNumberish
   managers: Account[]
@@ -30,6 +31,7 @@ export default class Agreement {
     vault: Vault,
     feeCollector: Account,
     depositFee: BigNumberish,
+    withdrawFee: BigNumberish,
     performanceFee: BigNumberish,
     maxSwapSlippage: BigNumberish,
     managers: Account[],
@@ -43,6 +45,7 @@ export default class Agreement {
     this.vault = vault
     this.feeCollector = feeCollector
     this.depositFee = depositFee
+    this.withdrawFee = withdrawFee
     this.performanceFee = performanceFee
     this.maxSwapSlippage = maxSwapSlippage
     this.managers = managers
@@ -77,18 +80,23 @@ export default class Agreement {
     return this.instance.isTokenAllowed(toAddress(token))
   }
 
+  async getFeeCollector(): Promise<BigNumber> {
+    return this.instance.feeCollector()
+  }
+
   async getDepositFee(): Promise<{ fee: BigNumber; collector: string }> {
     const [fee, collector] = await this.instance.getDepositFee()
+    return { fee, collector }
+  }
+
+  async getWithdrawFee(): Promise<{ fee: BigNumber; collector: string }> {
+    const [fee, collector] = await this.instance.getWithdrawFee()
     return { fee, collector }
   }
 
   async getPerformanceFee(): Promise<{ fee: BigNumber; collector: string }> {
     const [fee, collector] = await this.instance.getPerformanceFee()
     return { fee, collector }
-  }
-
-  async getFeeCollector(): Promise<BigNumber> {
-    return this.instance.feeCollector()
   }
 
   async getMaxSwapSlippage(): Promise<BigNumber> {
