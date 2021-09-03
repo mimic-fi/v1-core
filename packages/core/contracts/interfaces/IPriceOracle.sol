@@ -15,5 +15,14 @@
 pragma solidity ^0.8.0;
 
 interface IPriceOracle {
+    /**
+     * @dev The returned value is expected to be the price of `token` expressed in `base`.
+     * Moreover, since `token` and `base` may not use the same decimal value, the returned value is expected
+     * to be expressed using a number of decimals such as when performing a fixed point product of it by a
+     * `base` amount it results in a value expressed in `token` decimals. For example, if `token` is USDC and
+     * `base` is ETH, then the returned value is expected to be expressed using 6 decimals.
+     *
+     * FixedPoint.mul(X[ETH], price[USDC/ETH]) =  FixedPoint.mul(X[18], price[6]) = X * price [6]
+     */
     function getTokenPrice(address token, address base) external view returns (uint256);
 }
