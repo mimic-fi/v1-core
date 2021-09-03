@@ -227,7 +227,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
 
         uint256 remainingIn;
         { // scope to avoid stack too deep
-            uint256 price = IPriceOracle(priceOracle).getTokenPrice(tokenIn, tokenOut);
+            uint256 price = IPriceOracle(priceOracle).getTokenPrice(tokenOut, tokenIn);
             uint256 minAmountOut = amountIn.mulUp(price).mulUp(FixedPoint.ONE - slippage);
             require(ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn) >= minAmountOut, "EXPECTED_SWAP_MIN_AMOUNT");
 
