@@ -759,7 +759,6 @@ describe('Vault', () => {
                 amountIn: amount,
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
-                data: '0x',
               })
             })
           }
@@ -932,7 +931,6 @@ describe('Vault', () => {
                 amountIn: amount,
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
-                data: '0x',
               })
             })
           }
@@ -1966,7 +1964,6 @@ describe('Vault', () => {
               amountIn: expectedAmountIn,
               remainingIn: 0,
               amountOut: expectedAmountOut,
-              data: '0xaa',
             })
           })
         })
@@ -2087,7 +2084,6 @@ describe('Vault', () => {
               amountIn,
               amountOut: expectedAmountOut,
               remainingIn: 0,
-              data: '0xaa',
             })
 
             await assertEvent(tx, 'Swap', {
@@ -2097,7 +2093,6 @@ describe('Vault', () => {
               amountIn: expectedAmountOut,
               amountOut: expectedSecondAmountOut,
               remainingIn: 0,
-              data: '0xbb',
             })
           })
         })
@@ -2130,7 +2125,6 @@ describe('Vault', () => {
               amountIn,
               amountOut: expectedAmountOut,
               remainingIn: 0,
-              data: '0xaa',
             })
 
             await assertEvent(tx, 'Join', {
@@ -2165,7 +2159,6 @@ describe('Vault', () => {
               amountIn,
               amountOut: expectedAmountOut,
               remainingIn: 0,
-              data: '0xaa',
             })
 
             await assertEvent(tx, 'Withdraw', {
@@ -2252,7 +2245,6 @@ describe('Vault', () => {
               amountIn: expectedReceivedAmount,
               amountOut: expectedAmountOut,
               remainingIn: 0,
-              data: '0xaa',
             })
           })
         })

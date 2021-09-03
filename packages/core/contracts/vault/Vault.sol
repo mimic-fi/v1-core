@@ -246,7 +246,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
 
         accounting.balance[tokenIn] = currentBalance.sub(amountIn).add(remainingIn);
         accounting.balance[tokenOut] = accounting.balance[tokenOut].add(amountOut);
-        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
+        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut);
     }
 
     function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data) internal returns (uint256 shares) {
