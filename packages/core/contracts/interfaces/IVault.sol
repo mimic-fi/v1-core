@@ -19,7 +19,7 @@ interface IVault {
     event Withdraw(address indexed account, address token, uint256 amount, uint256 fromVault, address recipient);
     event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares);
     event Exit(address indexed account, address indexed strategy, uint256 amountInvested, uint256 amountReceived, uint256 shares, uint256 protocolFee, uint256 performanceFee);
-    event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut, bytes data);
+    event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut);
     event ProtocolFeeSet(uint256 protocolFee);
     event PriceOracleSet(address priceOracle);
     event SwapConnectorSet(address swapConnector);

@@ -224,12 +224,6 @@
         "internalType": "uint256",
         "name": "amountOut",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
       }
     ],
     "name": "Swap",
