@@ -22,6 +22,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../libraries/FixedPoint.sol";
 import "../libraries/BytesHelpers.sol";
+import "../libraries/VaultHelpers.sol";
 
 import "../interfaces/IAgreement.sol";
 import "../interfaces/IStrategy.sol";
@@ -31,8 +32,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
     using Address for address;
     using SafeERC20 for IERC20;
     using FixedPoint for uint256;
-    using BytesHelpers for bytes;
-    using BytesHelpers for bytes4;
+    using VaultHelpers for bytes4;
     using BytesHelpers for bytes32;
     using BytesHelpers for bytes32[];
 
@@ -127,16 +127,16 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
 
         // Eval different actions and parameters
-        if (what.isSwap()) {
+        if (what.toBytes4().isSwap()) {
             address tokenOut = how.decodeAddress(1);
             uint256 slippage = how.decodeUint256(3);
             return isTokenAllowed(tokenOut) && slippage <= maxSwapSlippage;
-        } else if (what.isJoinOrExit()) {
+        } else if (what.toBytes4().isJoinOrExit()) {
             return isStrategyAllowed(how.decodeAddress(0));
-        } else if (what.isWithdraw()) {
+        } else if (what.toBytes4().isWithdraw()) {
             return isWithdrawer[how.decodeAddress(2)];
         } else {
-            return what.isDeposit();
+            return what.toBytes4().isDeposit();
         }
     }
 

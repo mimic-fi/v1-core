@@ -25,7 +25,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../libraries/Utils.sol";
 import "../libraries/Accounts.sol";
 import "../libraries/FixedPoint.sol";
-import "../libraries/BytesHelpers.sol";
+import "../libraries/VaultHelpers.sol";
 
 import "../interfaces/IStrategy.sol";
 import "../interfaces/ISwapConnector.sol";
@@ -35,6 +35,7 @@ import "../interfaces/IVault.sol";
 contract Vault is IVault, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FixedPoint for uint256;
+    using VaultHelpers for bytes;
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
@@ -112,9 +113,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function batch(bytes[] memory data) external override returns (bytes[] memory results) {
+    function batch(bytes[] memory data, bool[] memory readsOutput) external override returns (bytes[] memory results) {
+        require(readsOutput.length == data.length || readsOutput.length == 0, "BATCH_INVALID_READS_OUTPUT_VALUE");
+        bool requiresOutput = readsOutput.length == data.length;
         results = new bytes[](data.length);
+
         for (uint i = 0; i < data.length; i++) {
+            if (i > 0 && requiresOutput && readsOutput[i]) data[i].populateWithPreviousOutput(data[i - 1], results[i - 1]);
             results[i] = Address.functionDelegateCall(address(this), data[i]);
         }
     }
@@ -123,10 +128,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        returns (uint256 deposited)
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(token, amount));
+        Accounts.Data memory account = _authorize(accountAddress, arr(token, amount));
         account.beforeDeposit(msg.sender, token, amount);
-        _deposit(account, token, amount);
+        deposited = _deposit(account, token, amount);
         account.afterDeposit(msg.sender, token, amount);
     }
 
@@ -134,10 +140,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        returns (uint256 withdrawn)
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(token, amount, recipient));
+        Accounts.Data memory account = _authorize(accountAddress, arr(token, amount, recipient));
         account.beforeWithdraw(msg.sender, token, amount, recipient);
-        _withdraw(account, token, amount, recipient);
+        withdrawn = _withdraw(account, token, amount, recipient);
         account.afterWithdraw(msg.sender, token, amount, recipient);
     }
 
@@ -145,10 +152,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        returns (uint256 amountOut)
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(tokenIn, tokenOut, amountIn, slippage));
+        Accounts.Data memory account = _authorize(accountAddress, arr(tokenIn, tokenOut, amountIn, slippage));
         account.beforeSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
-        _swap(account, tokenIn, tokenOut, amountIn, slippage, data);
+        amountOut = _swap(account, tokenIn, tokenOut, amountIn, slippage, data);
         account.afterSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
     }
 
@@ -156,10 +164,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        returns (uint256 shares)
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(strategy, amount));
+        Accounts.Data memory account = _authorize(accountAddress, arr(strategy, amount));
         account.beforeJoin(msg.sender, strategy, amount, data);
-        _join(account, strategy, amount, data);
+        shares = _join(account, strategy, amount, data);
         account.afterJoin(msg.sender, strategy, amount, data);
     }
 
@@ -167,14 +176,15 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        returns (uint256 received)
     {
-        Accounts.Data memory account = _authenticate(accountAddress, arr(strategy, ratio));
+        Accounts.Data memory account = _authorize(accountAddress, arr(strategy, ratio));
         account.beforeExit(msg.sender, strategy, ratio, data);
-        _exit(account, strategy, ratio, data);
+        received = _exit(account, strategy, ratio, data);
         account.afterExit(msg.sender, strategy, ratio, data);
     }
 
-    function _deposit(Accounts.Data memory account, address token, uint256 amount) internal {
+    function _deposit(Accounts.Data memory account, address token, uint256 amount) internal returns (uint256 deposited) {
         require(amount > 0, "DEPOSIT_AMOUNT_ZERO");
 
         (uint256 depositFee, address feeCollector) = account.getDepositFee();
@@ -183,13 +193,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 depositFeeAmount = amount.mulDown(depositFee);
         _safeTransfer(token, feeCollector, depositFeeAmount);
 
-        uint256 amountAfterFees = amount.sub(depositFeeAmount);
+        deposited = amount.sub(depositFeeAmount);
         Accounting storage accounting = accountings[account.addr];
-        accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
+        accounting.balance[token] = accounting.balance[token].add(deposited);
         emit Deposit(account.addr, token, amount, depositFeeAmount);
     }
 
-    function _withdraw(Accounts.Data memory account, address token, uint256 amount, address recipient) internal {
+    function _withdraw(Accounts.Data memory account, address token, uint256 amount, address recipient) internal returns (uint256 withdrawn) {
         require(amount > 0, "WITHDRAW_AMOUNT_ZERO");
 
         Accounting storage accounting = accountings[account.addr];
@@ -203,10 +213,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
         _safeTransfer(token, recipient, fromVault);
         accounting.balance[token] = vaultBalance.sub(fromVault);
+        withdrawn = amount;
         emit Withdraw(account.addr, token, amount, fromVault, recipient);
     }
 
-    function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
+    function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal returns (uint256 amountOut) {
         require(tokenIn != tokenOut, "SWAP_SAME_TOKEN");
         require(slippage <= _MAX_SLIPPAGE, "SWAP_MAX_SLIPPAGE");
 
@@ -214,7 +225,6 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 currentBalance = accounting.balance[tokenIn];
         require(currentBalance >= amountIn, "ACCOUNTING_INSUFFICIENT_BALANCE");
 
-        uint256 amountOut;
         uint256 remainingIn;
         { // scope to avoid stack too deep
             uint256 price = IPriceOracle(priceOracle).getTokenPrice(tokenIn, tokenOut);
@@ -239,7 +249,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
     }
 
-    function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data) internal {
+    function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data) internal returns (uint256 shares) {
         require(amount > 0, "JOIN_AMOUNT_ZERO");
 
         address token = IStrategy(strategy).getToken();
@@ -249,13 +259,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         accounting.balance[token] = currentBalance.sub(amount);
 
         _safeTransfer(token, strategy, amount);
-        uint256 shares = IStrategy(strategy).onJoin(amount, data);
+        shares = IStrategy(strategy).onJoin(amount, data);
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
         accounting.invested[strategy] = accounting.invested[strategy].add(amount);
         emit Join(account.addr, strategy, amount, shares);
     }
 
-    function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bytes memory data) internal {
+    function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bytes memory data) internal returns (uint256 received) {
         require(ratio > 0, "EXIT_RATIO_ZERO");
         require(ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
 
@@ -266,17 +276,17 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         require(currentShares >= exitingShares, "ACCOUNT_INSUFFICIENT_SHARES");
         accounting.shares[strategy] = currentShares - exitingShares;
 
-        (address token, uint256 amountReceived) = IStrategy(strategy).onExit(exitingShares, data);
-        _safeTransferFrom(token, strategy, address(this), amountReceived);
+        (address token, uint256 amount) = IStrategy(strategy).onExit(exitingShares, data);
+        _safeTransferFrom(token, strategy, address(this), amount);
 
         uint256 invested = accounting.invested[strategy];
         uint256 deposited = invested.mulUp(ratio);
-        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(account, token, deposited, amountReceived);
+        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(account, token, deposited, amount);
 
         accounting.invested[strategy] = invested.sub(deposited);
-        uint256 amountAfterFees = amountReceived.sub(protocolFeeAmount).sub(performanceFeeAmount);
-        accounting.balance[token] = accounting.balance[token].add(amountAfterFees);
-        emit Exit(account.addr, strategy, deposited, amountReceived, exitingShares, protocolFeeAmount, performanceFeeAmount);
+        received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
+        accounting.balance[token] = accounting.balance[token].add(received);
+        emit Exit(account.addr, strategy, deposited, amount, exitingShares, protocolFeeAmount, performanceFeeAmount);
     }
 
     function _payExitFees(Accounts.Data memory account, address token, uint256 deposited, uint256 received)
@@ -309,7 +319,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function _authenticate(address accountAddress, bytes32[] memory params) internal view returns (Accounts.Data memory account) {
+    function _authorize(address accountAddress, bytes32[] memory params) internal view returns (Accounts.Data memory account) {
         // Check the given account is the msg.sender, otherwise it will ask the account whether the sender can operate
         // on its behalf. Note that this will never apply for accounts trying to operate on behalf of foreign EOAs.
         account = Accounts.parse(accountAddress);
