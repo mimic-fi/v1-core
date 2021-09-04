@@ -11,13 +11,13 @@ class TokensDeployer {
         .fill('TK')
         .map((t, i) => `${t}${i}`)
     if (!Array.isArray(params)) params = [params]
-    const tokens = await Promise.all(params.map((symbol) => this.deployToken(symbol, txParams)))
+    const tokens = await Promise.all(params.map((symbol) => this.deployToken(symbol, 18, txParams)))
     return new TokenList(tokens)
   }
 
-  async deployToken(symbol: string, { from }: TxParams = {}): Promise<Token> {
+  async deployToken(symbol: string, decimals?: number, { from }: TxParams = {}): Promise<Token> {
     const sender = from || (await getSigner())
-    const instance = await deploy('TokenMock', [symbol], sender)
+    const instance = await deploy('TokenMock', [symbol, decimals ?? 18], sender)
     return new Token(symbol, instance)
   }
 }

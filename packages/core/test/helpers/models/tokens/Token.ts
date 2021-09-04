@@ -8,8 +8,8 @@ export default class Token {
   symbol: string
   instance: Contract
 
-  static async create(symbol: string, txParams: TxParams = {}): Promise<Token> {
-    return TokensDeployer.deployToken(symbol, txParams)
+  static async create(symbol: string, decimals?: number, txParams: TxParams = {}): Promise<Token> {
+    return TokensDeployer.deployToken(symbol, decimals, txParams)
   }
 
   constructor(symbol: string, instance: Contract) {
@@ -19,6 +19,10 @@ export default class Token {
 
   get address(): string {
     return this.instance.address
+  }
+
+  async decimals(): Promise<number> {
+    return this.instance.decimals()
   }
 
   async balanceOf(account: Account): Promise<BigNumber> {

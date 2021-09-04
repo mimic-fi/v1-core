@@ -14,7 +14,9 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import "../libraries/FixedPoint.sol";
@@ -27,33 +29,45 @@ contract ChainLinkPriceOracle is IPriceOracle {
     address private constant _PRICE_ONE_FEED =
         0x1111111111111111111111111111111111111111; // Feed to use when price is one
 
-    mapping(address => AggregatorV3Interface) internal ethPriceFeeds;
+    struct PriceFeed {
+        AggregatorV3Interface aggregator;
+        uint8 tokenDecimals;
+    }
 
-    //If a price feed is address 0x0, it will have a price of one
+    mapping(address => PriceFeed) internal ethPriceFeeds;
+
+    //If a price feed is address 0x11..11, it will have a price of one
     constructor(
         address[] memory _tokens,
-        AggregatorV3Interface[] memory _ethPriceFeeds
+        AggregatorV3Interface[] memory _aggregators
     ) {
-        require(
-            _tokens.length == _ethPriceFeeds.length,
-            "INVALID_FEEDS_LENGTH"
-        );
+        require(_tokens.length == _aggregators.length, "INVALID_FEEDS_LENGTH");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            ethPriceFeeds[_tokens[i]] = _ethPriceFeeds[i];
+            //This version of the price oracle only handles 18 decimals prices
+            require(
+                address(_aggregators[i]) == _PRICE_ONE_FEED ||
+                    _aggregators[i].decimals() == 18,
+                "INVALID_FEED_DECIMALS"
+            );
+
+            ethPriceFeeds[_tokens[i]] = PriceFeed({
+                aggregator: _aggregators[i],
+                tokenDecimals: IERC20Metadata(_tokens[i]).decimals()
+            });
         }
     }
 
-    function hasFeed(address token) public view returns (bool) {
-        return address(ethPriceFeeds[token]) != address(0);
+    function hasPriceFeed(address token) public view returns (bool) {
+        return address(ethPriceFeeds[token].aggregator) != address(0);
     }
 
-    function getFeed(address token)
+    function getPriceFeed(address token)
         external
         view
-        returns (AggregatorV3Interface)
+        returns (PriceFeed memory)
     {
-        require(hasFeed(token), "TOKEN_WITH_NO_FEED");
+        require(hasPriceFeed(token), "TOKEN_WITH_NO_FEED");
         return ethPriceFeeds[token];
     }
 
@@ -63,27 +77,36 @@ contract ChainLinkPriceOracle is IPriceOracle {
         override
         returns (uint256)
     {
-        require(hasFeed(token), "TOKEN_WITH_NO_FEED");
-        require(hasFeed(base), "BASE_WITH_NO_FEED");
+        require(hasPriceFeed(token), "TOKEN_WITH_NO_FEED");
+        require(hasPriceFeed(base), "BASE_WITH_NO_FEED");
 
-        AggregatorV3Interface tokenPriceFeed = ethPriceFeeds[token];
-        AggregatorV3Interface basePriceFeed = ethPriceFeeds[base];
+        PriceFeed memory tokenPriceFeed = ethPriceFeeds[token];
+        PriceFeed memory basePriceFeed = ethPriceFeeds[base];
 
-        // Prices are expressed in
+        AggregatorV3Interface tokenAggregator = tokenPriceFeed.aggregator;
+        AggregatorV3Interface baseAggregator = basePriceFeed.aggregator;
+
+        uint8 tokenDecimals = tokenPriceFeed.tokenDecimals;
+        uint8 baseDecimals = basePriceFeed.tokenDecimals;
 
         uint256 tokenPrice = FixedPoint.ONE;
-        if (address(tokenPriceFeed) != _PRICE_ONE_FEED) {
-            (, int256 tokenPriceIInt, , , ) = tokenPriceFeed.latestRoundData();
-            tokenPrice = SafeCast.toUint256(tokenPriceIInt);
+        if (address(tokenAggregator) != _PRICE_ONE_FEED) {
+            (, int256 tokenPriceInt, , , ) = tokenAggregator.latestRoundData();
+            tokenPrice = SafeCast.toUint256(tokenPriceInt);
         }
 
         uint256 basePrice = FixedPoint.ONE;
-        if (address(basePriceFeed) != _PRICE_ONE_FEED) {
-            (, int256 basePriceIInt, , , ) = basePriceFeed.latestRoundData();
-            basePrice = SafeCast.toUint256(basePriceIInt);
+        if (address(baseAggregator) != _PRICE_ONE_FEED) {
+            (, int256 basePriceInt, , , ) = baseAggregator.latestRoundData();
+            basePrice = SafeCast.toUint256(basePriceInt);
         }
 
-        // Returns token/base = (ETH/base) / (ETH/token)
-        return basePrice.div(tokenPrice);
+        //Price is token/base = (ETH/base) / (ETH/token)
+        uint256 notScaledPrice = basePrice.div(tokenPrice);
+
+        return
+            tokenDecimals > baseDecimals
+                ? (notScaledPrice * 10**(tokenDecimals - baseDecimals))
+                : (notScaledPrice / 10**(baseDecimals - tokenDecimals));
     }
 }
