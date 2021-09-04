@@ -16,7 +16,7 @@ pragma solidity ^0.8.0;
 
 interface IVault {
     event Deposit(address indexed account, address token, uint256 amount, uint256 depositFee);
-    event Withdraw(address indexed account, address token, uint256 amount, uint256 fromVault, address recipient);
+    event Withdraw(address indexed account, address token, uint256 amount, uint256 fromVault, uint256 withdrawFee, address recipient);
     event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares);
     event Exit(address indexed account, address indexed strategy, uint256 amountInvested, uint256 amountReceived, uint256 shares, uint256 protocolFee, uint256 performanceFee);
     event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut);
@@ -42,9 +42,9 @@ interface IVault {
 
     function batch(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
-    function deposit(address account, address token, uint256 amount) external returns (uint256);
+    function deposit(address account, address token, uint256 amount) external returns (uint256 deposited);
 
-    function withdraw(address account, address token, uint256 amount, address recipient) external returns (uint256 );
+    function withdraw(address account, address token, uint256 amount, address recipient) external returns (uint256 withdrawn);
 
     function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external returns (uint256 amountOut);
 

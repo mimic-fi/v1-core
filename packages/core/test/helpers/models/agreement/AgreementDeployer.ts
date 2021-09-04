@@ -14,13 +14,15 @@ const ALLOWED_STRATEGIES = {
 
 const AgreementDeployer = {
   async deploy(params: RawAgreementDeployment = {}): Promise<Agreement> {
-    const { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies } = await this.parseParams(params)
+    const parsedParams = await this.parseParams(params)
+    const { vault, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies } = parsedParams
 
     const agreement = await deploy('Agreement', [], params.from)
     await agreement.initialize(
       vault.address,
       toAddress(feeCollector),
       depositFee,
+      withdrawFee,
       performanceFee,
       maxSwapSlippage,
       toAddresses(managers),
@@ -31,7 +33,7 @@ const AgreementDeployer = {
       ALLOWED_STRATEGIES[allowedStrategies]
     )
 
-    return new Agreement(agreement, vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies)
+    return new Agreement(agreement, vault, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies)
   },
 
   async parseParams(params: RawAgreementDeployment): Promise<AgreementDeployment> {
@@ -40,6 +42,7 @@ const AgreementDeployer = {
     const vault = params.vault && params.vault !== 'mocked' ? params.vault : await Vault.create({ mocked: !!params.vault })
     const feeCollector = params.feeCollector ?? signer5
     const depositFee = params.depositFee ?? 0
+    const withdrawFee = params.withdrawFee ?? 0
     const performanceFee = params.performanceFee ?? 0
     const maxSwapSlippage = params.maxSwapSlippage ?? fp(0.02)
 
@@ -51,7 +54,7 @@ const AgreementDeployer = {
 
     const strategies = params.strategies ?? []
     const allowedStrategies = params.allowedStrategies ?? 'any'
-    return { vault, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies }
+    return { vault, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies }
   },
 }
 

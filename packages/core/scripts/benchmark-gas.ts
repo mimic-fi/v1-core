@@ -32,19 +32,19 @@ async function benchmarkAgreement(vault: Contract, tokens: string[], strategies:
   const factory = await deploy('AgreementFactory', [vault.address])
 
   const name = 'Test Agreement'
-  const depositFee = fp(0.00005)
+  const depositFee = fp(0.005)
+  const withdrawFee = fp(0.003)
   const performanceFee = fp(0.00001)
   const maxSwapSlippage = fp(0.1)
   const [manager1, manager2, withdrawer1, withdrawer2, feeCollector] = toAddresses(await getSigners())
   const managers = [manager1, manager2]
   const withdrawers = [withdrawer1, withdrawer2]
-  const allowedTokens = 2
-  const allowedStrategies = 2
-  const agreement1Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies)
-  const agreement2Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowedTokens, strategies, allowedStrategies)
-  const agreement3Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowedTokens, [strategies[0]], allowedStrategies)
-  const agreement4Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowedTokens, [], allowedStrategies)
-  const agreement5Tx = await factory.create(name, feeCollector, depositFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [], allowedTokens, [], allowedStrategies)
+  const allowed = 2
+  const agreement1Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowed, strategies, allowed)
+  const agreement2Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowed, strategies, allowed)
+  const agreement3Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowed, [strategies[0]], allowed)
+  const agreement4Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowed, [], allowed)
+  const agreement5Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [], allowed, [], allowed)
 
   console.log(`- 2 managers, 2 withdrawers, 2 tokens, 2 strategies: ${(await agreement1Tx.wait()).gasUsed}`)
   console.log(`- 1 managers, 1 withdrawers, 2 tokens, 2 strategies: ${(await agreement2Tx.wait()).gasUsed}`)

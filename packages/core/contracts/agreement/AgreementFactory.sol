@@ -34,6 +34,7 @@ contract AgreementFactory  {
         string memory _name,
         address _feeCollector,
         uint256 _depositFee,
+        uint256 _withdrawFee,
         uint256 _performanceFee,
         uint256 _maxSwapSlippage,
         address[] memory _managers,
@@ -44,7 +45,7 @@ contract AgreementFactory  {
         Agreement.Allowed _allowedStrategies
     ) external {
         address agreement = address(new Proxy(implementation));
-        Agreement(agreement).initialize(vault, _feeCollector, _depositFee, _performanceFee, _maxSwapSlippage, _managers, _withdrawers, _customTokens, _allowedTokens, _customStrategies, _allowedStrategies);
+        Agreement(agreement).initialize(vault, _feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage, _managers, _withdrawers, _customTokens, _allowedTokens, _customStrategies, _allowedStrategies);
         isAgreement[agreement] = true;
         emit AgreementCreated(agreement, _name);
     }

@@ -210,11 +210,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         uint256 fromAccount = Math.min(accountBalance, amount);
         _safeTransferFrom(token, account.addr, recipient, fromAccount);
 
+        (uint256 withdrawFee, address feeCollector) = account.getWithdrawFee();
         uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
-        _safeTransfer(token, recipient, fromVault);
+        uint256 withdrawFeeAmount = fromVault.mulDown(withdrawFee);
+        _safeTransfer(token, feeCollector, withdrawFeeAmount);
+        _safeTransfer(token, recipient, fromVault.sub(withdrawFeeAmount));
         accounting.balance[token] = vaultBalance.sub(fromVault);
-        withdrawn = amount;
-        emit Withdraw(account.addr, token, amount, fromVault, recipient);
+        withdrawn = amount.sub(withdrawFeeAmount);
+        emit Withdraw(account.addr, token, amount, fromVault, withdrawFeeAmount, recipient);
     }
 
     function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal returns (uint256 amountOut) {

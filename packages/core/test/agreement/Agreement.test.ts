@@ -102,6 +102,38 @@ describe('Agreement', () => {
     })
   })
 
+  describe('withdraw fee', () => {
+    context('when using a zero fee', async () => {
+      const withdrawFee = 0
+
+      it('accepts the fee', async () => {
+        const agreement = await Agreement.create({ withdrawFee })
+
+        const { fee } = await agreement.getWithdrawFee()
+        expect(fee).to.be.equal(withdrawFee)
+      })
+    })
+
+    context('when using a fee between zero and the maximum allowed', async () => {
+      const withdrawFee = fp(0.5)
+
+      it('accepts the fee', async () => {
+        const agreement = await Agreement.create({ withdrawFee })
+
+        const { fee } = await agreement.getWithdrawFee()
+        expect(fee).to.be.equal(withdrawFee)
+      })
+    })
+
+    context('when using a fee above the maximum allowed', async () => {
+      const withdrawFee = fp(1).add(1)
+
+      it('reverts', async () => {
+        await expect(Agreement.create({ withdrawFee })).to.be.revertedWith('WITHDRAW_FEE_TOO_HIGH')
+      })
+    })
+  })
+
   describe('performance fee', () => {
     context('when using a zero fee', async () => {
       const performanceFee = 0

@@ -1,7 +1,7 @@
 import { expect } from 'chai'
-import { Contract, BigNumber } from 'ethers'
+import { BigNumber, Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { fp, deploy, getSigners, assertEvent, BigNumberish, ZERO_ADDRESS, MAX_UINT256, assertIndirectEvent, assertNoIndirectEvent } from '@mimic-fi/v1-helpers'
+import { assertEvent, assertIndirectEvent, assertNoIndirectEvent, BigNumberish, deploy, fp, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from '../helpers/models/vault/Vault'
 import Token from '../helpers/models/tokens/Token'
@@ -12,6 +12,7 @@ describe('Vault', () => {
   let account: SignerWithAddress, other: SignerWithAddress, admin: SignerWithAddress, feeCollector: SignerWithAddress
 
   const depositFee = fp(0.01)
+  const withdrawFee = fp(0.02)
   const protocolFee = fp(0.05)
   const performanceFee = fp(0.2)
 
@@ -24,7 +25,7 @@ describe('Vault', () => {
     vault = await Vault.create({ protocolFee, from: admin })
     tokens = await TokenList.create(2)
     token = tokens.first
-    portfolio = await deploy('PortfolioMock', [vault.address, depositFee, performanceFee, feeCollector.address])
+    portfolio = await deploy('PortfolioMock', [vault.address, depositFee, withdrawFee, performanceFee, feeCollector.address])
   })
 
   describe('deposit', () => {
@@ -493,6 +494,8 @@ describe('Vault', () => {
             })
 
             context('when there are enough tokens deposited in the vault', async () => {
+              const expectedWithdrawFee = amount.div(2).mul(withdrawFee).div(fp(1))
+
               beforeEach('deposit tokens', async () => {
                 const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
                 await token.mint(portfolio, depositedAmount)
@@ -503,6 +506,7 @@ describe('Vault', () => {
                 const previousVaultBalance = await token.balanceOf(vault)
                 const previousPortfolioBalance = await token.balanceOf(portfolio)
                 const previousRecipientBalance = await token.balanceOf(other)
+                const previousCollectorBalance = await token.balanceOf(feeCollector)
 
                 await vault.withdraw(portfolio, token, amount, other, { from })
 
@@ -513,7 +517,10 @@ describe('Vault', () => {
                 expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance.sub(amount.div(2)))
 
                 const currentRecipientBalance = await token.balanceOf(other)
-                expect(currentRecipientBalance).to.be.equal(previousRecipientBalance.add(amount))
+                expect(currentRecipientBalance).to.be.equal(previousRecipientBalance.add(amount.sub(expectedWithdrawFee)))
+
+                const currentCollectorBalance = await token.balanceOf(feeCollector)
+                expect(currentCollectorBalance).to.be.equal(previousCollectorBalance.add(expectedWithdrawFee))
               })
 
               it('decreases the account available balance in the vault', async () => {
@@ -533,6 +540,7 @@ describe('Vault', () => {
                   token,
                   amount,
                   fromVault: amount.div(2),
+                  withdrawFee: expectedWithdrawFee,
                   recipient: other,
                 })
               })
@@ -569,10 +577,13 @@ describe('Vault', () => {
 
         context('when the portfolio does not have balance at all', async () => {
           const itWithdrawsTokensFromVault = () => {
+            const expectedWithdrawFee = amount.mul(withdrawFee).div(fp(1))
+
             it('transfers the tokens to the recipient', async () => {
               const previousVaultBalance = await token.balanceOf(vault)
               const previousPortfolioBalance = await token.balanceOf(portfolio)
               const previousRecipientBalance = await token.balanceOf(other)
+              const previousCollectorBalance = await token.balanceOf(feeCollector)
 
               await vault.withdraw(portfolio, token, amount, other, { from })
 
@@ -583,7 +594,10 @@ describe('Vault', () => {
               expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance)
 
               const currentRecipientBalance = await token.balanceOf(other)
-              expect(currentRecipientBalance).to.be.equal(previousRecipientBalance.add(amount))
+              expect(currentRecipientBalance).to.be.equal(previousRecipientBalance.add(amount).sub(expectedWithdrawFee))
+
+              const currentCollectorBalance = await token.balanceOf(feeCollector)
+              expect(currentCollectorBalance).to.be.equal(previousCollectorBalance.add(expectedWithdrawFee))
             })
 
             it('decreases the account available balance in the vault', async () => {
@@ -603,6 +617,7 @@ describe('Vault', () => {
                 token,
                 amount,
                 fromVault: amount,
+                withdrawFee: expectedWithdrawFee,
                 recipient: other,
               })
             })

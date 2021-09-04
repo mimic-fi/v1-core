@@ -43,12 +43,14 @@ contract Agreement is IAgreement, ReentrancyGuard {
     }
 
     uint256 internal constant MAX_DEPOSIT_FEE = 1e18; // 100%
+    uint256 internal constant MAX_WITHDRAW_FEE = 1e18; // 100%
     uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
     uint256 internal constant MAX_SWAP_SLIPPAGE = 1e18; // 100%
 
     address public override vault;
     address public override feeCollector;
     uint256 public override depositFee;
+    uint256 public override withdrawFee;
     uint256 public override performanceFee;
     uint256 public override maxSwapSlippage;
 
@@ -70,6 +72,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         address _vault,
         address _feeCollector,
         uint256 _depositFee,
+        uint256 _withdrawFee,
         uint256 _performanceFee,
         uint256 _maxSwapSlippage,
         address[] memory _managers,
@@ -80,7 +83,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         Allowed _allowedStrategies
     ) external {
         _setVault(_vault);
-        _setParams(_feeCollector, _depositFee, _performanceFee, _maxSwapSlippage);
+        _setParams(_feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage);
         _setManagers(_managers);
         _setWithdrawers(_withdrawers);
         _setAllowedTokens(_customTokens, _allowedTokens);
@@ -93,6 +96,10 @@ contract Agreement is IAgreement, ReentrancyGuard {
 
     function getDepositFee() external override view returns (uint256, address) {
         return (depositFee, feeCollector);
+    }
+
+    function getWithdrawFee() external override view returns (uint256, address) {
+        return (withdrawFee, feeCollector);
     }
 
     function getPerformanceFee() external override view returns (uint256, address) {
@@ -232,12 +239,15 @@ contract Agreement is IAgreement, ReentrancyGuard {
         emit WithdrawersSet(withdrawers);
     }
 
-    function _setParams(address _feeCollector, uint256 _depositFee, uint256 _performanceFee, uint256 _maxSwapSlippage) private {
+    function _setParams(address _feeCollector, uint256 _depositFee, uint256 _withdrawFee, uint256 _performanceFee, uint256 _maxSwapSlippage) private {
         require(_feeCollector != address(0), "FEE_COLLECTOR_ZERO_ADDRESS");
         feeCollector = _feeCollector;
 
         require(_depositFee <= MAX_DEPOSIT_FEE, "DEPOSIT_FEE_TOO_HIGH");
         depositFee = _depositFee;
+
+        require(_withdrawFee <= MAX_WITHDRAW_FEE, "WITHDRAW_FEE_TOO_HIGH");
+        withdrawFee = _withdrawFee;
 
         require(_performanceFee <= MAX_PERFORMANCE_FEE, "PERFORMANCE_FEE_TOO_HIGH");
         performanceFee = _performanceFee;
@@ -245,7 +255,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, "MAX_SWAP_SLIPPAGE_TOO_HIGH");
         maxSwapSlippage = _maxSwapSlippage;
 
-        emit ParamsSet(_feeCollector, _depositFee, _performanceFee, _maxSwapSlippage);
+        emit ParamsSet(_feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage);
     }
 
     function _setVault(address _vault) private {

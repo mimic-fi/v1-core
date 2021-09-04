@@ -30,7 +30,7 @@ export function handleWithdraw(event: Withdraw): void {
   loadOrCreateERC20(event.params.token)
   loadOrCreateAccount(event.params.account, event.address)
   let balance = loadOrCreateAccountBalance(event.params.account, event.params.token)
-  balance.amount = balance.amount.minus(event.params.amount)
+  balance.amount = balance.amount.minus(event.params.amount).minus(event.params.withdrawFee)
   balance.save()
 }
 
