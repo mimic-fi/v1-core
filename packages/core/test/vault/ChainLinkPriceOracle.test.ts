@@ -100,19 +100,19 @@ describe('ChainLinkPriceOracle', () => {
     it('token A & base C', async () => {
       const price = await oracle.getTokenPrice(tokenA.address, tokenC.address)
 
-      const oneInBaseDecimals = bn(decimal(10).pow(decimal(await tokenC.decimals)))
-      const unScaleBasePrice = price.mul(oneInBaseDecimals).div(fp(1))
+      const oneInBaseDecimals = bn(10).pow(tokenC.decimals)
+      const unscaledBasePrice = price.mul(oneInBaseDecimals).div(fp(1))
 
       const calcPrice = fp(1).mul(priceC).div(priceA)
 
-      expect(unScaleBasePrice).to.be.equal(calcPrice)
+      expect(unscaledBasePrice).to.be.equal(calcPrice)
     })
 
     it('token C & base A', async () => {
       const price = await oracle.getTokenPrice(tokenC.address, tokenA.address)
 
       const calcPrice = fp(1).mul(priceA).div(priceC)
-      const oneInTokenDecimals = bn(decimal(10).pow(decimal(tokenC.decimals)))
+      const oneInTokenDecimals = bn(10).pow(tokenC.decimals)
       const scaledTokenCalcPrice = calcPrice.mul(oneInTokenDecimals).div(fp(1))
 
       expect(scaledTokenCalcPrice).to.be.equal(price)
@@ -121,27 +121,27 @@ describe('ChainLinkPriceOracle', () => {
     it('token C & base D', async () => {
       const price = await oracle.getTokenPrice(tokenC.address, tokenD.address)
 
-      const oneInBaseDecimals = bn(decimal(10).pow(decimal(tokenD.decimals)))
-      const unScaleBasePrice = price.mul(oneInBaseDecimals).div(fp(1))
+      const oneInBaseDecimals = bn(10).pow(tokenD.decimals)
+      const unscaledBasePrice = price.mul(oneInBaseDecimals).div(fp(1))
 
       const calcPrice = fp(1).mul(priceD).div(priceC)
-      const oneInTokenDecimals = bn(decimal(10).pow(decimal(tokenC.decimals)))
+      const oneInTokenDecimals = bn(10).pow(tokenC.decimals)
       const scaledTokenCalcPrice = calcPrice.mul(oneInTokenDecimals).div(fp(1))
 
-      expect(unScaleBasePrice).to.be.equal(scaledTokenCalcPrice)
+      expect(unscaledBasePrice).to.be.equal(scaledTokenCalcPrice)
     })
 
     it('token D & base C', async () => {
       const price = await oracle.getTokenPrice(tokenD.address, tokenC.address)
 
-      const oneInBaseDecimals = bn(decimal(10).pow(decimal(tokenC.decimals)))
-      const unScaleBasePrice = price.mul(oneInBaseDecimals).div(fp(1))
+      const oneInBaseDecimals = bn(10).pow(tokenC.decimals)
+      const unscaledBasePrice = price.mul(oneInBaseDecimals).div(fp(1))
 
       const calcPrice = fp(1).mul(priceC).div(priceD)
-      const oneInTokenDecimals = bn(decimal(10).pow(decimal(tokenD.decimals)))
+      const oneInTokenDecimals = bn(10).pow(tokenD.decimals)
       const scaledTokenCalcPrice = calcPrice.mul(oneInTokenDecimals).div(fp(1))
 
-      expect(unScaleBasePrice).to.be.equal(scaledTokenCalcPrice)
+      expect(unscaledBasePrice).to.be.equal(scaledTokenCalcPrice)
     })
   })
 })
