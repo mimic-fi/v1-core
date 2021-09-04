@@ -14,10 +14,9 @@
 
 pragma solidity ^0.8.0;
 
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import "../libraries/FixedPoint.sol";
 
@@ -26,87 +25,70 @@ import "../interfaces/IPriceOracle.sol";
 contract ChainLinkPriceOracle is IPriceOracle {
     using FixedPoint for uint256;
 
-    address private constant _PRICE_ONE_FEED =
-        0x1111111111111111111111111111111111111111; // Feed to use when price is one
+    // Feed to use when price is one
+    address private constant _PRICE_ONE_FEED = 0x1111111111111111111111111111111111111111;
 
     struct PriceFeed {
-        AggregatorV3Interface aggregator;
         uint8 tokenDecimals;
+        AggregatorV3Interface aggregator;
     }
 
     mapping(address => PriceFeed) internal ethPriceFeeds;
 
-    //If a price feed is address 0x11..11, it will have a price of one
-    constructor(
-        address[] memory _tokens,
-        AggregatorV3Interface[] memory _aggregators
-    ) {
-        require(_tokens.length == _aggregators.length, "INVALID_FEEDS_LENGTH");
+    constructor(address[] memory tokens, AggregatorV3Interface[] memory aggregators) {
+        require(tokens.length == aggregators.length, "INVALID_FEEDS_LENGTH");
 
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            //This version of the price oracle only handles 18 decimals prices
-            require(
-                address(_aggregators[i]) == _PRICE_ONE_FEED ||
-                    _aggregators[i].decimals() == 18,
-                "INVALID_FEED_DECIMALS"
-            );
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            AggregatorV3Interface aggregator = aggregators[i];
 
-            ethPriceFeeds[_tokens[i]] = PriceFeed({
-                aggregator: _aggregators[i],
-                tokenDecimals: IERC20Metadata(_tokens[i]).decimals()
-            });
+            // This version of the price oracle only handles 18 decimals prices
+            // If a price feed is address 0x11..11, it will have a price of one
+            bool worksWith18Decimals = address(aggregator) == _PRICE_ONE_FEED || aggregator.decimals() == 18;
+            require(worksWith18Decimals, "INVALID_FEED_DECIMALS");
+
+            uint8 tokenDecimals = IERC20Metadata(token).decimals();
+            ethPriceFeeds[token] = PriceFeed({ aggregator: aggregator, tokenDecimals: tokenDecimals });
         }
     }
 
-    function hasPriceFeed(address token) public view returns (bool) {
-        return address(ethPriceFeeds[token].aggregator) != address(0);
+    function hasPriceFeed(address token) external view returns (bool) {
+        return address(getPriceFeed(token).aggregator) != address(0);
     }
 
-    function getPriceFeed(address token)
-        external
-        view
-        returns (PriceFeed memory)
-    {
-        require(hasPriceFeed(token), "TOKEN_WITH_NO_FEED");
+    function getPriceFeed(address token) public view returns (PriceFeed memory) {
         return ethPriceFeeds[token];
     }
 
-    function getTokenPrice(address token, address base)
-        external
-        view
-        override
-        returns (uint256)
-    {
-        require(hasPriceFeed(token), "TOKEN_WITH_NO_FEED");
-        require(hasPriceFeed(base), "BASE_WITH_NO_FEED");
+    function getTokenPrice(address token, address base) external view override returns (uint256) {
+        (uint256 basePrice, uint8 baseDecimals) = _getEthPriceIn(base);
+        (uint256 tokenPrice, uint8 tokenDecimals) = _getEthPriceIn(token);
 
-        PriceFeed memory tokenPriceFeed = ethPriceFeeds[token];
-        PriceFeed memory basePriceFeed = ethPriceFeeds[base];
-
-        AggregatorV3Interface tokenAggregator = tokenPriceFeed.aggregator;
-        AggregatorV3Interface baseAggregator = basePriceFeed.aggregator;
-
-        uint8 tokenDecimals = tokenPriceFeed.tokenDecimals;
-        uint8 baseDecimals = basePriceFeed.tokenDecimals;
-
-        uint256 tokenPrice = FixedPoint.ONE;
-        if (address(tokenAggregator) != _PRICE_ONE_FEED) {
-            (, int256 tokenPriceInt, , , ) = tokenAggregator.latestRoundData();
-            tokenPrice = SafeCast.toUint256(tokenPriceInt);
-        }
-
-        uint256 basePrice = FixedPoint.ONE;
-        if (address(baseAggregator) != _PRICE_ONE_FEED) {
-            (, int256 basePriceInt, , , ) = baseAggregator.latestRoundData();
-            basePrice = SafeCast.toUint256(basePriceInt);
-        }
-
-        //Price is token/base = (ETH/base) / (ETH/token)
-        uint256 notScaledPrice = basePrice.div(tokenPrice);
+        // Price is token/base = (ETH/base) / (ETH/token)
+        uint256 unscaledPrice = basePrice.div(tokenPrice);
 
         return
             tokenDecimals > baseDecimals
-                ? (notScaledPrice * 10**(tokenDecimals - baseDecimals))
-                : (notScaledPrice / 10**(baseDecimals - tokenDecimals));
+                ? (unscaledPrice * 10**(tokenDecimals - baseDecimals))
+                : (unscaledPrice / 10**(baseDecimals - tokenDecimals));
+    }
+
+    function _getEthPriceIn(address token) internal view returns (uint256 price, uint8 tokenDecimals) {
+        AggregatorV3Interface aggregator;
+        (aggregator, tokenDecimals) = _getPriceFeed(token);
+        price = _getAggregatorPrice(aggregator);
+    }
+
+    function _getAggregatorPrice(AggregatorV3Interface aggregator) internal view returns (uint256) {
+        if (address(aggregator) == _PRICE_ONE_FEED) return FixedPoint.ONE;
+        (, int256 priceInt, , , ) = aggregator.latestRoundData();
+        return SafeCast.toUint256(priceInt);
+    }
+
+    function _getPriceFeed(address token) internal view returns (AggregatorV3Interface aggregator, uint8 tokenDecimals) {
+        PriceFeed memory priceFeed = getPriceFeed(token);
+        aggregator = priceFeed.aggregator;
+        tokenDecimals = priceFeed.tokenDecimals;
+        require(address(aggregator) != address(0), "TOKEN_WITH_NO_FEED");
     }
 }

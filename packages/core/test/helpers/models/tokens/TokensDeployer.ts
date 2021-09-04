@@ -17,8 +17,9 @@ class TokensDeployer {
 
   async deployToken(symbol: string, decimals?: number, { from }: TxParams = {}): Promise<Token> {
     const sender = from || (await getSigner())
+    decimals = decimals || 18
     const instance = await deploy('TokenMock', [symbol, decimals ?? 18], sender)
-    return new Token(symbol, instance)
+    return new Token(symbol, decimals, instance)
   }
 }
 

@@ -6,23 +6,21 @@ import { Account, toAddress, TxParams } from '../types'
 
 export default class Token {
   symbol: string
+  decimals: number
   instance: Contract
 
   static async create(symbol: string, decimals?: number, txParams: TxParams = {}): Promise<Token> {
     return TokensDeployer.deployToken(symbol, decimals, txParams)
   }
 
-  constructor(symbol: string, instance: Contract) {
+  constructor(symbol: string, decimals: number, instance: Contract) {
     this.symbol = symbol
+    this.decimals = decimals
     this.instance = instance
   }
 
   get address(): string {
     return this.instance.address
-  }
-
-  async decimals(): Promise<number> {
-    return this.instance.decimals()
   }
 
   async balanceOf(account: Account): Promise<BigNumber> {
