@@ -53,6 +53,7 @@ type Portfolio @entity {
   id: ID!
   account: Account
   depositFee: BigInt!
+  withdrawFee: BigInt!
   performanceFee: BigInt!
   feeCollector: Bytes!
   agreement: Agreement @derivedFrom(field: "portfolio")

@@ -91,7 +91,7 @@ templates:
           handler: handleWithdrawersSet
         - event: ManagersSet(address[])
           handler: handleManagersSet
-        - event: ParamsSet(address,uint256,uint256,uint256)
+        - event: ParamsSet(address,uint256,uint256,uint256,uint256)
           handler: handleParamsSet
         - event: AllowedTokensSet(uint256,address[])
           handler: handleAllowedTokensSet

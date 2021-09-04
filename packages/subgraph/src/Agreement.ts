@@ -65,6 +65,7 @@ export function handleParamsSet(event: ParamsSet): void {
   let id = event.address.toHexString()
   let portfolio = PortfolioEntity.load(id) || new PortfolioEntity(id)
   portfolio.depositFee = event.params.depositFee
+  portfolio.withdrawFee = event.params.withdrawFee
   portfolio.performanceFee = event.params.performanceFee
   portfolio.feeCollector = event.params.feeCollector
   portfolio.save()

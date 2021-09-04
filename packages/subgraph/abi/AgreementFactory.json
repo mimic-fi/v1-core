@@ -48,6 +48,11 @@
       },
       {
         "internalType": "uint256",
+        "name": "_withdrawFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "_performanceFee",
         "type": "uint256"
       },

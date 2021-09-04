@@ -174,15 +174,17 @@ function loadOrCreateAccountStrategy(accountAddress: Address, strategyAddress: A
 function tryDecodingPortfolio(accountAddress: Address): void {
   let portfolioContract = PortfolioContract.bind(accountAddress)
   let depositFeeResponse = portfolioContract.try_getDepositFee()
+  let withdrawFeeResponse = portfolioContract.try_getWithdrawFee()
   let performanceFeeResponse = portfolioContract.try_getPerformanceFee()
 
-  if (!depositFeeResponse.reverted && !performanceFeeResponse.reverted) {
+  if (!depositFeeResponse.reverted && !withdrawFeeResponse.reverted && !performanceFeeResponse.reverted) {
     let id = accountAddress.toHexString()
     let portfolio = PortfolioEntity.load(id)
     if (portfolio == null) {
       portfolio = new PortfolioEntity(id)
-      portfolio.depositFee = depositFeeResponse.value.value0
       portfolio.feeCollector = depositFeeResponse.value.value1
+      portfolio.depositFee = depositFeeResponse.value.value0
+      portfolio.withdrawFee = withdrawFeeResponse.value.value0
       portfolio.performanceFee = performanceFeeResponse.value.value0
       portfolio.account = id
       portfolio.save()
