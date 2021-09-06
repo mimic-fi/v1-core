@@ -240,11 +240,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
             (remainingIn, amountOut) = ISwapConnector(swapConnector).swap(tokenIn, tokenOut, amountIn, minAmountOut, block.timestamp, data);
 
             uint256 postBalanceIn = IERC20(tokenIn).balanceOf(address(this));
-            require(postBalanceIn.sub(preBalanceIn) >= remainingIn, "SWAP_INVALID_REMAINING_IN");
+            require(postBalanceIn >= preBalanceIn.add(remainingIn), "SWAP_INVALID_REMAINING_IN");
 
             uint256 postBalanceOut = IERC20(tokenOut).balanceOf(address(this));
             require(amountOut >= minAmountOut, "SWAP_MIN_AMOUNT");
-            require(postBalanceOut.sub(preBalanceOut) >= amountOut, "SWAP_INVALID_AMOUNT_OUT");
+            require(postBalanceOut >= preBalanceOut.add(amountOut), "SWAP_INVALID_AMOUNT_OUT");
         }
 
         accounting.balance[tokenIn] = currentBalance.sub(amountIn).add(remainingIn);

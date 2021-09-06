@@ -53,7 +53,7 @@ contract UniswapConnector is ISwapConnector {
         address[] memory path = _path(tokenIn, tokenOut);
         uint256[] memory amounts = uniswap.swapExactTokensForTokens(amountIn, minAmountOut, path, msg.sender, deadline);
         require(amounts.length == 2, "UNISWAP_INVALID_RESPONSE_LENGTH");
-        return (amounts[0], amounts[1]);
+        return (0, amounts[1]);
     }
 
     function _getPool(address tokenA, address tokenB) internal view returns (IUniswapV2Pair) {
