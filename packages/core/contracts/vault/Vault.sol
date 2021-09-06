@@ -39,8 +39,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
-    uint256 private constant _MAX_SLIPPAGE = 1e18; // 100%
-    uint256 private constant _MAX_PROTOCOL_FEE = 5e16; // 5%
+    uint256 internal constant MAX_SLIPPAGE = 2e17; // 20%
+    uint256 internal constant MAX_PROTOCOL_FEE = 1e17; // 10%
 
     struct Accounting {
         mapping (address => uint256) balance;
@@ -76,7 +76,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
-        require(newProtocolFee <= _MAX_PROTOCOL_FEE, "PROTOCOL_FEE_TOO_HIGH");
+        require(newProtocolFee <= MAX_PROTOCOL_FEE, "PROTOCOL_FEE_TOO_HIGH");
         protocolFee = newProtocolFee;
         emit ProtocolFeeSet(newProtocolFee);
     }
@@ -222,7 +222,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
 
     function _swap(Accounts.Data memory account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal returns (uint256 amountOut) {
         require(tokenIn != tokenOut, "SWAP_SAME_TOKEN");
-        require(slippage <= _MAX_SLIPPAGE, "SWAP_MAX_SLIPPAGE");
+        require(slippage <= MAX_SLIPPAGE, "SWAP_MAX_SLIPPAGE");
 
         Accounting storage accounting = accountings[account.addr];
         uint256 currentBalance = accounting.balance[tokenIn];

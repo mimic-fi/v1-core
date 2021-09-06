@@ -26,7 +26,7 @@ contract ChainLinkPriceOracle is IPriceOracle {
     using FixedPoint for uint256;
 
     // Feed to use when price is one
-    address private constant _PRICE_ONE_FEED = 0x1111111111111111111111111111111111111111;
+    address internal constant PRICE_ONE_FEED = 0x1111111111111111111111111111111111111111;
 
     struct PriceFeed {
         uint8 tokenDecimals;
@@ -44,7 +44,7 @@ contract ChainLinkPriceOracle is IPriceOracle {
 
             // This version of the price oracle only handles 18 decimals prices
             // If a price feed is address 0x11..11, it will have a price of one
-            bool worksWith18Decimals = address(aggregator) == _PRICE_ONE_FEED || aggregator.decimals() == 18;
+            bool worksWith18Decimals = address(aggregator) == PRICE_ONE_FEED || aggregator.decimals() == 18;
             require(worksWith18Decimals, "INVALID_FEED_DECIMALS");
 
             uint8 tokenDecimals = IERC20Metadata(token).decimals();
@@ -80,7 +80,7 @@ contract ChainLinkPriceOracle is IPriceOracle {
     }
 
     function _getAggregatorPrice(AggregatorV3Interface aggregator) internal view returns (uint256) {
-        if (address(aggregator) == _PRICE_ONE_FEED) return FixedPoint.ONE;
+        if (address(aggregator) == PRICE_ONE_FEED) return FixedPoint.ONE;
         (, int256 priceInt, , , ) = aggregator.latestRoundData();
         return SafeCast.toUint256(priceInt);
     }
