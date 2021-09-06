@@ -77,7 +77,7 @@ library VaultHelpers {
     }
 
     /**
-     * @dev `swap` has their `amountIn` argument in the fourth place, which means
+     * @dev `swap` has its `amountIn` argument in the fourth place, which means
      * it will be positioned at the 132nd place of the calldata using 32 bytes.
      */
     function populateSwapAmount(bytes memory data, uint256 value) internal pure {
@@ -87,8 +87,8 @@ library VaultHelpers {
     }
 
     /**
-     * @dev Both `join` and `withdraw` methods have their `amount` argument in the third place, which means
-     * it will be positioned at the 100th place of the calldata using 32 bytes.
+     * @dev Both `join` and `withdraw` methods have their `amount` argument in the third place,
+     * which means it will be positioned at the 100th place of the calldata using 32 bytes.
      */
     function populateJoinOrWithdrawAmount(bytes memory data, uint256 value) internal pure {
         assembly {
