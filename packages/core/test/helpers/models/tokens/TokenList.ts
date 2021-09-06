@@ -55,21 +55,4 @@ export default class TokenList {
     const amounts = !Array.isArray(amount) ? Array(to.length).fill(amount) : amount
     await Promise.all(to.flatMap((to, i) => this.tokens.map((token) => token.approve(to, amounts[i], { from }))))
   }
-
-  each(fn: (value: Token, i: number, array: Token[]) => void, thisArg?: unknown): void {
-    this.tokens.forEach(fn, thisArg)
-  }
-
-  async asyncEach(fn: (value: Token, i: number, array: Token[]) => Promise<void>, thisArg?: unknown): Promise<void> {
-    await this.asyncMap(fn, thisArg)
-  }
-
-  map<T>(fn: (value: Token, i: number, array: Token[]) => T, thisArg?: unknown): T[] {
-    return this.tokens.map(fn, thisArg)
-  }
-
-  async asyncMap<T>(fn: (value: Token, i: number, array: Token[]) => Promise<T>, thisArg?: unknown): Promise<T[]> {
-    const promises = this.tokens.map(fn, thisArg)
-    return Promise.all(promises)
-  }
 }

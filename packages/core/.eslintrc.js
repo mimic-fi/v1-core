@@ -7,5 +7,6 @@ module.exports = {
     "comma-spacing": ["error", { before: false, after: true }],
     "prettier/prettier": "error",
     "mocha-no-only/mocha-no-only": ["error"],
+    "no-unused-vars": ["error"],
   },
 };

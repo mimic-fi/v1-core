@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { Contract } from 'ethers'
-import { fp, deploy, decimal, bn, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { fp, deploy, bn, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Token from '../helpers/models/tokens/Token'
 
