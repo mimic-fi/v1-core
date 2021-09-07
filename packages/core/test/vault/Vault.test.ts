@@ -130,7 +130,11 @@ describe('Vault', () => {
             await token.mint(portfolio, amount)
           })
 
-          const itTransfersTheTokensToTheVault = () => {
+          context('when the sender has approved enough tokens', async () => {
+            beforeEach('approve tokens', async () => {
+              await portfolio.mockApproveTokens(token.address, MAX_UINT256)
+            })
+
             it('transfers the tokens to the vault charging deposit fees', async () => {
               const previousVaultBalance = await token.balanceOf(vault)
               const previousPortfolioBalance = await token.balanceOf(portfolio)
@@ -165,6 +169,21 @@ describe('Vault', () => {
                 token,
                 amount,
                 depositFee: expectedFee,
+              })
+            })
+
+            describe('authorization', async () => {
+              it('encodes the authorization as expected', async () => {
+                const how = vault.encodeDeposit(token, amount)
+                await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('deposit'), how })
+
+                await expect(vault.deposit(portfolio, token, amount, { from })).not.to.be.reverted
+              })
+
+              it('fails with an invalid authorization', async () => {
+                await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('deposit'), how: '0x' })
+
+                await expect(vault.deposit(portfolio, token, amount, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
               })
             })
 
@@ -238,14 +257,6 @@ describe('Vault', () => {
                 })
               })
             })
-          }
-
-          context('when the sender has approved enough tokens', async () => {
-            beforeEach('approve tokens', async () => {
-              await portfolio.mockApproveTokens(token.address, MAX_UINT256)
-            })
-
-            itTransfersTheTokensToTheVault()
           })
 
           context('when the portfolio did not approve enough tokens', async () => {
@@ -397,6 +408,21 @@ describe('Vault', () => {
                 amount,
                 fromVault: fp(0),
                 recipient: other,
+              })
+            })
+
+            describe('authorization', async () => {
+              it('encodes the authorization as expected', async () => {
+                const how = vault.encodeWithdraw(token, amount, other)
+                await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('withdraw'), how })
+
+                await expect(vault.withdraw(portfolio, token, amount, other, { from })).not.to.be.reverted
+              })
+
+              it('fails with an invalid authorization', async () => {
+                await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('withdraw'), how: '0x' })
+
+                await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
               })
             })
 
@@ -1011,6 +1037,21 @@ describe('Vault', () => {
 
               itSwapsAsExpected(SWAP_RATE, slippage)
 
+              describe('authorization', async () => {
+                it('encodes the authorization as expected', async () => {
+                  const how = vault.encodeSwap(tokenIn, tokenOut, amount, slippage, '0xaa')
+                  await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('swap'), how })
+
+                  await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, '0xaa', { from })).not.to.be.reverted
+                })
+
+                it('fails with an invalid authorization', async () => {
+                  await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('swap'), how: '0x' })
+
+                  await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+                })
+              })
+
               describe('callbacks', async () => {
                 const slippage = fp(0.2)
 
@@ -1332,6 +1373,21 @@ describe('Vault', () => {
             const rate = fp(0.95)
 
             itJoinsAsExpected(rate)
+
+            describe('authorization', async () => {
+              it('encodes the authorization as expected', async () => {
+                const how = vault.encodeJoin(strategy, amount, '0xaa')
+                await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('join'), how })
+
+                await expect(vault.join(portfolio, strategy, amount, '0xaa', { from })).not.to.be.reverted
+              })
+
+              it('fails with an invalid authorization', async () => {
+                await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('join'), how: '0x' })
+
+                await expect(vault.join(portfolio, strategy, amount, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+              })
+            })
 
             describe('callbacks', async () => {
               context('when non is allowed', () => {
@@ -1762,6 +1818,21 @@ describe('Vault', () => {
               })
 
               itExitsAsExpected(rate)
+
+              describe('authorization', async () => {
+                it('encodes the authorization as expected', async () => {
+                  const how = vault.encodeExit(strategy, ratio, '0xaa')
+                  await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('exit'), how })
+
+                  await expect(vault.exit(portfolio, strategy, ratio, '0xaa', { from })).not.to.be.reverted
+                })
+
+                it('fails with an invalid authorization', async () => {
+                  await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('exit'), how: '0x' })
+
+                  await expect(vault.exit(portfolio, strategy, ratio, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+                })
+              })
 
               describe('callbacks', async () => {
                 context('when non is allowed', () => {
@@ -2376,7 +2447,7 @@ describe('Vault', () => {
       })
 
       context('when the new protocol fee is above the max', () => {
-        const newProtocolFee = fp(0.05).add(1)
+        const newProtocolFee = fp(0.1).add(1)
 
         it('reverts', async () => {
           await expect(vault.setProtocolFee(newProtocolFee, { from })).to.be.revertedWith('PROTOCOL_FEE_TOO_HIGH')

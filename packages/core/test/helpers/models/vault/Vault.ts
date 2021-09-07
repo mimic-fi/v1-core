@@ -1,5 +1,6 @@
 import { BigNumber } from 'ethers'
 import { BigNumberish } from '@mimic-fi/v1-helpers'
+import { defaultAbiCoder } from '@ethersproject/abi'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractTransaction } from 'ethers'
 
@@ -37,8 +38,9 @@ export default class Vault {
     return this.instance.address
   }
 
-  getSighash(method: string): string {
-    return this.instance.interface.getSighash(method)
+  getSelector(method: string): string {
+    const sighash = this.instance.interface.getSighash(method)
+    return `0x${sighash.replace('0x', '').padEnd(64, '0')}`
   }
 
   async getProtocolFee(): Promise<BigNumber> {
@@ -134,5 +136,25 @@ export default class Vault {
     if (!whitelisted) whitelisted = Array(strategies.length).fill(true)
     const vault = this.instance.connect(from || this.admin)
     return vault.setWhitelistedStrategies(toAddresses(strategies), whitelisted)
+  }
+
+  encodeDeposit(token: Account, amount: BigNumberish): string {
+    return defaultAbiCoder.encode(['address', 'uint256'], [toAddress(token), amount])
+  }
+
+  encodeWithdraw(token: Account, amount: BigNumberish, recipient: Account): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'address'], [toAddress(token), amount, toAddress(recipient)])
+  }
+
+  encodeSwap(tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data: string): string {
+    return defaultAbiCoder.encode(['address', 'address', 'uint256', 'uint256', 'bytes'], [toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data])
+  }
+
+  encodeJoin(strategy: Account, amount: BigNumberish, data: string): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), amount, data])
+  }
+
+  encodeExit(strategy: Account, ratio: BigNumberish, data: string): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), ratio, data])
   }
 }

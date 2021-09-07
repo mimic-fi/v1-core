@@ -12,6 +12,13 @@ import "../interfaces/IPortfolio.sol";
 contract PortfolioMock is IPortfolio {
     using SafeMath for uint256;
 
+    struct MockedCanPerformData {
+        address who;
+        address where;
+        bytes32 what;
+        bytes how;
+    }
+
     event BeforeDeposit(address sender, address token, uint256 amount);
     event AfterDeposit(address sender, address token, uint256 amount);
     event BeforeWithdraw(address sender, address token, uint256 amount, address recipient);
@@ -25,6 +32,7 @@ contract PortfolioMock is IPortfolio {
 
     bool public mockedCanPerform;
     bytes2 public mockedSupportedCallbacks;
+    MockedCanPerformData public mockedCanPerformData;
 
     address public vault;
     uint256 public depositFee;
@@ -42,6 +50,10 @@ contract PortfolioMock is IPortfolio {
 
     function mockCanPerform(bool newMockedCanPerform) external {
         mockedCanPerform = newMockedCanPerform;
+    }
+
+    function mockCanPerformData(MockedCanPerformData memory newMockedCanPerformData) external {
+        mockedCanPerformData = newMockedCanPerformData;
     }
 
     function mockSupportedCallbacks(bytes2 newMockedSupportedCallbacks) external {
@@ -64,8 +76,10 @@ contract PortfolioMock is IPortfolio {
         return (performanceFee, feeCollector);
     }
 
-    function canPerform(address, address, bytes32, bytes32[] memory) external override view returns (bool) {
-        return mockedCanPerform;
+    function canPerform(address who, address where, bytes32 what, bytes memory how) external override view returns (bool) {
+        if (mockedCanPerformData.who == address(0)) return mockedCanPerform;
+        if (mockedCanPerformData.who != who || mockedCanPerformData.where != where || mockedCanPerformData.what != what) return false;
+        return keccak256(mockedCanPerformData.how) == keccak256(how);
     }
 
     function getSupportedCallbacks() external override view returns (bytes2) {

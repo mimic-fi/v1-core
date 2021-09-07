@@ -21,48 +21,120 @@ library VaultHelpers {
     using BytesHelpers for bytes;
     using BytesHelpers for bytes32;
 
-    function isDeposit(bytes memory self) internal pure returns (bool) {
-        return isDeposit(self.toBytes4());
+    struct DepositParams {
+        address token;
+        uint256 amount;
     }
 
-    function isDeposit(bytes4 self) internal pure returns (bool) {
-        return self == IVault.deposit.selector;
+    struct WithdrawParams {
+        address token;
+        uint256 amount;
+        address recipient;
+    }
+
+    struct SwapParams {
+        address tokenIn;
+        address tokenOut;
+        uint256 amountIn;
+        uint256 slippage;
+        bytes data;
+    }
+
+    struct JoinParams {
+        address strategy;
+        uint256 amount;
+        bytes data;
+    }
+
+    struct ExitParams {
+        address strategy;
+        uint256 ratio;
+        bytes data;
+    }
+
+    function encodeDeposit(address token, uint256 amount) internal pure returns (bytes memory) {
+        return abi.encode(token, amount);
+    }
+
+    function encodeWithdraw(address token, uint256 amount, address recipient) internal pure returns (bytes memory) {
+        return abi.encode(token, amount, recipient);
+    }
+
+    function encodeSwap(address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal pure returns (bytes memory) {
+        return abi.encode(tokenIn, tokenOut, amountIn, slippage, data);
+    }
+
+    function encodeJoin(address strategy, uint256 amount, bytes memory data) internal pure returns (bytes memory) {
+        return abi.encode(strategy, amount, data);
+    }
+
+    function encodeExit(address strategy, uint256 ratio, bytes memory data) internal pure returns (bytes memory) {
+        return abi.encode(strategy, ratio, data);
+    }
+
+    function decodeDeposit(bytes memory self) internal pure returns (DepositParams memory) {
+        (address token, uint256 amount) = abi.decode(self, (address, uint256));
+        return DepositParams({ token: token, amount: amount });
+    }
+
+    function decodeWithdraw(bytes memory self) internal pure returns (WithdrawParams memory) {
+        (address token, uint256 amount, address recipient) = abi.decode(self, (address, uint256, address));
+        return WithdrawParams({ token: token, amount: amount, recipient: recipient });
+    }
+
+    function decodeSwap(bytes memory self) internal pure returns (SwapParams memory) {
+        (address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) = abi.decode(self, (address, address, uint256, uint256, bytes));
+        return SwapParams({ tokenIn: tokenIn, tokenOut: tokenOut, amountIn: amountIn, slippage: slippage, data: data });
+    }
+
+    function decodeJoin(bytes memory self) internal pure returns (JoinParams memory) {
+        (address strategy, uint256 amount, bytes memory data) = abi.decode(self, (address, uint256, bytes));
+        return JoinParams({ strategy: strategy, amount: amount, data: data });
+    }
+
+    function decodeExit(bytes memory self) internal pure returns (ExitParams memory) {
+        (address strategy, uint256 ratio, bytes memory data) = abi.decode(self, (address, uint256, bytes));
+        return ExitParams({ strategy: strategy, ratio: ratio, data: data });
+    }
+
+    function isDeposit(bytes32 self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.deposit.selector;
+    }
+
+    function isDeposit(bytes memory self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.deposit.selector;
+    }
+
+    function isWithdraw(bytes32 self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.withdraw.selector;
     }
 
     function isWithdraw(bytes memory self) internal pure returns (bool) {
-        return isWithdraw(self.toBytes4());
+        return self.toBytes4() == IVault.withdraw.selector;
     }
 
-    function isWithdraw(bytes4 self) internal pure returns (bool) {
-        return self == IVault.withdraw.selector;
+    function isSwap(bytes32 self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.swap.selector;
     }
 
     function isSwap(bytes memory self) internal pure returns (bool) {
-        return isSwap(self.toBytes4());
+        return self.toBytes4() == IVault.swap.selector;
     }
 
-    function isSwap(bytes4 self) internal pure returns (bool) {
-        return self == IVault.swap.selector;
+    function isJoin(bytes32 self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.join.selector;
     }
 
     function isJoin(bytes memory self) internal pure returns (bool) {
-        return isJoin(self.toBytes4());
+        return self.toBytes4() == IVault.join.selector;
     }
 
-    function isJoin(bytes4 self) internal pure returns (bool) {
-        return self == IVault.join.selector;
+    function isExit(bytes32 self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.exit.selector;
     }
 
     function isExit(bytes memory self) internal pure returns (bool) {
-        return isExit(self.toBytes4());
-    }
-
-    function isExit(bytes4 self) internal pure returns (bool) {
-        return self == IVault.exit.selector;
-    }
-
-    function isJoinOrExit(bytes4 self) internal pure returns (bool) {
-        return isJoin(self) || isExit(self);
+        return self.toBytes4() == IVault.exit.selector;
     }
 
     function populateWithPreviousOutput(bytes memory currentCall, bytes memory previousCall, bytes memory previousResult) internal pure {

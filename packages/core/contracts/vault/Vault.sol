@@ -130,7 +130,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 deposited)
     {
-        Accounts.Data memory account = _authorize(accountAddress, arr(token, amount));
+        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeDeposit(token, amount));
         account.beforeDeposit(msg.sender, token, amount);
         deposited = _deposit(account, token, amount);
         account.afterDeposit(msg.sender, token, amount);
@@ -142,7 +142,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 withdrawn)
     {
-        Accounts.Data memory account = _authorize(accountAddress, arr(token, amount, recipient));
+        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeWithdraw(token, amount, recipient));
         account.beforeWithdraw(msg.sender, token, amount, recipient);
         withdrawn = _withdraw(account, token, amount, recipient);
         account.afterWithdraw(msg.sender, token, amount, recipient);
@@ -154,7 +154,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 amountOut)
     {
-        Accounts.Data memory account = _authorize(accountAddress, arr(tokenIn, tokenOut, amountIn, slippage));
+        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeSwap(tokenIn, tokenOut, amountIn, slippage, data));
         account.beforeSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
         amountOut = _swap(account, tokenIn, tokenOut, amountIn, slippage, data);
         account.afterSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
@@ -166,7 +166,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 shares)
     {
-        Accounts.Data memory account = _authorize(accountAddress, arr(strategy, amount));
+        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeJoin(strategy, amount, data));
         account.beforeJoin(msg.sender, strategy, amount, data);
         shares = _join(account, strategy, amount, data);
         account.afterJoin(msg.sender, strategy, amount, data);
@@ -178,7 +178,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 received)
     {
-        Accounts.Data memory account = _authorize(accountAddress, arr(strategy, ratio));
+        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeExit(strategy, ratio, data));
         account.beforeExit(msg.sender, strategy, ratio, data);
         received = _exit(account, strategy, ratio, data);
         account.afterExit(msg.sender, strategy, ratio, data);
@@ -322,7 +322,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         }
     }
 
-    function _authorize(address accountAddress, bytes32[] memory params) internal view returns (Accounts.Data memory account) {
+    function _authorize(address accountAddress, bytes memory params) internal view returns (Accounts.Data memory account) {
         // Check the given account is the msg.sender, otherwise it will ask the account whether the sender can operate
         // on its behalf. Note that this will never apply for accounts trying to operate on behalf of foreign EOAs.
         account = Accounts.parse(accountAddress);

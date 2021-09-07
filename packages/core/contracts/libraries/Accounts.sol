@@ -57,7 +57,7 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).getSupportedCallbacks() : bytes2(0x00);
     }
 
-    function canPerform(Data memory self, address who, address where, bytes32 what, bytes32[] memory how) internal view returns (bool) {
+    function canPerform(Data memory self, address who, address where, bytes32 what, bytes memory how) internal view returns (bool) {
         return self.isPortfolio ? IPortfolio(self.addr).canPerform(who, where, what, how) : false;
     }
 

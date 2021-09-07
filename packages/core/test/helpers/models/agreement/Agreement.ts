@@ -1,5 +1,5 @@
-import { BigNumber, Contract, utils } from 'ethers'
-import { BigNumberish, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { BigNumber, Contract } from 'ethers'
+import { BigNumberish, ZERO_ADDRESS, ZERO_BYTES32 } from '@mimic-fi/v1-helpers'
 
 import { Account, toAddress, toAddresses } from '../types'
 import { Allowed, RawAgreementDeployment } from './types'
@@ -107,34 +107,32 @@ export default class Agreement {
     return this.instance.getSupportedCallbacks()
   }
 
-  async canDeposit({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('deposit'), how: this.parseHow(how) })
+  async canDeposit(who: Account, where: Account, token?: string, amount: BigNumberish = 0): Promise<boolean> {
+    const how = token ? this.vault.encodeDeposit(token, amount) : '0x'
+    return this.canPerform(who, where, this.vault.getSelector('deposit'), how)
   }
 
-  async canWithdraw({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('withdraw'), how: this.parseHow(how) })
+  async canWithdraw(who: Account, where: Account, token?: string, amount: BigNumberish = 0, recipient = ZERO_ADDRESS): Promise<boolean> {
+    const how = token ? this.vault.encodeWithdraw(token, amount, recipient) : '0x'
+    return this.canPerform(who, where, this.vault.getSelector('withdraw'), how)
   }
 
-  async canSwap({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('swap'), how: this.parseHow(how) })
+  async canSwap(who: Account, where: Account, tokenIn?: string, tokenOut?: string, amountIn: BigNumberish = 0, slippage: BigNumberish = 0, data = '0x'): Promise<boolean> {
+    const how = tokenIn && tokenOut ? this.vault.encodeSwap(tokenIn, tokenOut, amountIn, slippage, data) : '0x'
+    return this.canPerform(who, where, this.vault.getSelector('swap'), how)
   }
 
-  async canJoin({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('join'), how: this.parseHow(how) })
+  async canJoin(who: Account, where: Account, strategy?: string, amount: BigNumberish = 0, data = '0x'): Promise<boolean> {
+    const how = strategy ? this.vault.encodeJoin(strategy, amount, data) : '0x'
+    return this.canPerform(who, where, this.vault.getSelector('join'), how)
   }
 
-  async canExit({ who, where, how }: { who: Account; where: Account; how?: Array<string | BigNumberish> }): Promise<boolean> {
-    return this.canPerform({ who, where, what: this.vault.getSighash('exit'), how: this.parseHow(how) })
+  async canExit(who: Account, where: Account, strategy?: string, ratio: BigNumberish = 0, data = '0x'): Promise<boolean> {
+    const how = strategy ? this.vault.encodeExit(strategy, ratio, data) : '0x'
+    return this.canPerform(who, where, this.vault.getSelector('exit'), how)
   }
 
-  async canPerform({ who, where, what, how }: { who: Account; where: Account; what?: string; how?: string[] }): Promise<boolean> {
-    const padRight = (s: string) => `0x${s.replace('0x', '').padEnd(64, '0')}`
-    what = padRight(what ?? ZERO_ADDRESS)
-    how = (how ?? []).map(padRight)
+  async canPerform(who: Account, where: Account, what = ZERO_BYTES32, how = '0x'): Promise<boolean> {
     return this.instance.canPerform(toAddress(who), toAddress(where), what, how)
-  }
-
-  private parseHow(how?: Array<string | BigNumberish>): string[] {
-    return how ? how.map((h) => (typeof h === 'string' ? h : utils.hexZeroPad(utils.hexlify(h), 32))) : []
   }
 }

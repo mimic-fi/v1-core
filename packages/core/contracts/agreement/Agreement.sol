@@ -32,9 +32,8 @@ contract Agreement is IAgreement, ReentrancyGuard {
     using Address for address;
     using SafeERC20 for IERC20;
     using FixedPoint for uint256;
-    using VaultHelpers for bytes4;
-    using BytesHelpers for bytes32;
-    using BytesHelpers for bytes32[];
+    using VaultHelpers for bytes;
+    using VaultHelpers for bytes32;
 
     enum Allowed {
         Any,
@@ -122,7 +121,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return allowedStrategies == Allowed.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
     }
 
-    function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external override view returns (bool) {
+    function canPerform(address who, address where, bytes32 what, bytes memory how) external override view returns (bool) {
         // If the sender is not allowed, then it cannot perform any actions
         if (!isManager[who]) {
             return false;
@@ -134,16 +133,20 @@ contract Agreement is IAgreement, ReentrancyGuard {
         }
 
         // Eval different actions and parameters
-        if (what.toBytes4().isSwap()) {
-            address tokenOut = how.decodeAddress(1);
-            uint256 slippage = how.decodeUint256(3);
-            return isTokenAllowed(tokenOut) && slippage <= maxSwapSlippage;
-        } else if (what.toBytes4().isJoinOrExit()) {
-            return isStrategyAllowed(how.decodeAddress(0));
-        } else if (what.toBytes4().isWithdraw()) {
-            return isWithdrawer[how.decodeAddress(2)];
+        if (what.isSwap()) {
+            VaultHelpers.SwapParams memory params = how.decodeSwap();
+            return isTokenAllowed(params.tokenOut) && params.slippage <= maxSwapSlippage;
+        } else if (what.isJoin()) {
+            VaultHelpers.JoinParams memory params = how.decodeJoin();
+            return isStrategyAllowed(params.strategy);
+        } else if (what.isExit()) {
+            VaultHelpers.ExitParams memory params = how.decodeExit();
+            return isStrategyAllowed(params.strategy);
+        } else if (what.isWithdraw()) {
+            VaultHelpers.WithdrawParams memory params = how.decodeWithdraw();
+            return isWithdrawer[params.recipient];
         } else {
-            return what.toBytes4().isDeposit();
+            return what.isDeposit();
         }
     }
 

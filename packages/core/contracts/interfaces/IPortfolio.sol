@@ -39,7 +39,7 @@ interface IPortfolio {
 
     function getPerformanceFee() external view returns (uint256 fee, address collector);
 
-    function canPerform(address who, address where, bytes32 what, bytes32[] memory how) external view returns (bool);
+    function canPerform(address who, address where, bytes32 what, bytes memory how) external view returns (bool);
 
     function beforeDeposit(address sender, address token, uint256 amount) external;
 
