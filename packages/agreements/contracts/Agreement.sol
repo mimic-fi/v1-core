@@ -22,9 +22,10 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "@mimic-fi/v1-core/contracts/libraries/VaultHelpers.sol";
 
-import "@mimic-fi/v1-core/contracts/interfaces/IAgreement.sol";
 import "@mimic-fi/v1-core/contracts/interfaces/IStrategy.sol";
 import "@mimic-fi/v1-core/contracts/interfaces/IVault.sol";
+
+import "./IAgreement.sol";
 
 contract Agreement is IAgreement, ReentrancyGuard {
     using Address for address;
