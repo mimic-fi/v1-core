@@ -22,7 +22,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "./libraries/Utils.sol";
 import "./libraries/Accounts.sol";
 import "./libraries/FixedPoint.sol";
 import "./libraries/VaultHelpers.sol";
@@ -60,8 +59,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         setProtocolFee(_protocolFee);
         setPriceOracle(_priceOracle);
         setSwapConnector(_swapConnector);
-        setWhitelistedTokens(_whitelistedTokens, trues(_whitelistedTokens.length));
-        setWhitelistedStrategies(_whitelistedStrategies, trues(_whitelistedStrategies.length));
+        setWhitelistedTokens(_whitelistedTokens, VaultHelpers.trues(_whitelistedTokens.length));
+        setWhitelistedStrategies(_whitelistedStrategies, VaultHelpers.trues(_whitelistedStrategies.length));
     }
 
     function getAccountBalance(address accountAddress, address token) external override view returns (uint256) {

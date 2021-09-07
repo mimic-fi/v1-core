@@ -3,9 +3,9 @@ import { BigNumber, Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { assertEvent, assertIndirectEvent, assertNoIndirectEvent, BigNumberish, deploy, fp, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
-import Vault from './helpers/models/vault/Vault'
-import Token from './helpers/models/tokens/Token'
-import TokenList from './helpers/models/tokens/TokenList'
+import Vault from './helpers/vault/Vault'
+import Token from './helpers/tokens/Token'
+import TokenList from './helpers/tokens/TokenList'
 
 describe('Vault', () => {
   let tokens: TokenList, token: Token, vault: Vault, portfolio: Contract

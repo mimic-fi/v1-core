@@ -16,22 +16,16 @@ pragma solidity ^0.8.0;
 
 library FixedPoint {
     uint256 internal constant ONE = 1e18; // 18 decimal places
-    uint256 internal constant MAX_UINT256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Fixed Point addition is the same as regular checked addition
-
         uint256 c = a + b;
         require(c >= a, "ADD_OVERFLOW");
         return c;
     }
 
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Fixed Point addition is the same as regular checked addition
-
         require(b <= a, "SUB_OVERFLOW");
-        uint256 c = a - b;
-        return c;
+        return a - b;
     }
 
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -39,82 +33,49 @@ library FixedPoint {
         require(a == 0 || c0 / a == b, "MUL_OVERFLOW");
         uint256 c1 = c0 + (ONE / 2);
         require(c1 >= c0, "MUL_OVERFLOW");
-        uint256 c2 = c1 / ONE;
-        return c2;
+        return c1 / ONE;
     }
 
     function mulDown(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
         require(a == 0 || product / a == b, "MUL_OVERFLOW");
-
         return product / ONE;
     }
 
     function mulUp(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
         require(a == 0 || product / a == b, "MUL_OVERFLOW");
-
-        if (product == 0) {
-            return 0;
-        } else {
-            // The traditional divUp formula is:
-            // divUp(x, y) := (x + y - 1) / y
-            // To avoid intermediate overflow in the addition, we distribute the division and get:
-            // divUp(x, y) := (x - 1) / y + 1
-            // Note that this requires x != 0, which we already tested for.
-
-            return ((product - 1) / ONE) + 1;
-        }
+        return product == 0 ? 0 : (((product - 1) / ONE) + 1);
     }
 
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, "ZERO_DIVISION");
         uint256 c0 = a * ONE;
-        require(a == 0 || c0 / a == ONE, "DIV_INTERNAL"); // mul overflow
+        require(a == 0 || c0 / a == ONE, "DIV_INTERNAL");
         uint256 c1 = c0 + (b / 2);
-        require(c1 >= c0, "DIV_INTERNAL"); // add require
-        uint256 c2 = c1 / b;
-        return c2;
+        require(c1 >= c0, "DIV_INTERNAL");
+        return c1 / b;
     }
 
     function divDown(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, "ZERO_DIVISION");
-
         uint256 aInflated = a * ONE;
-        require(aInflated / a == ONE, "DIV_INTERNAL"); // mul overflow
-
+        require(aInflated / a == ONE, "DIV_INTERNAL");
         return aInflated / b;
     }
 
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, "ZERO_DIVISION");
-
-        if (a == 0) {
-            return 0;
-        } else {
-            uint256 aInflated = a * ONE;
-            require(aInflated / a == ONE, "DIV_INTERNAL"); // mul overflow
-
-            // The traditional divUp formula is:
-            // divUp(x, y) := (x + y - 1) / y
-            // To avoid intermediate overflow in the addition, we distribute the division and get:
-            // divUp(x, y) := (x - 1) / y + 1
-            // Note that this requires x != 0, which we already tested for.
-
-            return ((aInflated - 1) / b) + 1;
-        }
+        if (a == 0) return 0;
+        uint256 aInflated = a * ONE;
+        require(aInflated / a == ONE, "DIV_INTERNAL");
+        return ((aInflated - 1) / b) + 1;
     }
 
-    /**
-     * @dev Returns the largest of two numbers of 256 bits.
-     */
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a >= b ? a : b;
     }
 
-    /**
-     * @dev Returns the smallest of two numbers of 256 bits.
-     */
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }

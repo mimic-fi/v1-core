@@ -15,6 +15,7 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/IVault.sol";
+
 import "./BytesHelpers.sol";
 
 library VaultHelpers {
@@ -135,6 +136,13 @@ library VaultHelpers {
 
     function isExit(bytes memory self) internal pure returns (bool) {
         return self.toBytes4() == IVault.exit.selector;
+    }
+
+    function trues(uint256 size) internal pure returns (bool[] memory array) {
+        array = new bool[](size);
+        for (uint256 i = 0; i < size; i++) {
+            array[i] = true;
+        }
     }
 
     function populateWithPreviousOutput(bytes memory currentCall, bytes memory previousCall, bytes memory previousResult) internal pure {
