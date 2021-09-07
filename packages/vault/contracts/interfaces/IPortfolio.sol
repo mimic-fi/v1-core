@@ -33,6 +33,8 @@ interface IPortfolio {
      */
     function getSupportedCallbacks() external view returns (bytes2);
 
+    function getTokenBalance(address token) external view returns (uint256);
+
     function getDepositFee() external view returns (uint256 fee, address collector);
 
     function getWithdrawFee() external view returns (uint256 fee, address collector);

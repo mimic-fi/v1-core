@@ -69,6 +69,26 @@ export default class Vault {
     return this.instance.getAccountInvestment(toAddress(account), toAddress(strategy))
   }
 
+  async getDepositAmount(account: Account, amount: BigNumberish): Promise<BigNumber> {
+    return this.instance.getDepositAmount(toAddress(account), amount)
+  }
+
+  async getWithdrawAmount(account: Account, token: Account, amount: BigNumberish): Promise<BigNumber> {
+    return this.instance.getWithdrawAmount(toAddress(account), toAddress(token), amount)
+  }
+
+  async getSwapAmount(tokenIn: Account, tokenOut: Account, amount: BigNumberish): Promise<BigNumber> {
+    return this.instance.getSwapAmount(toAddress(tokenIn), toAddress(tokenOut), amount)
+  }
+
+  async getJoinAmount(strategy: Account, amount: BigNumberish, data = '0x'): Promise<BigNumber> {
+    return this.instance.getJoinAmount(toAddress(strategy), amount, data)
+  }
+
+  async getExitAmount(account: Account, strategy: Account, ratio: BigNumberish, emergency = false, data = '0x'): Promise<BigNumber> {
+    return this.instance.getExitAmount(toAddress(account), toAddress(strategy), ratio, emergency, data)
+  }
+
   async deposit(account: Account, token: Account, amount: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.deposit(toAddress(account), toAddress(token), amount)

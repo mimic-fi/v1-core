@@ -62,6 +62,10 @@ contract PortfolioMock is IPortfolio {
         IERC20(token).approve(vault, amount);
     }
 
+    function getTokenBalance(address token) external override view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
+    }
+
     function getDepositFee() external override view returns (uint256 fee, address collector) {
         return (depositFee, feeCollector);
     }

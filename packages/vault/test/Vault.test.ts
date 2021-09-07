@@ -81,6 +81,10 @@ describe('Vault', () => {
                 depositFee: fp(0),
               })
             })
+
+            it('calculates the expected amount', async () => {
+              expect(await vault.getDepositAmount(account, amount)).to.be.equal(amount)
+            })
           })
 
           context('when the sender did not approve enough tokens', async () => {
@@ -170,6 +174,11 @@ describe('Vault', () => {
                 amount,
                 depositFee: expectedFee,
               })
+            })
+
+            it('calculates the expected amount', async () => {
+              const expectedAmount = amount.sub(expectedFee)
+              expect(await vault.getDepositAmount(portfolio, amount)).to.be.equal(expectedAmount)
             })
 
             describe('authorization', async () => {
@@ -328,6 +337,10 @@ describe('Vault', () => {
               amount,
               recipient: other,
             })
+          })
+
+          it('calculates the expected amount', async () => {
+            expect(await vault.getWithdrawAmount(account, token, amount)).to.be.equal(amount)
           })
         })
 
@@ -647,6 +660,11 @@ describe('Vault', () => {
                 recipient: other,
               })
             })
+
+            it('calculates the expected amount', async () => {
+              const expectedAmount = amount.sub(expectedWithdrawFee)
+              expect(await vault.getWithdrawAmount(portfolio, token, amount)).to.be.equal(expectedAmount)
+            })
           }
 
           context('when the portfolio has allowed the vault', async () => {
@@ -802,6 +820,10 @@ describe('Vault', () => {
                 amountOut: expectedAmountOut,
               })
             })
+
+            it('calculates the expected amount', async () => {
+              expect(await vault.getSwapAmount(tokenIn, tokenOut, amount)).to.be.equal(expectedAmountOut)
+            })
           }
 
           context('when the swap connector provides a worse rate', () => {
@@ -932,7 +954,7 @@ describe('Vault', () => {
               expect(currentConnectorBalance).to.be.equal(previousConnectorBalance.add(amount))
             })
 
-            it('transfers the token out to the strategy', async () => {
+            it('transfers the token out to the vault', async () => {
               const previousVaultBalance = await tokenOut.balanceOf(vault)
               const previousPortfolioBalance = await tokenOut.balanceOf(portfolio)
               const previousConnectorBalance = await tokenOut.balanceOf(swapConnector)
@@ -973,6 +995,10 @@ describe('Vault', () => {
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
               })
+            })
+
+            it('calculates the expected amount', async () => {
+              expect(await vault.getSwapAmount(tokenIn, tokenOut, amount)).to.be.equal(expectedAmountOut)
             })
           }
 
@@ -1245,6 +1271,10 @@ describe('Vault', () => {
                 shares: expectedShares,
               })
             })
+
+            it('calculates the expected amount', async () => {
+              expect(await vault.getJoinAmount(strategy, amount)).to.be.equal(expectedShares)
+            })
           }
 
           context('with a rate lower than one', async () => {
@@ -1366,6 +1396,10 @@ describe('Vault', () => {
                 amount,
                 shares: expectedShares,
               })
+            })
+
+            it('calculates the expected amount', async () => {
+              expect(await vault.getJoinAmount(strategy, amount)).to.be.equal(expectedShares)
             })
           }
 
@@ -1614,6 +1648,11 @@ describe('Vault', () => {
                   performanceFee: 0,
                 })
               })
+
+              it('calculates the expected amount', async () => {
+                const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmount
+                expect(await vault.getExitAmount(account, strategy, ratio)).to.be.equal(exitAmount)
+              })
             }
 
             context('when the user gain sth', async () => {
@@ -1807,6 +1846,11 @@ describe('Vault', () => {
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   // performanceFee: expectedPerformanceFee, TODO: fix rounding
                 })
+              })
+
+              it('calculates the expected amount', async () => {
+                const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmount
+                expect(await vault.getExitAmount(portfolio, strategy, ratio)).to.be.equal(exitAmount)
               })
             }
 
