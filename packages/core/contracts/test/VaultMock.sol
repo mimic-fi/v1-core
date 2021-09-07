@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.0;
 
-import "../vault/Vault.sol";
+import "../Vault.sol";
 
 contract VaultMock is Vault {
     constructor (uint256 _protocolFee, address _priceOracle, address _swapConnector, address[] memory _whitelistedTokens, address[] memory _whitelistedStrategies)

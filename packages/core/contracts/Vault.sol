@@ -22,15 +22,15 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "../libraries/Utils.sol";
-import "../libraries/Accounts.sol";
-import "../libraries/FixedPoint.sol";
-import "../libraries/VaultHelpers.sol";
+import "./libraries/Utils.sol";
+import "./libraries/Accounts.sol";
+import "./libraries/FixedPoint.sol";
+import "./libraries/VaultHelpers.sol";
 
-import "../interfaces/IStrategy.sol";
-import "../interfaces/ISwapConnector.sol";
-import "../interfaces/IPriceOracle.sol";
-import "../interfaces/IVault.sol";
+import "./interfaces/IStrategy.sol";
+import "./interfaces/ISwapConnector.sol";
+import "./interfaces/IPriceOracle.sol";
+import "./interfaces/IVault.sol";
 
 contract Vault is IVault, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
