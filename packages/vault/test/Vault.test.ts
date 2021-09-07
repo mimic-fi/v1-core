@@ -1821,10 +1821,10 @@ describe('Vault', () => {
 
               describe('authorization', async () => {
                 it('encodes the authorization as expected', async () => {
-                  const how = vault.encodeExit(strategy, ratio, '0xaa')
+                  const how = vault.encodeExit(strategy, ratio, true, '0xaa')
                   await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('exit'), how })
 
-                  await expect(vault.exit(portfolio, strategy, ratio, '0xaa', { from })).not.to.be.reverted
+                  await expect(vault.exit(portfolio, strategy, ratio, true, '0xaa', { from })).not.to.be.reverted
                 })
 
                 it('fails with an invalid authorization', async () => {
@@ -1890,20 +1890,22 @@ describe('Vault', () => {
                   })
 
                   it('calls before and after to the portfolio', async () => {
-                    const tx = await vault.exit(portfolio, strategy, ratio, { from })
+                    const tx = await vault.exit(portfolio, strategy, ratio, true, '0xaa', { from })
 
                     await assertIndirectEvent(tx, portfolio.interface, 'BeforeExit', {
                       sender: from,
                       strategy,
                       ratio,
-                      data: '0x',
+                      emergency: true,
+                      data: '0xaa',
                     })
 
                     await assertIndirectEvent(tx, portfolio.interface, 'AfterExit', {
                       sender: from,
                       strategy,
                       ratio,
-                      data: '0x',
+                      emergency: true,
+                      data: '0xaa',
                     })
                   })
                 })
@@ -1971,7 +1973,7 @@ describe('Vault', () => {
 
         const { data: deposit } = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, depositedAmount)
         const { data: join } = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, amount, '0x')
-        const { data: exit } = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, fp(0.5), '0x')
+        const { data: exit } = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, fp(0.5), false, '0x')
 
         const tx = await vault.instance.connect(from).batch([deposit, join, exit], [])
 
@@ -2282,7 +2284,7 @@ describe('Vault', () => {
         })
 
         beforeEach('populate exit', async () => {
-          const tx = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, ratio, '0xee')
+          const tx = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, ratio, false, '0xee')
           exit = tx.data || ''
         })
 

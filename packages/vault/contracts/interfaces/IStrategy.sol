@@ -27,5 +27,5 @@ interface IStrategy {
 
     function onJoin(uint256 amount, bytes memory data) external returns (uint256 shares);
 
-    function onExit(uint256 shares, bytes memory data) external returns (address token, uint256 amount);
+    function onExit(uint256 shares, bool emergency, bytes memory data) external returns (address token, uint256 amount);
 }

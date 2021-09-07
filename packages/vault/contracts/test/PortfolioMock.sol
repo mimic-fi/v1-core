@@ -5,8 +5,6 @@ pragma solidity 0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "../libraries/FixedPoint.sol";
-
 import "../interfaces/IPortfolio.sol";
 
 contract PortfolioMock is IPortfolio {
@@ -27,8 +25,8 @@ contract PortfolioMock is IPortfolio {
     event AfterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes data);
     event BeforeJoin(address sender, address strategy, uint256 amount, bytes data);
     event AfterJoin(address sender, address strategy, uint256 amount, bytes data);
-    event BeforeExit(address sender, address strategy, uint256 ratio, bytes data);
-    event AfterExit(address sender, address strategy, uint256 ratio, bytes data);
+    event BeforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes data);
+    event AfterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes data);
 
     bool public mockedCanPerform;
     bytes2 public mockedSupportedCallbacks;
@@ -118,11 +116,11 @@ contract PortfolioMock is IPortfolio {
         emit AfterJoin(sender, strategy, amount, data);
     }
 
-    function beforeExit(address sender, address strategy, uint256 ratio, bytes memory data) external override {
-        emit BeforeExit(sender, strategy, ratio, data);
+    function beforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external override {
+        emit BeforeExit(sender, strategy, ratio, emergency, data);
     }
 
-    function afterExit(address sender, address strategy, uint256 ratio, bytes memory data) external override {
-        emit AfterExit(sender, strategy, ratio, data);
+    function afterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external override {
+        emit AfterExit(sender, strategy, ratio, emergency, data);
     }
 }

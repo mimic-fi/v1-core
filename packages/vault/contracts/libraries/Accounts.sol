@@ -109,15 +109,15 @@ library Accounts {
         }
     }
 
-    function beforeExit(Data memory self, address sender, address strategy, uint256 ratio, bytes memory data) internal {
+    function beforeExit(Data memory self, address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) internal {
         if (supportsBeforeExit(self.callbacks)) {
-            IPortfolio(self.addr).beforeExit(sender, strategy, ratio, data);
+            IPortfolio(self.addr).beforeExit(sender, strategy, ratio, emergency, data);
         }
     }
 
-    function afterExit(Data memory self, address sender, address strategy, uint256 ratio, bytes memory data) internal {
+    function afterExit(Data memory self, address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) internal {
         if (supportsAfterExit(self.callbacks)) {
-            IPortfolio(self.addr).afterExit(sender, strategy, ratio, data);
+            IPortfolio(self.addr).afterExit(sender, strategy, ratio, emergency, data);
         }
     }
 

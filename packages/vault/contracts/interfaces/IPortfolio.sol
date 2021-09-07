@@ -57,7 +57,7 @@ interface IPortfolio {
 
     function afterJoin(address sender, address strategy, uint256 amount, bytes memory data) external;
 
-    function beforeExit(address sender, address strategy, uint256 ratio, bytes memory data) external;
+    function beforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external;
 
-    function afterExit(address sender, address strategy, uint256 ratio, bytes memory data) external;
+    function afterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external;
 }

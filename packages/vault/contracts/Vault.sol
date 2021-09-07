@@ -171,16 +171,16 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         account.afterJoin(msg.sender, strategy, amount, data);
     }
 
-    function exit(address accountAddress, address strategy, uint256 ratio, bytes memory data)
+    function exit(address accountAddress, address strategy, uint256 ratio, bool emergency, bytes memory data)
         external
         override
         nonReentrant
         returns (uint256 received)
     {
-        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeExit(strategy, ratio, data));
-        account.beforeExit(msg.sender, strategy, ratio, data);
-        received = _exit(account, strategy, ratio, data);
-        account.afterExit(msg.sender, strategy, ratio, data);
+        Accounts.Data memory account = _authorize(accountAddress, VaultHelpers.encodeExit(strategy, ratio, emergency, data));
+        account.beforeExit(msg.sender, strategy, ratio, emergency, data);
+        received = _exit(account, strategy, ratio, emergency, data);
+        account.afterExit(msg.sender, strategy, ratio, emergency, data);
     }
 
     function _deposit(Accounts.Data memory account, address token, uint256 amount) internal returns (uint256 deposited) {
@@ -267,19 +267,23 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         emit Join(account.addr, strategy, amount, shares);
     }
 
-    function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bytes memory data) internal returns (uint256 received) {
-        require(ratio > 0, "EXIT_RATIO_ZERO");
-        require(ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
+    function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bool emergency, bytes memory data) internal returns (uint256 received) {
+        require(ratio > 0 && ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
 
+        address token;
+        uint256 amount;
+        uint256 exitingShares;
         Accounting storage accounting = accountings[account.addr];
-        uint256 currentShares = accounting.shares[strategy];
-        uint256 exitingShares = currentShares.mulDown(ratio);
-        require(exitingShares > 0, "EXIT_SHARES_ZERO");
-        require(currentShares >= exitingShares, "ACCOUNT_INSUFFICIENT_SHARES");
-        accounting.shares[strategy] = currentShares - exitingShares;
+        { // scope to avoid stack too deep
+            uint256 currentShares = accounting.shares[strategy];
+            exitingShares = currentShares.mulDown(ratio);
+            require(exitingShares > 0, "EXIT_SHARES_ZERO");
+            require(currentShares >= exitingShares, "ACCOUNT_INSUFFICIENT_SHARES");
+            accounting.shares[strategy] = currentShares - exitingShares;
 
-        (address token, uint256 amount) = IStrategy(strategy).onExit(exitingShares, data);
-        _safeTransferFrom(token, strategy, address(this), amount);
+            (token, amount) = IStrategy(strategy).onExit(exitingShares, emergency, data);
+            _safeTransferFrom(token, strategy, address(this), amount);
+        }
 
         uint256 invested = accounting.invested[strategy];
         uint256 deposited = invested.mulUp(ratio);
