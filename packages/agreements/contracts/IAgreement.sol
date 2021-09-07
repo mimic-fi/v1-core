@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@mimic-fi/v1-core/contracts/interfaces/IPortfolio.sol";
+import "@mimic-fi/v1-vault/contracts/interfaces/IPortfolio.sol";
 
 interface IAgreement is IPortfolio {
     event ManagersSet(address[] managers);

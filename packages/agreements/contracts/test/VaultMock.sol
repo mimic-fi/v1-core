@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.0;
 
-import "@mimic-fi/v1-core/contracts/interfaces/IPortfolio.sol";
+import "@mimic-fi/v1-vault/contracts/interfaces/IPortfolio.sol";
 
 contract VaultMock {
     mapping (address => bool) public isTokenWhitelisted;

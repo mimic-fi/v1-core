@@ -3,15 +3,15 @@ import { assertEvent, deploy, fp, getSigner, getSigners, instanceAt, MAX_UINT256
 
 async function benchmark(): Promise<void> {
   const protocolFee = fp(0.01)
-  const priceOracle = await deploy('@mimic-fi/v1-core/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock')
-  const swapConnector = await deploy('@mimic-fi/v1-core/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock')
-  const token1 = await deploy('@mimic-fi/v1-core/artifacts/contracts/test/TokenMock.sol/TokenMock')
-  const token2 = await deploy('@mimic-fi/v1-core/artifacts/contracts/test/TokenMock.sol/TokenMock')
+  const priceOracle = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock')
+  const swapConnector = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock')
+  const token1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock')
+  const token2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock')
   const tokens = [token1.address, token2.address]
-  const strategy1 = await deploy('@mimic-fi/v1-core/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token1.address])
-  const strategy2 = await deploy('@mimic-fi/v1-core/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token2.address])
+  const strategy1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token1.address])
+  const strategy2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token2.address])
   const strategies = [strategy1.address, strategy2.address]
-  const vault = await deploy('@mimic-fi/v1-core/artifacts/contracts/Vault.sol/Vault', [protocolFee, priceOracle.address, swapConnector.address, tokens, strategies])
+  const vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [protocolFee, priceOracle.address, swapConnector.address, tokens, strategies])
 
   await token1.mint(swapConnector.address, fp(1000000))
   await token2.mint(swapConnector.address, fp(1000000))

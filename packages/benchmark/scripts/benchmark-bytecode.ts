@@ -1,7 +1,7 @@
 import { getArtifact } from '@mimic-fi/v1-helpers'
 
 async function benchmark(): Promise<void> {
-  const Vault = await getArtifact('@mimic-fi/v1-core/artifacts/contracts/Vault.sol/Vault')
+  const Vault = await getArtifact('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault')
   const Agreement = await getArtifact('@mimic-fi/v1-agreements/artifacts/contracts/Agreement.sol/Agreement')
   const AgreementFactory = await getArtifact('@mimic-fi/v1-agreements/artifacts/contracts/AgreementFactory.sol/AgreementFactory')
 
