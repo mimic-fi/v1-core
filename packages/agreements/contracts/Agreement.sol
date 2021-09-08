@@ -15,15 +15,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol";
-
 import "@mimic-fi/v1-vault/contracts/interfaces/IStrategy.sol";
 import "@mimic-fi/v1-vault/contracts/interfaces/IVault.sol";
+import "@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol";
 
 import "./IAgreement.sol";
 

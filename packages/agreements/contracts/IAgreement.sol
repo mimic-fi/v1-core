@@ -19,9 +19,9 @@ import "@mimic-fi/v1-vault/contracts/interfaces/IPortfolio.sol";
 interface IAgreement is IPortfolio {
     event ManagersSet(address[] managers);
     event WithdrawersSet(address[] withdrawers);
-    event ParamsSet(address feeCollector, uint256 depositFee, uint256 withdrawFee, uint256 performanceFee, uint256 maxSwapSlippage);
     event AllowedTokensSet(uint256 allowedTokens, address[] customTokens);
     event AllowedStrategiesSet(uint256 allowedStrategies, address[] customStrategies);
+    event ParamsSet(address feeCollector, uint256 depositFee, uint256 withdrawFee, uint256 performanceFee, uint256 maxSwapSlippage);
 
     function vault() external view returns (address);
 

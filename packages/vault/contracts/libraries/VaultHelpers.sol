@@ -14,9 +14,9 @@
 
 pragma solidity ^0.8.0;
 
-import "../interfaces/IVault.sol";
-
 import "./BytesHelpers.sol";
+
+import "../interfaces/IVault.sol";
 
 library VaultHelpers {
     using BytesHelpers for bytes;

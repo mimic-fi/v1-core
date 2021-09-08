@@ -27,16 +27,6 @@ library BytesHelpers {
         assembly { result := self }
     }
 
-    function decodeAddress(bytes32[] memory self, uint256 index) internal pure returns (address) {
-        require(self.length > index, "INVALID_BYTES_ARRAY_INDEX");
-        return address(bytes20(self[index]));
-    }
-
-    function decodeUint256(bytes32[] memory self, uint256 index) internal pure returns (uint256) {
-        require(self.length > index, "INVALID_BYTES_ARRAY_INDEX");
-        return uint256(self[index]);
-    }
-
     function isBitSet(bytes2 self, uint256 pos) internal pure returns (bool) {
         return (uint16(self) & (1 << pos)) != 0;
     }
