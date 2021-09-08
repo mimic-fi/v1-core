@@ -50,7 +50,7 @@ interface IVault {
 
     function join(address account, address strategy, uint256 amount, bytes memory data) external returns (uint256 shares);
 
-    function exit(address account, address strategy, uint256 ratio, bytes memory data) external returns (uint256 received);
+    function exit(address account, address strategy, uint256 ratio, bool emergency, bytes memory data) external returns (uint256 received);
 
     function setProtocolFee(uint256 newProtocolFee) external;
 

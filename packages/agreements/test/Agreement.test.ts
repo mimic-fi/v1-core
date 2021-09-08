@@ -417,64 +417,7 @@ describe('Agreement', () => {
         expect(await agreement.canJoin(who, where, ZERO_ADDRESS, 0, '0x')).to.be.false
 
         expect(await agreement.canExit(who, where)).to.be.false
-        expect(await agreement.canExit(who, where, ZERO_ADDRESS, 0, '0x')).to.be.false
-      })
-    }
-
-    const itAcceptsAllowedActions = () => {
-      it('accepts any deposit', async () => {
-        expect(await agreement.canDeposit(who, where)).to.be.true
-        expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1))).to.be.true
-      })
-
-      it('accepts withdrawals to allowed recipients', async () => {
-        const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
-        expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer0)).to.be.true
-        expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer1)).to.be.true
-
-        const [manager0, manager1] = toAddresses(agreement.managers)
-        expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager0)).to.be.false
-        expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager1)).to.be.false
-
-        const collector = toAddress(agreement.feeCollector)
-        expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), collector)).to.be.false
-      })
-
-      it('accepts operating with allowed tokens', async () => {
-        const unknownToken = await deploy('TokenMock')
-        const whitelistedToken = await deploy('TokenMock')
-        await vault.mockWhitelistedTokens([whitelistedToken.address])
-
-        // valid token out, valid slippage
-        expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage)).to.be.true
-        // valid token out, invalid slippage
-        expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1))).to.be.false
-        // invalid token out, valid slippage
-        expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage)).to.be.false
-        // invalid token out, invalid slippage
-        expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage.add(1))).to.be.false
-        // invalid token out, valid slippage
-        expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage)).to.be.false
-        // invalid token out, invalid slippage
-        expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1))).to.be.false
-      })
-
-      it('accepts operating with allowed strategies', async () => {
-        const unknownStrategy = await deploy('StrategyMock')
-        const whitelistedStrategy = await deploy('StrategyMock')
-        await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
-
-        expect(await agreement.canJoin(who, where, customStrategy.address)).to.be.true
-        expect(await agreement.canJoin(who, where, unknownStrategy.address)).to.be.false
-        expect(await agreement.canJoin(who, where, whitelistedStrategy.address)).to.be.false
-
-        expect(await agreement.canExit(who, where, customStrategy.address)).to.be.true
-        expect(await agreement.canExit(who, where, unknownStrategy.address)).to.be.false
-        expect(await agreement.canExit(who, where, whitelistedStrategy.address)).to.be.false
-      })
-
-      it('does not accept any other action', async () => {
-        expect(await agreement.canPerform(who, where)).to.be.false
+        expect(await agreement.canExit(who, where, ZERO_ADDRESS, 0, false, '0x')).to.be.false
       })
     }
 
@@ -500,7 +443,77 @@ describe('Agreement', () => {
       context('when the target is the vault', () => {
         beforeEach('set target', () => (where = vault.address))
 
-        itAcceptsAllowedActions()
+        it('accepts any deposit', async () => {
+          expect(await agreement.canDeposit(who, where)).to.be.true
+          expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1))).to.be.true
+        })
+
+        it('accepts withdrawals to allowed recipients', async () => {
+          const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer0)).to.be.true
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer1)).to.be.true
+
+          const [manager0, manager1] = toAddresses(agreement.managers)
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager0)).to.be.false
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager1)).to.be.false
+
+          const collector = toAddress(agreement.feeCollector)
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), collector)).to.be.false
+        })
+
+        it('accepts operating with allowed tokens', async () => {
+          const unknownToken = await deploy('TokenMock')
+          const whitelistedToken = await deploy('TokenMock')
+          await vault.mockWhitelistedTokens([whitelistedToken.address])
+
+          // valid token out, valid slippage
+          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage)).to.be.true
+          // valid token out, invalid slippage
+          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1))).to.be.false
+          // invalid token out, valid slippage
+          expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage)).to.be.false
+          // invalid token out, invalid slippage
+          expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage.add(1))).to.be.false
+          // invalid token out, valid slippage
+          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage)).to.be.false
+          // invalid token out, invalid slippage
+          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1))).to.be.false
+        })
+
+        it('accepts operating with allowed strategies', async () => {
+          const unknownStrategy = await deploy('StrategyMock')
+          const whitelistedStrategy = await deploy('StrategyMock')
+          await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
+
+          expect(await agreement.canJoin(who, where, customStrategy.address)).to.be.true
+          expect(await agreement.canJoin(who, where, unknownStrategy.address)).to.be.false
+          expect(await agreement.canJoin(who, where, whitelistedStrategy.address)).to.be.false
+
+          expect(await agreement.canExit(who, where, customStrategy.address)).to.be.true
+          expect(await agreement.canExit(who, where, unknownStrategy.address)).to.be.false
+          expect(await agreement.canExit(who, where, whitelistedStrategy.address)).to.be.false
+        })
+
+        it('accepts exiting strategies on emergency only if also a withdrawer', async () => {
+          const onlyManager = agreement.managers[1] // third manager is also a withdrawer
+          const alsoWithdrawer = agreement.managers[2] // third manager is also a withdrawer
+
+          const unknownStrategy = await deploy('StrategyMock')
+          const whitelistedStrategy = await deploy('StrategyMock')
+          await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
+
+          expect(await agreement.canExit(onlyManager, where, customStrategy.address, 0, true)).to.be.false
+          expect(await agreement.canExit(onlyManager, where, unknownStrategy.address, 0, true)).to.be.false
+          expect(await agreement.canExit(onlyManager, where, whitelistedStrategy.address, 0, true)).to.be.false
+
+          expect(await agreement.canExit(alsoWithdrawer, where, customStrategy.address, 0, true)).to.be.true
+          expect(await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, true)).to.be.false
+          expect(await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, true)).to.be.false
+        })
+
+        it('does not accept any other action', async () => {
+          expect(await agreement.canPerform(who, where)).to.be.false
+        })
       })
 
       context('when the target is not the vault', () => {

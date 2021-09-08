@@ -35,17 +35,17 @@ const AgreementDeployer = {
   },
 
   async parseParams(params: RawAgreementDeployment): Promise<AgreementDeployment> {
-    const [, signer1, signer2, signer3, signer4, signer5] = await getSigners()
+    const [, signer1, signer2, signer3, signer4, signer5, signer6] = await getSigners()
 
     const vault = params.vault || (await deploy('VaultMock'))
-    const feeCollector = params.feeCollector ?? signer5
+    const feeCollector = params.feeCollector ?? signer6
     const depositFee = params.depositFee ?? 0
     const withdrawFee = params.withdrawFee ?? 0
     const performanceFee = params.performanceFee ?? 0
     const maxSwapSlippage = params.maxSwapSlippage ?? fp(0.02)
 
-    const managers = params.managers || [signer3, signer4]
-    const withdrawers = params.withdrawers || [signer1, signer2]
+    const managers = params.managers || [signer3, signer4, signer5]
+    const withdrawers = params.withdrawers || [signer1, signer2, signer5]
 
     const tokens = params.tokens ?? []
     const allowedTokens = params.allowedTokens ?? 'any'

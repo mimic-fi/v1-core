@@ -126,8 +126,8 @@ export default class Agreement {
     return this.canPerform(who, where, await this.getVaultActionId('join'), how)
   }
 
-  async canExit(who: Account, where: Account, strategy?: string, ratio: BigNumberish = 0, data = '0x'): Promise<boolean> {
-    const how = strategy ? this.encodeExit(strategy, ratio, data) : '0x'
+  async canExit(who: Account, where: Account, strategy?: string, ratio: BigNumberish = 0, emergency = false, data = '0x'): Promise<boolean> {
+    const how = strategy ? this.encodeExit(strategy, ratio, emergency, data) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('exit'), how)
   }
 
@@ -157,7 +157,7 @@ export default class Agreement {
     return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), amount, data])
   }
 
-  encodeExit(strategy: Account, ratio: BigNumberish, data: string): string {
-    return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), ratio, data])
+  encodeExit(strategy: Account, ratio: BigNumberish, emergency: boolean, data: string): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'bool', 'bytes'], [toAddress(strategy), ratio, emergency, data])
   }
 }

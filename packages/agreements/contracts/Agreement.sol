@@ -139,7 +139,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
             return isStrategyAllowed(params.strategy);
         } else if (what.isExit()) {
             VaultHelpers.ExitParams memory params = how.decodeExit();
-            return isStrategyAllowed(params.strategy);
+            return isStrategyAllowed(params.strategy) && (!params.emergency || isWithdrawer[who]);
         } else if (what.isWithdraw()) {
             VaultHelpers.WithdrawParams memory params = how.decodeWithdraw();
             return isWithdrawer[params.recipient];
@@ -185,11 +185,11 @@ contract Agreement is IAgreement, ReentrancyGuard {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function beforeExit(address /* sender */, address /* strategy */, uint256 /* ratio */, bytes memory /* data */) external override onlyVault {
+    function beforeExit(address /* sender */, address /* strategy */, uint256 /* ratio */, bool /* emergency */, bytes memory /* data */) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function afterExit(address /* sender */, address /* strategy */, uint256 /* ratio */, bytes memory /* data */) external override onlyVault {
+    function afterExit(address /* sender */, address /* strategy */, uint256 /* ratio */, bool /* emergency */, bytes memory /* data */) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 

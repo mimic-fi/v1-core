@@ -50,6 +50,7 @@ library VaultHelpers {
     struct ExitParams {
         address strategy;
         uint256 ratio;
+        bool emergency;
         bytes data;
     }
 
@@ -69,8 +70,8 @@ library VaultHelpers {
         return abi.encode(strategy, amount, data);
     }
 
-    function encodeExit(address strategy, uint256 ratio, bytes memory data) internal pure returns (bytes memory) {
-        return abi.encode(strategy, ratio, data);
+    function encodeExit(address strategy, uint256 ratio, bool emergency, bytes memory data) internal pure returns (bytes memory) {
+        return abi.encode(strategy, ratio, emergency, data);
     }
 
     function decodeDeposit(bytes memory self) internal pure returns (DepositParams memory) {
@@ -94,8 +95,8 @@ library VaultHelpers {
     }
 
     function decodeExit(bytes memory self) internal pure returns (ExitParams memory) {
-        (address strategy, uint256 ratio, bytes memory data) = abi.decode(self, (address, uint256, bytes));
-        return ExitParams({ strategy: strategy, ratio: ratio, data: data });
+        (address strategy, uint256 ratio, bool emergency, bytes memory data) = abi.decode(self, (address, uint256, bool, bytes));
+        return ExitParams({ strategy: strategy, ratio: ratio, emergency: emergency, data: data });
     }
 
     function isDeposit(bytes32 self) internal pure returns (bool) {

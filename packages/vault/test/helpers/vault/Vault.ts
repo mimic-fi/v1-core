@@ -79,13 +79,6 @@ export default class Vault {
     return vault.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
   }
 
-  async join(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {
-    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
-    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
-    const vault = from ? this.instance.connect(from) : this.instance
-    return vault.join(toAddress(account), toAddress(strategy), amount, data)
-  }
-
   async swap(
     account: Account,
     tokenIn: Token,
@@ -101,11 +94,26 @@ export default class Vault {
     return vault.swap(toAddress(account), tokenIn.address, tokenOut.address, amountIn, slippage, data)
   }
 
-  async exit(account: Account, strategy: Account, ratio: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {
+  async join(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {
     const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
     const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const vault = from ? this.instance.connect(from) : this.instance
-    return vault.exit(toAddress(account), toAddress(strategy), ratio, data)
+    return vault.join(toAddress(account), toAddress(strategy), amount, data)
+  }
+
+  async exit(
+    account: Account,
+    strategy: Account,
+    ratio: BigNumberish,
+    emergencyOrDataOrParams: boolean | string | TxParams = false,
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
+  ): Promise<ContractTransaction> {
+    const emergency = typeof emergencyOrDataOrParams === 'boolean' ? emergencyOrDataOrParams : false
+    const data = typeof emergencyOrDataOrParams === 'string' ? emergencyOrDataOrParams : dataOrParams
+    const from = typeof emergencyOrDataOrParams === 'object' ? emergencyOrDataOrParams?.from : typeof dataOrParams === 'object' ? dataOrParams.from : params?.from
+    const vault = from ? this.instance.connect(from) : this.instance
+    return vault.exit(toAddress(account), toAddress(strategy), ratio, emergency, data)
   }
 
   async setProtocolFee(fee: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
@@ -152,7 +160,7 @@ export default class Vault {
     return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), amount, data])
   }
 
-  encodeExit(strategy: Account, ratio: BigNumberish, data: string): string {
-    return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), ratio, data])
+  encodeExit(strategy: Account, ratio: BigNumberish, emergency: boolean, data: string): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'bool', 'bytes'], [toAddress(strategy), ratio, emergency, data])
   }
 }
