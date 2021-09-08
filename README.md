@@ -1,6 +1,6 @@
 # Core
 
-Mimic is a trustless non-custodial portfolio management protocol.
+> Mimic is a trustless non-custodial portfolio management protocol
 
 This monorepo holds the key components of the Mimic Finance protocol:
 - [Vault](./packages/vault): Main entry point and orchestrator of the protocol rules.
