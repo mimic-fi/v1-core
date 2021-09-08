@@ -87,7 +87,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         _setAllowedStrategies(_customStrategies, _allowedStrategies);
     }
 
-    function getBalance(address token) public view returns (uint256) {
+    function getTokenBalance(address token) external override view returns (uint256) {
         return IERC20(token).balanceOf(address(this));
     }
 

@@ -74,6 +74,32 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         shares = accounting.shares[strategy];
     }
 
+    function getDepositAmount(address accountAddress, uint256 amount) external override view returns (uint256) {
+        return Accounts.getDepositAmount(accountAddress, amount);
+    }
+
+    function getWithdrawAmount(address accountAddress, address token, uint256 amount) external override view returns (uint256) {
+        uint256 vaultBalance = accountings[accountAddress].balance[token];
+        return Accounts.getWithdrawAmount(accountAddress, token, amount, vaultBalance);
+    }
+
+    function getSwapAmount(address tokenIn, address tokenOut, uint256 amountIn) external override view returns (uint256) {
+        return ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
+    }
+
+    function getJoinAmount(address strategy, uint256 amount, bytes memory data) external override view returns (uint256) {
+        return IStrategy(strategy).getJoinAmount(amount, data);
+    }
+
+    function getExitAmount(address accountAddress, address strategy, uint256 ratio, bool emergency, bytes memory data) external override view returns (uint256) {
+        require(ratio > 0 && ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
+        Accounting storage accounting = accountings[accountAddress];
+        uint256 exitingShares = accounting.shares[strategy].mulDown(ratio);
+        uint256 amount = IStrategy(strategy).getExitAmount(exitingShares, emergency, data);
+        uint256 deposited = accounting.invested[strategy].mulUp(ratio);
+        return Accounts.getExitAmount(accountAddress, deposited, amount, protocolFee);
+    }
+
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
         require(newProtocolFee <= MAX_PROTOCOL_FEE, "PROTOCOL_FEE_TOO_HIGH");
         protocolFee = newProtocolFee;
@@ -203,10 +229,10 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
 
         Accounting storage accounting = accountings[account.addr];
         uint256 vaultBalance = accounting.balance[token];
-        uint256 accountBalance = account.isPortfolio ? IERC20(token).balanceOf(account.addr) : 0;
-        require(vaultBalance.add(accountBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
+        uint256 portfolioBalance = account.getTokenBalance(token);
+        require(vaultBalance.add(portfolioBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
 
-        uint256 fromAccount = Math.min(accountBalance, amount);
+        uint256 fromAccount = Math.min(portfolioBalance, amount);
         _safeTransferFrom(token, account.addr, recipient, fromAccount);
 
         (uint256 withdrawFee, address feeCollector) = account.getWithdrawFee();
