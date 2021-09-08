@@ -4,7 +4,7 @@ import { loadOrCreateERC20 } from './ERC20'
 import { Strategy as StrategyContract } from '../types/Vault/Strategy'
 import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } from '../types/schema'
 
-const ONE = BigInt.fromString('1000000000000000000')
+let ONE = BigInt.fromString('1000000000000000000')
 
 export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event): StrategyEntity {
   let id = strategyAddress.toHexString()
