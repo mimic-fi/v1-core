@@ -1532,7 +1532,7 @@ describe('Vault', () => {
         context('when the portfolio did not deposit enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
-            await expect(vault.getJoinAmount(account, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+            await expect(vault.getJoinAmount(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -1544,7 +1544,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
-          await expect(vault.getJoinAmount(account, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getJoinAmount(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
