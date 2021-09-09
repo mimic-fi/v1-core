@@ -74,12 +74,12 @@ async function benchmark(): Promise<void> {
   // Exit 30% DAI => 12.24k DAI => protocol 0.24 => performance 35.964 => receives 12203.796
   console.log('exiting DAI strategy...')
   await strategyDAI.mockRate(DAI_STRATEGY_RATE)
-  await vault.connect(manager1).exit(agreement, strategyDAI.address, fp(0.3), '0x')
+  await vault.connect(manager1).exit(agreement, strategyDAI.address, fp(0.3), false, '0x')
 
   // Exit 90% USDC => 18.54k USDC => protocol 0.54 => performance 80.919 => receives 18458.541
   console.log('exiting USDC strategy...')
   await strategyUSDC.mockRate(USDC_STRATEGY_RATE)
-  await vault.connect(manager1).exit(agreement, strategyUSDC.address, fp(0.9), '0x')
+  await vault.connect(manager1).exit(agreement, strategyUSDC.address, fp(0.9), false, '0x')
 
   // Withdraw USDC earnings 458.541 => 18k USDC
   console.log('withdrawing USDC strategy...')

@@ -5,8 +5,8 @@ async function benchmark(): Promise<void> {
   const protocolFee = fp(0.01)
   const priceOracle = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock')
   const swapConnector = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock')
-  const token1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock')
-  const token2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock')
+  const token1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['DAI'])
+  const token2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['USDC'])
   const tokens = [token1.address, token2.address]
   const strategy1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token1.address])
   const strategy2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token2.address])
@@ -79,8 +79,8 @@ async function benchmarkVault(vault: Contract, account: string, strategies: stri
   console.log(`- First join: \t\t${(await join1Tx.wait()).gasUsed}`)
   console.log(`- Second join: \t\t${(await join2Tx.wait()).gasUsed}`)
 
-  const exit1Tx = await vault.exit(account, strategy, fp(0.5), '0x')
-  const exit2Tx = await vault.exit(account, strategy, fp(1), '0x')
+  const exit1Tx = await vault.exit(account, strategy, fp(0.5), false, '0x')
+  const exit2Tx = await vault.exit(account, strategy, fp(1), false, '0x')
   console.log(`- Half exit: \t\t${(await exit1Tx.wait()).gasUsed}`)
   console.log(`- Full exit: \t\t${(await exit2Tx.wait()).gasUsed}`)
 
