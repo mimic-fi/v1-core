@@ -40,15 +40,7 @@ interface IVault {
 
     function getAccountInvestment(address account, address strategy) external view returns (uint256 invested, uint256 shares);
 
-    function getDepositAmount(address account, uint256 amount) external view returns (uint256);
-
-    function getWithdrawAmount(address account, address token, uint256 amount) external view returns (uint256);
-
-    function getSwapAmount(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256);
-
-    function getJoinAmount(address strategy, uint256 amount, bytes memory data) external view returns (uint256);
-
-    function getExitAmount(address account, address strategy, uint256 ratio, bool emergency, bytes memory data) external view returns (uint256);
+    function query(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
     function batch(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 

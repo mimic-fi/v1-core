@@ -1,7 +1,8 @@
 import { expect } from 'chai'
 import { BigNumber, Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { assertEvent, assertIndirectEvent, assertNoIndirectEvent, BigNumberish, deploy, fp, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { assertEvent, assertIndirectEvent, assertNoIndirectEvent, BigNumberish,
+  bn, deploy, fp, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from './helpers/vault/Vault'
 import Token from './helpers/tokens/Token'
@@ -83,13 +84,14 @@ describe('Vault', () => {
             })
 
             it('calculates the expected amount', async () => {
-              expect(await vault.getDepositAmount(account, amount)).to.be.equal(amount)
+              expect(await vault.getDepositAmount(account, token, amount, { from })).to.be.equal(amount)
             })
           })
 
           context('when the sender did not approve enough tokens', async () => {
             it('reverts', async () => {
               await expect(vault.deposit(account, token, amount, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+              await expect(vault.getDepositAmount(account, token, amount, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
             })
           })
         })
@@ -97,6 +99,7 @@ describe('Vault', () => {
         context('when the sender does not have enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.deposit(account, token, fp(10), { from })).to.be.revertedWith('ERC20: transfer amount exceeds balance')
+            await expect(vault.getDepositAmount(account, token, fp(10), { from })).to.be.revertedWith('ERC20: transfer amount exceeds balance')
           })
         })
       })
@@ -110,6 +113,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.deposit(account, token, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getDepositAmount(account, token, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -178,12 +182,12 @@ describe('Vault', () => {
 
             it('calculates the expected amount', async () => {
               const expectedAmount = amount.sub(expectedFee)
-              expect(await vault.getDepositAmount(portfolio, amount)).to.be.equal(expectedAmount)
+              expect(await vault.getDepositAmount(portfolio, token, amount, { from })).to.be.equal(expectedAmount)
             })
 
             describe('authorization', async () => {
               it('encodes the authorization as expected', async () => {
-                const how = vault.encodeDeposit(token, amount)
+                const how = vault.encodeDepositParams(token, amount)
                 await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('deposit'), how })
 
                 await expect(vault.deposit(portfolio, token, amount, { from })).not.to.be.reverted
@@ -283,6 +287,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.deposit(portfolio, token, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getWithdrawAmount(portfolio, token, fp(10), other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -340,13 +345,14 @@ describe('Vault', () => {
           })
 
           it('calculates the expected amount', async () => {
-            expect(await vault.getWithdrawAmount(account, token, amount)).to.be.equal(amount)
+            expect(await vault.getWithdrawAmount(account, token, amount, other, { from })).to.be.equal(amount)
           })
         })
 
         context('when the sender did not deposit enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.withdraw(account, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+            await expect(vault.getWithdrawAmount(account, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -360,6 +366,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.withdraw(account, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -426,7 +433,7 @@ describe('Vault', () => {
 
             describe('authorization', async () => {
               it('encodes the authorization as expected', async () => {
-                const how = vault.encodeWithdraw(token, amount, other)
+                const how = vault.encodeWithdrawParams(token, amount, other)
                 await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('withdraw'), how })
 
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).not.to.be.reverted
@@ -436,6 +443,7 @@ describe('Vault', () => {
                 await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('withdraw'), how: '0x' })
 
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+                await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
               })
             })
 
@@ -518,6 +526,7 @@ describe('Vault', () => {
           context('when the portfolio did not allow the corresponding amount', async () => {
             it('reverts', async () => {
               await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+              await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
             })
           })
         })
@@ -588,6 +597,7 @@ describe('Vault', () => {
             context('when there are not enough tokens deposited in the vault', async () => {
               it('reverts', async () => {
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+                await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
               })
             })
           })
@@ -603,12 +613,14 @@ describe('Vault', () => {
 
               it('reverts', async () => {
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+                await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
               })
             })
 
             context('when there are not enough tokens deposited in the vault', async () => {
               it('reverts', async () => {
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+                await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
               })
             })
           })
@@ -663,7 +675,7 @@ describe('Vault', () => {
 
             it('calculates the expected amount', async () => {
               const expectedAmount = amount.sub(expectedWithdrawFee)
-              expect(await vault.getWithdrawAmount(portfolio, token, amount)).to.be.equal(expectedAmount)
+              expect(await vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.equal(expectedAmount)
             })
           }
 
@@ -685,6 +697,7 @@ describe('Vault', () => {
             context('when there are not enough tokens deposited in the vault', async () => {
               it('reverts', async () => {
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+                await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
               })
             })
           })
@@ -704,6 +717,7 @@ describe('Vault', () => {
             context('when there are not enough tokens deposited in the vault', async () => {
               it('reverts', async () => {
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+                await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
               })
             })
           })
@@ -717,6 +731,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -822,7 +837,7 @@ describe('Vault', () => {
             })
 
             it('calculates the expected amount', async () => {
-              expect(await vault.getSwapAmount(tokenIn, tokenOut, amount)).to.be.equal(expectedAmountOut)
+              expect(await vault.getSwapAmount(account, tokenIn, tokenOut, amount, slippage, { from })).to.be.equal(expectedAmountOut)
             })
           }
 
@@ -845,6 +860,7 @@ describe('Vault', () => {
 
               it('reverts', async () => {
                 await expect(vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
+                await expect(vault.getSwapAmount(account, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
               })
             })
           })
@@ -893,6 +909,7 @@ describe('Vault', () => {
         context('when the sender did not deposit enough tokens', () => {
           it('reverts', async () => {
             await expect(vault.swap(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+            await expect(vault.getSwapAmount(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -906,6 +923,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.swap(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getSwapAmount(account, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -998,7 +1016,7 @@ describe('Vault', () => {
             })
 
             it('calculates the expected amount', async () => {
-              expect(await vault.getSwapAmount(tokenIn, tokenOut, amount)).to.be.equal(expectedAmountOut)
+              expect(await vault.getSwapAmount(portfolio, tokenIn, tokenOut, amount, slippage, { from })).to.be.equal(expectedAmountOut)
             })
           }
 
@@ -1021,6 +1039,7 @@ describe('Vault', () => {
 
               it('reverts', async () => {
                 await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
+                await expect(vault.getSwapAmount(portfolio, tokenIn, tokenOut, amount, slippage, { from })).to.be.revertedWith('SWAP_MIN_AMOUNT')
               })
             })
           })
@@ -1065,7 +1084,7 @@ describe('Vault', () => {
 
               describe('authorization', async () => {
                 it('encodes the authorization as expected', async () => {
-                  const how = vault.encodeSwap(tokenIn, tokenOut, amount, slippage, '0xaa')
+                  const how = vault.encodeSwapParams(tokenIn, tokenOut, amount, slippage, '0xaa')
                   await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('swap'), how })
 
                   await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, '0xaa', { from })).not.to.be.reverted
@@ -1169,6 +1188,7 @@ describe('Vault', () => {
         context('when the portfolio did not deposit enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+            await expect(vault.getSwapAmount(portfolio, tokenIn, tokenOut, amount, 0, { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -1180,6 +1200,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.swap(portfolio, tokenIn, tokenOut, amount, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getSwapAmount(portfolio, tokenIn, tokenOut, amount, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1273,7 +1294,7 @@ describe('Vault', () => {
             })
 
             it('calculates the expected amount', async () => {
-              expect(await vault.getJoinAmount(strategy, amount)).to.be.equal(expectedShares)
+              expect(await vault.getJoinAmount(account, strategy, amount, { from })).to.be.equal(expectedShares)
             })
           }
 
@@ -1296,6 +1317,7 @@ describe('Vault', () => {
         context('when the sender did not deposit enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.join(account, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+            await expect(vault.getJoinAmount(account, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -1309,6 +1331,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.join(account, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getJoinAmount(account, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1399,7 +1422,7 @@ describe('Vault', () => {
             })
 
             it('calculates the expected amount', async () => {
-              expect(await vault.getJoinAmount(strategy, amount)).to.be.equal(expectedShares)
+              expect(await vault.getJoinAmount(portfolio, strategy, amount, { from })).to.be.equal(expectedShares)
             })
           }
 
@@ -1410,7 +1433,7 @@ describe('Vault', () => {
 
             describe('authorization', async () => {
               it('encodes the authorization as expected', async () => {
-                const how = vault.encodeJoin(strategy, amount, '0xaa')
+                const how = vault.encodeJoinParams(strategy, amount, '0xaa')
                 await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('join'), how })
 
                 await expect(vault.join(portfolio, strategy, amount, '0xaa', { from })).not.to.be.reverted
@@ -1420,6 +1443,7 @@ describe('Vault', () => {
                 await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('join'), how: '0x' })
 
                 await expect(vault.join(portfolio, strategy, amount, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+                await expect(vault.getJoinAmount(account, strategy, amount, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
               })
             })
 
@@ -1509,6 +1533,7 @@ describe('Vault', () => {
         context('when the portfolio did not deposit enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
+            await expect(vault.getJoinAmount(account, strategy, fp(10), { from })).to.be.revertedWith('ACCOUNTING_INSUFFICIENT_BALANCE')
           })
         })
       })
@@ -1520,6 +1545,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.join(portfolio, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getJoinAmount(account, strategy, fp(10), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1651,7 +1677,7 @@ describe('Vault', () => {
 
               it('calculates the expected amount', async () => {
                 const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmount
-                expect(await vault.getExitAmount(account, strategy, ratio)).to.be.equal(exitAmount)
+                expect(await vault.getExitAmount(account, strategy, ratio, { from })).to.be.equal(exitAmount)
               })
             }
 
@@ -1681,6 +1707,7 @@ describe('Vault', () => {
 
             it('reverts', async () => {
               await expect(vault.exit(account, strategy, ratio, { from })).to.be.revertedWith('INVALID_EXIT_RATIO')
+              await expect(vault.getExitAmount(account, strategy, ratio, { from })).to.be.revertedWith('INVALID_EXIT_RATIO')
             })
           })
         })
@@ -1688,6 +1715,7 @@ describe('Vault', () => {
         context('when the account does not have enough shares', async () => {
           it('reverts', async () => {
             await expect(vault.exit(account, strategy, fp(1), { from })).to.be.revertedWith('EXIT_SHARES_ZERO')
+            await expect(vault.getExitAmount(account, strategy, fp(1), { from })).to.be.revertedWith('EXIT_SHARES_ZERO')
           })
         })
       })
@@ -1701,6 +1729,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.exit(account, strategy, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getExitAmount(account, strategy, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -1850,7 +1879,7 @@ describe('Vault', () => {
 
               it('calculates the expected amount', async () => {
                 const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmount
-                expect(await vault.getExitAmount(portfolio, strategy, ratio)).to.be.equal(exitAmount)
+                expect(await vault.getExitAmount(portfolio, strategy, ratio, { from })).to.be.equal(exitAmount)
               })
             }
 
@@ -1865,7 +1894,7 @@ describe('Vault', () => {
 
               describe('authorization', async () => {
                 it('encodes the authorization as expected', async () => {
-                  const how = vault.encodeExit(strategy, ratio, true, '0xaa')
+                  const how = vault.encodeExitParams(strategy, ratio, true, '0xaa')
                   await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('exit'), how })
 
                   await expect(vault.exit(portfolio, strategy, ratio, true, '0xaa', { from })).not.to.be.reverted
@@ -1875,6 +1904,7 @@ describe('Vault', () => {
                   await portfolio.mockCanPerformData({ who: from.address, where: vault.address, what: vault.getSelector('exit'), how: '0x' })
 
                   await expect(vault.exit(portfolio, strategy, ratio, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+                  await expect(vault.getExitAmount(portfolio, strategy, ratio, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
                 })
               })
 
@@ -1972,6 +2002,7 @@ describe('Vault', () => {
 
             it('reverts', async () => {
               await expect(vault.exit(portfolio, strategy, ratio, { from })).to.be.revertedWith('INVALID_EXIT_RATIO')
+              await expect(vault.getExitAmount(portfolio, strategy, ratio, { from })).to.be.revertedWith('INVALID_EXIT_RATIO')
             })
           })
         })
@@ -1979,6 +2010,7 @@ describe('Vault', () => {
         context('when the portfolio does not have enough shares', async () => {
           it('reverts', async () => {
             await expect(vault.exit(portfolio, strategy, fp(1), { from })).to.be.revertedWith('EXIT_SHARES_ZERO')
+            await expect(vault.getExitAmount(portfolio, strategy, fp(1), { from })).to.be.revertedWith('EXIT_SHARES_ZERO')
           })
         })
       })
@@ -1990,6 +2022,7 @@ describe('Vault', () => {
 
         it('reverts', async () => {
           await expect(vault.exit(portfolio, strategy, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+          await expect(vault.getExitAmount(portfolio, strategy, fp(1), { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
         })
       })
     })
@@ -2008,18 +2041,21 @@ describe('Vault', () => {
     })
 
     context('without reading output', () => {
-      it('allows batching actions', async () => {
-        const amount = fp(500)
-        const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
-        const expectedFee = depositedAmount.sub(amount)
+      const amount = fp(500)
+      const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
+      const expectedFee = depositedAmount.sub(amount)
+
+      beforeEach('mint and approve tokens', async () => {
         await token.mint(portfolio, depositedAmount)
         await portfolio.mockApproveTokens(token.address, depositedAmount)
+      })
 
-        const { data: deposit } = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, depositedAmount)
-        const { data: join } = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, amount, '0x')
-        const { data: exit } = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, fp(0.5), false, '0x')
+      it('allows batching actions', async () => {
+        const deposit = await vault.encodeDepositCall(portfolio.address, token.address, depositedAmount)
+        const join = await vault.encodeJoinCall(portfolio.address, strategy.address, amount, '0x')
+        const exit = await vault.encodeExitCall(portfolio.address, strategy.address, fp(0.5), false, '0x')
 
-        const tx = await vault.instance.connect(from).batch([deposit, join, exit], [])
+        const tx = await vault.batch([deposit, join, exit], [], { from })
 
         await assertEvent(tx, 'Deposit', {
           account: portfolio,
@@ -2045,6 +2081,17 @@ describe('Vault', () => {
           performanceFee: 0,
         })
       })
+
+      it('allows querying actions', async () => {
+        const deposit = await vault.encodeDepositCall(portfolio.address, token.address, depositedAmount)
+        const join = await vault.encodeJoinCall(portfolio.address, strategy.address, amount, '0x')
+        const exit = await vault.encodeExitCall(portfolio.address, strategy.address, fp(0.5), false, '0x')
+
+        const results = await vault.query([deposit, join, exit], [], { from })
+        expect(bn(results[0])).to.be.equal(amount)
+        expect(bn(results[1])).to.be.equal(amount)
+        expect(bn(results[2])).to.be.equal(amount.div(2))
+      })
     })
 
     context('when reading output', () => {
@@ -2058,8 +2105,7 @@ describe('Vault', () => {
         beforeEach('populate deposit', async () => {
           await tokens.first.mint(portfolio, depositedAmount)
           await portfolio.mockApproveTokens(token.address, depositedAmount)
-          const tx = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, depositedAmount)
-          deposit = tx.data || ''
+          deposit = await vault.encodeDepositCall(portfolio.address, token.address, depositedAmount)
         })
 
         context('when appending it to a swap', () => {
@@ -2072,8 +2118,7 @@ describe('Vault', () => {
             tokenOut = tokens.second
             await vault.swapConnector.mockRate(swapRate)
             await tokenOut.mint(vault.swapConnector.address, fp(10000))
-            const tx = await vault.instance.populateTransaction.swap(portfolio.address, tokenIn.address, tokenOut.address, MAX_UINT256, fp(0.1), '0xaa')
-            swap = tx.data || ''
+            swap = await vault.encodeSwapCall(portfolio.address, tokenIn.address, tokenOut.address, MAX_UINT256, fp(0.1), '0xaa')
           })
 
           it('batches actions correctly', async () => {
@@ -2107,8 +2152,7 @@ describe('Vault', () => {
 
           beforeEach('populate swap', async () => {
             await strategy.mockRate(strategyRate)
-            const tx = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, MAX_UINT256, '0x99')
-            join = tx.data || ''
+            join = await vault.encodeJoinCall(portfolio.address, strategy.address, MAX_UINT256, '0x99')
           })
 
           it('batches actions correctly', async () => {
@@ -2137,8 +2181,7 @@ describe('Vault', () => {
           let withdraw: string
 
           beforeEach('populate withdraw', async () => {
-            const tx = await vault.instance.populateTransaction.withdraw(portfolio.address, token.address, MAX_UINT256, other.address)
-            withdraw = tx.data || ''
+            withdraw = await vault.encodeWithdrawCall(portfolio.address, token.address, MAX_UINT256, other.address)
           })
 
           it('batches actions correctly', async () => {
@@ -2175,8 +2218,7 @@ describe('Vault', () => {
         beforeEach('populate deposit', async () => {
           await token.mint(portfolio, fp(10000))
           await portfolio.mockApproveTokens(token.address, fp(10000))
-          const tx = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, fp(10000))
-          deposit = tx.data || ''
+          deposit = await vault.encodeDepositCall(portfolio.address, token.address, fp(10000))
         })
 
         beforeEach('populate swap', async () => {
@@ -2184,8 +2226,7 @@ describe('Vault', () => {
           tokenOut = tokens.second
           await vault.swapConnector.mockRate(swapRate)
           await tokenOut.mint(vault.swapConnector.address, fp(10000))
-          const tx = await vault.instance.populateTransaction.swap(portfolio.address, tokenIn.address, tokenOut.address, amountIn, fp(0.1), '0xaa')
-          swap = tx.data || ''
+          swap = await vault.encodeSwapCall(portfolio.address, tokenIn.address, tokenOut.address, amountIn, fp(0.1), '0xaa')
         })
 
         context('when appending it to a swap', () => {
@@ -2195,12 +2236,11 @@ describe('Vault', () => {
             secondTokenIn = tokenOut
             secondTokenOut = await Token.create('MKR')
             await secondTokenOut.mint(vault.swapConnector.address, fp(10000))
-            const tx = await vault.instance.populateTransaction.swap(portfolio.address, secondTokenIn.address, secondTokenOut.address, MAX_UINT256, fp(0.1), '0xbb')
-            secondSwap = tx.data || ''
+            secondSwap = await vault.encodeSwapCall(portfolio.address, secondTokenIn.address, secondTokenOut.address, MAX_UINT256, fp(0.1), '0xbb')
           })
 
           it('batches actions correctly', async () => {
-            const tx = await vault.instance.connect(from).batch([deposit, swap, secondSwap], readsOutput)
+            const tx = await vault.batch([deposit, swap, secondSwap], readsOutput, { from })
 
             const expectedSecondAmountOut = expectedAmountOut.mul(swapRate).div(fp(1))
 
@@ -2227,6 +2267,16 @@ describe('Vault', () => {
               remainingIn: 0,
             })
           })
+
+          it('batches queries correctly', async () => {
+            const results = await vault.query([deposit, swap, secondSwap], readsOutput, { from })
+            const expectedDeposit = fp(10000).sub(fp(10000).mul(depositFee).div(fp(1)))
+            const expectedSecondAmountOut = expectedAmountOut.mul(swapRate).div(fp(1))
+
+            expect(bn(results[0])).to.be.equal(expectedDeposit)
+            expect(bn(results[1])).to.be.equal(expectedAmountOut)
+            expect(bn(results[2])).to.be.equal(expectedSecondAmountOut)
+          })
         })
 
         context('when appending it to a join', () => {
@@ -2236,8 +2286,7 @@ describe('Vault', () => {
 
           beforeEach('populate swap', async () => {
             await strategy.mockRate(strategyRate)
-            const tx = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, MAX_UINT256, '0x99')
-            join = tx.data || ''
+            join = await vault.encodeJoinCall(portfolio.address, strategy.address, MAX_UINT256, '0x99')
           })
 
           it('batches actions correctly', async () => {
@@ -2272,8 +2321,7 @@ describe('Vault', () => {
           let withdraw: string
 
           beforeEach('populate withdraw', async () => {
-            const tx = await vault.instance.populateTransaction.withdraw(portfolio.address, token.address, MAX_UINT256, other.address)
-            withdraw = tx.data || ''
+            withdraw = await vault.encodeWithdrawCall(portfolio.address, token.address, MAX_UINT256, other.address)
           })
 
           it('batches actions correctly', async () => {
@@ -2317,19 +2365,16 @@ describe('Vault', () => {
         beforeEach('populate deposit', async () => {
           await token.mint(portfolio, fp(10000))
           await portfolio.mockApproveTokens(token.address, fp(10000))
-          const tx = await vault.instance.populateTransaction.deposit(portfolio.address, token.address, fp(10000))
-          deposit = tx.data || ''
+          deposit = await vault.encodeDepositCall(portfolio.address, token.address, fp(10000))
         })
 
         beforeEach('populate join', async () => {
           await strategy.mockRate(strategyRate)
-          const tx = await vault.instance.populateTransaction.join(portfolio.address, strategy.address, MAX_UINT256, '0x99')
-          join = tx.data || ''
+          join = await vault.encodeJoinCall(portfolio.address, strategy.address, MAX_UINT256, '0x99')
         })
 
         beforeEach('populate exit', async () => {
-          const tx = await vault.instance.populateTransaction.exit(portfolio.address, strategy.address, ratio, false, '0xee')
-          exit = tx.data || ''
+          exit = await vault.encodeExitCall(portfolio.address, strategy.address, ratio, false, '0xee')
         })
 
         context('when appending it to a swap', () => {
@@ -2342,8 +2387,7 @@ describe('Vault', () => {
             tokenOut = tokens.second
             await vault.swapConnector.mockRate(swapRate)
             await tokenOut.mint(vault.swapConnector.address, fp(10000))
-            const tx = await vault.instance.populateTransaction.swap(portfolio.address, tokenIn.address, tokenOut.address, MAX_UINT256, fp(0.1), '0xaa')
-            swap = tx.data || ''
+            swap = await vault.encodeSwapCall(portfolio.address, tokenIn.address, tokenOut.address, MAX_UINT256, fp(0.1), '0xaa')
           })
 
           it('batches actions correctly', async () => {
@@ -2389,8 +2433,7 @@ describe('Vault', () => {
           beforeEach('populate second join', async () => {
             secondStrategy = await deploy('StrategyMock', [token.address])
             await secondStrategy.mockRate(secondStrategyRate)
-            const tx = await vault.instance.populateTransaction.join(portfolio.address, secondStrategy.address, MAX_UINT256, '0x99')
-            secondJoin = tx.data || ''
+            secondJoin = await vault.encodeJoinCall(portfolio.address, secondStrategy.address, MAX_UINT256, '0x99')
           })
 
           it('batches actions correctly', async () => {
@@ -2430,8 +2473,7 @@ describe('Vault', () => {
           let withdraw: string
 
           beforeEach('populate withdraw', async () => {
-            const tx = await vault.instance.populateTransaction.withdraw(portfolio.address, token.address, MAX_UINT256, other.address)
-            withdraw = tx.data || ''
+            withdraw = await vault.encodeWithdrawCall(portfolio.address, token.address, MAX_UINT256, other.address)
           })
 
           it('batches actions correctly', async () => {

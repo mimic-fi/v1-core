@@ -25,10 +25,6 @@ interface IStrategy {
 
     function getMetadataURI() external view returns (string memory);
 
-    function getJoinAmount(uint256 amount, bytes memory data) external view returns (uint256);
-
-    function getExitAmount(uint256 shares, bool emergency, bytes memory data) external view returns (uint256);
-
     function onJoin(uint256 amount, bytes memory data) external returns (uint256 shares);
 
     function onExit(uint256 shares, bool emergency, bytes memory data) external returns (address token, uint256 amount);
