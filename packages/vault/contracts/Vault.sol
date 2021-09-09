@@ -18,12 +18,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./libraries/Accounts.sol";
 import "./libraries/FixedPoint.sol";
+import "./libraries/VaultQuery.sol";
 import "./libraries/VaultHelpers.sol";
 
 import "./interfaces/IPriceOracle.sol";
@@ -31,7 +30,7 @@ import "./interfaces/IStrategy.sol";
 import "./interfaces/ISwapConnector.sol";
 import "./interfaces/IVault.sol";
 
-contract Vault is IVault, Ownable, ReentrancyGuard {
+contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     using SafeERC20 for IERC20;
     using FixedPoint for uint256;
     using VaultHelpers for bytes;
@@ -74,30 +73,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard {
         shares = accounting.shares[strategy];
     }
 
-    function getDepositAmount(address accountAddress, uint256 amount) external override view returns (uint256) {
-        return Accounts.getDepositAmount(accountAddress, amount);
-    }
-
-    function getWithdrawAmount(address accountAddress, address token, uint256 amount) external override view returns (uint256) {
-        uint256 vaultBalance = accountings[accountAddress].balance[token];
-        return Accounts.getWithdrawAmount(accountAddress, token, amount, vaultBalance);
-    }
-
-    function getSwapAmount(address tokenIn, address tokenOut, uint256 amountIn) external override view returns (uint256) {
-        return ISwapConnector(swapConnector).getAmountOut(tokenIn, tokenOut, amountIn);
-    }
-
-    function getJoinAmount(address strategy, uint256 amount, bytes memory data) external override view returns (uint256) {
-        return IStrategy(strategy).getJoinAmount(amount, data);
-    }
-
-    function getExitAmount(address accountAddress, address strategy, uint256 ratio, bool emergency, bytes memory data) external override view returns (uint256) {
-        require(ratio > 0 && ratio <= FixedPoint.ONE, "INVALID_EXIT_RATIO");
-        Accounting storage accounting = accountings[accountAddress];
-        uint256 exitingShares = accounting.shares[strategy].mulDown(ratio);
-        uint256 amount = IStrategy(strategy).getExitAmount(exitingShares, emergency, data);
-        uint256 deposited = accounting.invested[strategy].mulUp(ratio);
-        return Accounts.getExitAmount(accountAddress, deposited, amount, protocolFee);
+    function query(bytes[] memory data, bool[] memory readsOutput) public override(IVault, VaultQuery) returns (bytes[] memory results) {
+        return VaultQuery.query(data, readsOutput);
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {

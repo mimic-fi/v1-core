@@ -1,4 +1,5 @@
 export * from './src/asserts'
+export * from './src/compiler'
 export * from './src/constants'
 export * from './src/contracts'
 export * from './src/numbers'

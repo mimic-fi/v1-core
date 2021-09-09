@@ -1,5 +1,5 @@
-import { BigNumberish } from '@mimic-fi/v1-helpers'
 import { defaultAbiCoder } from '@ethersproject/abi'
+import { BigNumberish, bn } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber, Contract, ContractTransaction } from 'ethers'
 
@@ -69,24 +69,9 @@ export default class Vault {
     return this.instance.getAccountInvestment(toAddress(account), toAddress(strategy))
   }
 
-  async getDepositAmount(account: Account, amount: BigNumberish): Promise<BigNumber> {
-    return this.instance.getDepositAmount(toAddress(account), amount)
-  }
-
-  async getWithdrawAmount(account: Account, token: Account, amount: BigNumberish): Promise<BigNumber> {
-    return this.instance.getWithdrawAmount(toAddress(account), toAddress(token), amount)
-  }
-
-  async getSwapAmount(tokenIn: Account, tokenOut: Account, amount: BigNumberish): Promise<BigNumber> {
-    return this.instance.getSwapAmount(toAddress(tokenIn), toAddress(tokenOut), amount)
-  }
-
-  async getJoinAmount(strategy: Account, amount: BigNumberish, data = '0x'): Promise<BigNumber> {
-    return this.instance.getJoinAmount(toAddress(strategy), amount, data)
-  }
-
-  async getExitAmount(account: Account, strategy: Account, ratio: BigNumberish, emergency = false, data = '0x'): Promise<BigNumber> {
-    return this.instance.getExitAmount(toAddress(account), toAddress(strategy), ratio, emergency, data)
+  async getDepositAmount(account: Account, token: Account, amount: BigNumberish, params: TxParams = {}): Promise<BigNumber> {
+    const call = await this.encodeDepositCall(account, token, amount)
+    return this.singleQuery(call, params)
   }
 
   async deposit(account: Account, token: Account, amount: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
@@ -94,9 +79,29 @@ export default class Vault {
     return vault.deposit(toAddress(account), toAddress(token), amount)
   }
 
+  async getWithdrawAmount(account: Account, token: Account, amount: BigNumberish, recipient: Account, params: TxParams = {}): Promise<BigNumber> {
+    const call = await this.encodeWithdrawCall(account, token, amount, recipient)
+    return this.singleQuery(call, params)
+  }
+
   async withdraw(account: Account, token: Account, amount: BigNumberish, recipient: Account, { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
+  }
+
+  async getSwapAmount(
+    account: Account,
+    tokenIn: Token,
+    tokenOut: Token,
+    amountIn: BigNumberish,
+    slippage: BigNumberish,
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
+  ): Promise<BigNumber> {
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
+    const call = await this.encodeSwapCall(account, tokenIn, tokenOut, amountIn, slippage, data)
+    return this.singleQuery(call, { from })
   }
 
   async swap(
@@ -114,11 +119,33 @@ export default class Vault {
     return vault.swap(toAddress(account), tokenIn.address, tokenOut.address, amountIn, slippage, data)
   }
 
+  async getJoinAmount(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<BigNumber> {
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
+    const call = await this.encodeJoinCall(account, strategy, amount, data)
+    return this.singleQuery(call, { from })
+  }
+
   async join(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {
     const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
     const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.join(toAddress(account), toAddress(strategy), amount, data)
+  }
+
+  async getExitAmount(
+    account: Account,
+    strategy: Account,
+    ratio: BigNumberish,
+    emergencyOrDataOrParams: boolean | string | TxParams = false,
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
+  ): Promise<BigNumber> {
+    const emergency = typeof emergencyOrDataOrParams === 'boolean' ? emergencyOrDataOrParams : false
+    const data = typeof emergencyOrDataOrParams === 'string' ? emergencyOrDataOrParams : (dataOrParams as string)
+    const from = typeof emergencyOrDataOrParams === 'object' ? emergencyOrDataOrParams?.from : typeof dataOrParams === 'object' ? dataOrParams.from : params?.from
+    const call = await this.encodeExitCall(account, strategy, ratio, emergency, data)
+    return this.singleQuery(call, { from })
   }
 
   async exit(
@@ -130,10 +157,25 @@ export default class Vault {
     params: TxParams = {}
   ): Promise<ContractTransaction> {
     const emergency = typeof emergencyOrDataOrParams === 'boolean' ? emergencyOrDataOrParams : false
-    const data = typeof emergencyOrDataOrParams === 'string' ? emergencyOrDataOrParams : dataOrParams
+    const data = typeof emergencyOrDataOrParams === 'string' ? emergencyOrDataOrParams : (dataOrParams as string)
     const from = typeof emergencyOrDataOrParams === 'object' ? emergencyOrDataOrParams?.from : typeof dataOrParams === 'object' ? dataOrParams.from : params?.from
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.exit(toAddress(account), toAddress(strategy), ratio, emergency, data)
+  }
+
+  async singleQuery(data: string, params: TxParams): Promise<BigNumber> {
+    const results = await this.query([data], [false], params)
+    return bn(results[0])
+  }
+
+  async query(data: string[], readsOutput: boolean[], { from }: TxParams = {}): Promise<string[]> {
+    const vault = from ? this.instance.connect(from) : this.instance
+    return vault.query(data, readsOutput)
+  }
+
+  async batch(data: string[], readsOutput: boolean[], { from }: TxParams = {}): Promise<ContractTransaction> {
+    const vault = from ? this.instance.connect(from) : this.instance
+    return vault.batch(data, readsOutput)
   }
 
   async setProtocolFee(fee: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
@@ -164,23 +206,48 @@ export default class Vault {
     return vault.setWhitelistedStrategies(toAddresses(strategies), whitelisted)
   }
 
-  encodeDeposit(token: Account, amount: BigNumberish): string {
+  encodeDepositParams(token: Account, amount: BigNumberish): string {
     return defaultAbiCoder.encode(['address', 'uint256'], [toAddress(token), amount])
   }
 
-  encodeWithdraw(token: Account, amount: BigNumberish, recipient: Account): string {
+  encodeWithdrawParams(token: Account, amount: BigNumberish, recipient: Account): string {
     return defaultAbiCoder.encode(['address', 'uint256', 'address'], [toAddress(token), amount, toAddress(recipient)])
   }
 
-  encodeSwap(tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data: string): string {
+  encodeSwapParams(tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data: string): string {
     return defaultAbiCoder.encode(['address', 'address', 'uint256', 'uint256', 'bytes'], [toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data])
   }
 
-  encodeJoin(strategy: Account, amount: BigNumberish, data: string): string {
+  encodeJoinParams(strategy: Account, amount: BigNumberish, data: string): string {
     return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(strategy), amount, data])
   }
 
-  encodeExit(strategy: Account, ratio: BigNumberish, emergency: boolean, data: string): string {
+  encodeExitParams(strategy: Account, ratio: BigNumberish, emergency: boolean, data: string): string {
     return defaultAbiCoder.encode(['address', 'uint256', 'bool', 'bytes'], [toAddress(strategy), ratio, emergency, data])
+  }
+
+  async encodeDepositCall(account: Account, token: Account, amount: BigNumberish): Promise<string> {
+    const tx = await this.instance.populateTransaction.deposit(toAddress(account), toAddress(token), amount.toString())
+    return tx?.data || '0x'
+  }
+
+  async encodeWithdrawCall(account: Account, token: Account, amount: BigNumberish, recipient: Account): Promise<string> {
+    const tx = await this.instance.populateTransaction.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
+    return tx?.data || '0x'
+  }
+
+  async encodeJoinCall(account: Account, strategy: Account, amount: BigNumberish, data = '0x'): Promise<string> {
+    const tx = await this.instance.populateTransaction.join(toAddress(account), toAddress(strategy), amount, data)
+    return tx?.data || '0x'
+  }
+
+  async encodeExitCall(account: Account, strategy: Account, amount: BigNumberish, emergency = false, data = '0x'): Promise<string> {
+    const tx = await this.instance.populateTransaction.exit(toAddress(account), toAddress(strategy), amount, emergency, data)
+    return tx?.data || '0x'
+  }
+
+  async encodeSwapCall(account: Account, tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data = '0x'): Promise<string> {
+    const tx = await this.instance.populateTransaction.swap(toAddress(account), toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data)
+    return tx?.data || '0x'
   }
 }
