@@ -26,9 +26,9 @@ import "./libraries/Accounts.sol";
 import "./libraries/FixedPoint.sol";
 import "./libraries/VaultHelpers.sol";
 
+import "./interfaces/IPriceOracle.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/ISwapConnector.sol";
-import "./interfaces/IPriceOracle.sol";
 import "./interfaces/IVault.sol";
 
 contract Vault is IVault, Ownable, ReentrancyGuard {
