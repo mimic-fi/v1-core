@@ -1,8 +1,7 @@
 import { expect } from 'chai'
 import { BigNumber, Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { assertEvent, assertIndirectEvent, assertNoIndirectEvent, BigNumberish,
-  bn, deploy, fp, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { assertEvent, assertIndirectEvent, assertNoIndirectEvent, BigNumberish, bn, deploy, fp, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 
 import Vault from './helpers/vault/Vault'
 import Token from './helpers/tokens/Token'
