@@ -5,25 +5,25 @@ set -o errexit
 
 # Vault addresses
 vault_localhost=0x646A336CD183dc947D3AdbEfb19c3cF637720318
-vault_ropsten=0x0000000000000000000000000000000000000001
+vault_kovan=0x1eBbA4084e03Aa57FdA741148b7458b374F8571e
 vault_rinkeby=0x3683799B950B9680Fe9B5169e641e6DA5Fc751Ad
 vault_mainnet=0x0000000000000000000000000000000000000001
 
 # Agreement factory addresses
 agreement_factory_localhost=0xCfEB869F69431e42cdB54A4F4f105C19C080A601
-agreement_factory_ropsten=0x0000000000000000000000000000000000000002
+agreement_factory_kovan=0x2F687EA845965eb0cD0E47E5055959355FF131A1
 agreement_factory_rinkeby=0x5b34CC8E36B218C734cE4ACE32F8e6828f4F04Eb
 agreement_factory_mainnet=0x0000000000000000000000000000000000000002
 
 # Deployment block numbers
-start_block_ropsten=
+start_block_kovan=27137866
 start_block_rinkeby=9264082
 start_block_mainnet=
 
 # Validate network
-networks=(localhost ropsten rinkeby mainnet)
+networks=(localhost kovan rinkeby mainnet)
 if [[ -z $NETWORK || ! " ${networks[@]} " =~ " ${NETWORK} " ]]; then
-  echo 'Please make sure the network provided is either localhost, ropsten, rinkeby, or mainnet.'
+  echo 'Please make sure the network provided is either localhost, kovan, rinkeby, or mainnet.'
   exit 1
 fi
 

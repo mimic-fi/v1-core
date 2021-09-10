@@ -8,11 +8,11 @@
     "test": "echo 'No tests for now'",
     "build": "yarn build:mainnet",
     "build:localhost": "NETWORK=localhost ./scripts/build.sh",
-    "build:ropsten": "NETWORK=ropsten ./scripts/build.sh",
+    "build:kovan": "NETWORK=kovan ./scripts/build.sh",
     "build:rinkeby": "NETWORK=rinkeby ./scripts/build.sh",
     "build:mainnet": "NETWORK=mainnet ./scripts/build.sh",
     "deploy:localhost": "NETWORK=localhost ./scripts/deploy.sh",
-    "deploy:ropsten": "NETWORK=ropsten ./scripts/deploy.sh",
+    "deploy:kovan": "NETWORK=kovan ./scripts/deploy.sh",
     "deploy:rinkeby": "NETWORK=rinkeby ./scripts/deploy.sh",
     "deploy:mainnet": "NETWORK=mainnet ./scripts/deploy.sh"
   },
