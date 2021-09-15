@@ -1,15 +1,19 @@
-import path from 'path'
-import { Contract } from 'ethers'
-import { Artifact } from 'hardhat/types'
-import { Artifacts } from 'hardhat/internal/artifacts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { Contract } from 'ethers'
+import { Artifacts } from 'hardhat/internal/artifacts'
+import { Artifact } from 'hardhat/types'
+import path from 'path'
 
 import { getSigner } from './signers'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
-export async function deploy(nameOrArtifact: string | { abi: any; bytecode: string }, args: Array<any> = [], from?: SignerWithAddress): Promise<Contract> {
+export async function deploy(
+  nameOrArtifact: string | { abi: any; bytecode: string },
+  args: Array<any> = [],
+  from?: SignerWithAddress
+): Promise<Contract> {
   if (!args) args = []
   if (!from) from = await getSigner()
 
@@ -27,7 +31,9 @@ export async function instanceAt(nameOrArtifact: string | any, address: string):
 }
 
 export async function getArtifact(contractName: string): Promise<Artifact> {
-  const artifactsPath = !contractName.includes('/') ? path.resolve('./artifacts') : path.dirname(require.resolve(`${contractName}.json`))
+  const artifactsPath = !contractName.includes('/')
+    ? path.resolve('./artifacts')
+    : path.dirname(require.resolve(`${contractName}.json`))
   const artifacts = new Artifacts(artifactsPath)
   return artifacts.readArtifact(contractName.split('/').slice(-1)[0])
 }

@@ -12,14 +12,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity >= 0.5.0 < 0.9.0;
+pragma solidity >=0.5.0 <0.9.0;
 
 interface IVault {
-    event Deposit(address indexed account, address token, uint256 amount, uint256 depositFee);
-    event Withdraw(address indexed account, address token, uint256 amount, uint256 fromVault, uint256 withdrawFee, address recipient);
+    event Deposit(address indexed account, address indexed token, uint256 amount, uint256 depositFee);
+    event Withdraw(
+        address indexed account,
+        address indexed token,
+        uint256 amount,
+        uint256 fromVault,
+        uint256 withdrawFee,
+        address recipient
+    );
     event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares);
-    event Exit(address indexed account, address indexed strategy, uint256 amountInvested, uint256 amountReceived, uint256 shares, uint256 protocolFee, uint256 performanceFee);
-    event Swap(address indexed account, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 remainingIn, uint256 amountOut);
+    event Exit(
+        address indexed account,
+        address indexed strategy,
+        uint256 amountInvested,
+        uint256 amountReceived,
+        uint256 shares,
+        uint256 protocolFee,
+        uint256 performanceFee
+    );
+    event Swap(
+        address indexed account,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 remainingIn,
+        uint256 amountOut
+    );
     event ProtocolFeeSet(uint256 protocolFee);
     event PriceOracleSet(address priceOracle);
     event SwapConnectorSet(address swapConnector);
@@ -38,7 +60,10 @@ interface IVault {
 
     function getAccountBalance(address account, address token) external view returns (uint256);
 
-    function getAccountInvestment(address account, address strategy) external view returns (uint256 invested, uint256 shares);
+    function getAccountInvestment(address account, address strategy)
+        external
+        view
+        returns (uint256 invested, uint256 shares);
 
     function query(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
@@ -46,13 +71,26 @@ interface IVault {
 
     function deposit(address account, address token, uint256 amount) external returns (uint256 deposited);
 
-    function withdraw(address account, address token, uint256 amount, address recipient) external returns (uint256 withdrawn);
+    function withdraw(address account, address token, uint256 amount, address recipient)
+        external
+        returns (uint256 withdrawn);
 
-    function swap(address account, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external returns (uint256 amountOut);
+    function swap(
+        address account,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) external returns (uint256 amountOut);
 
-    function join(address account, address strategy, uint256 amount, bytes memory data) external returns (uint256 shares);
+    function join(address account, address strategy, uint256 amount, bytes memory data)
+        external
+        returns (uint256 shares);
 
-    function exit(address account, address strategy, uint256 ratio, bool emergency, bytes memory data) external returns (uint256 received);
+    function exit(address account, address strategy, uint256 ratio, bool emergency, bytes memory data)
+        external
+        returns (uint256 received);
 
     function setProtocolFee(uint256 newProtocolFee) external;
 

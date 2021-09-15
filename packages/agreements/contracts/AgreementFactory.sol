@@ -14,10 +14,10 @@
 
 pragma solidity ^0.8.0;
 
-import "./Proxy.sol";
-import "./Agreement.sol";
+import './Proxy.sol';
+import './Agreement.sol';
 
-contract AgreementFactory  {
+contract AgreementFactory {
     address public immutable vault;
     address public immutable implementation;
     mapping (address => bool) public isAgreement;
@@ -44,7 +44,20 @@ contract AgreementFactory  {
         Agreement.Allowed _allowedStrategies
     ) external {
         address agreement = address(new Proxy(implementation));
-        Agreement(agreement).initialize(vault, _feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage, _managers, _withdrawers, _customTokens, _allowedTokens, _customStrategies, _allowedStrategies);
+        Agreement(agreement).initialize(
+            vault,
+            _feeCollector,
+            _depositFee,
+            _withdrawFee,
+            _performanceFee,
+            _maxSwapSlippage,
+            _managers,
+            _withdrawers,
+            _customTokens,
+            _allowedTokens,
+            _customStrategies,
+            _allowedStrategies
+        );
         isAgreement[agreement] = true;
         emit AgreementCreated(agreement, _name);
     }

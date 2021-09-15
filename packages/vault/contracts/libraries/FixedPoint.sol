@@ -19,56 +19,56 @@ library FixedPoint {
 
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        require(c >= a, "ADD_OVERFLOW");
+        require(c >= a, 'ADD_OVERFLOW');
         return c;
     }
 
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "SUB_OVERFLOW");
+        require(b <= a, 'SUB_OVERFLOW');
         return a - b;
     }
 
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c0 = a * b;
-        require(a == 0 || c0 / a == b, "MUL_OVERFLOW");
+        require(a == 0 || c0 / a == b, 'MUL_OVERFLOW');
         uint256 c1 = c0 + (ONE / 2);
-        require(c1 >= c0, "MUL_OVERFLOW");
+        require(c1 >= c0, 'MUL_OVERFLOW');
         return c1 / ONE;
     }
 
     function mulDown(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
-        require(a == 0 || product / a == b, "MUL_OVERFLOW");
+        require(a == 0 || product / a == b, 'MUL_OVERFLOW');
         return product / ONE;
     }
 
     function mulUp(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
-        require(a == 0 || product / a == b, "MUL_OVERFLOW");
+        require(a == 0 || product / a == b, 'MUL_OVERFLOW');
         return product == 0 ? 0 : (((product - 1) / ONE) + 1);
     }
 
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "ZERO_DIVISION");
+        require(b != 0, 'ZERO_DIVISION');
         uint256 c0 = a * ONE;
-        require(a == 0 || c0 / a == ONE, "DIV_INTERNAL");
+        require(a == 0 || c0 / a == ONE, 'DIV_INTERNAL');
         uint256 c1 = c0 + (b / 2);
-        require(c1 >= c0, "DIV_INTERNAL");
+        require(c1 >= c0, 'DIV_INTERNAL');
         return c1 / b;
     }
 
     function divDown(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "ZERO_DIVISION");
+        require(b != 0, 'ZERO_DIVISION');
         uint256 aInflated = a * ONE;
-        require(aInflated / a == ONE, "DIV_INTERNAL");
+        require(aInflated / a == ONE, 'DIV_INTERNAL');
         return aInflated / b;
     }
 
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "ZERO_DIVISION");
+        require(b != 0, 'ZERO_DIVISION');
         if (a == 0) return 0;
         uint256 aInflated = a * ONE;
-        require(aInflated / a == ONE, "DIV_INTERNAL");
+        require(aInflated / a == ONE, 'DIV_INTERNAL');
         return ((aInflated - 1) / b) + 1;
     }
 

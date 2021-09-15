@@ -1,10 +1,9 @@
 import { defaultAbiCoder } from '@ethersproject/abi'
-import { BigNumber, Contract, utils } from 'ethers'
 import { BigNumberish, getArtifact, ZERO_ADDRESS, ZERO_BYTES32 } from '@mimic-fi/v1-helpers'
-
-import { toAddress, toAddresses, Account, Allowed, RawAgreementDeployment } from './types'
+import { BigNumber, Contract, utils } from 'ethers'
 
 import AgreementDeployer from './AgreementDeployer'
+import { Account, Allowed, RawAgreementDeployment, toAddress, toAddresses } from './types'
 
 export default class Agreement {
   instance: Contract
@@ -111,22 +110,50 @@ export default class Agreement {
     return this.canPerform(who, where, await this.getVaultActionId('deposit'), how)
   }
 
-  async canWithdraw(who: Account, where: Account, token?: string, amount: BigNumberish = 0, recipient = ZERO_ADDRESS): Promise<boolean> {
+  async canWithdraw(
+    who: Account,
+    where: Account,
+    token?: string,
+    amount: BigNumberish = 0,
+    recipient = ZERO_ADDRESS
+  ): Promise<boolean> {
     const how = token ? this.encodeWithdraw(token, amount, recipient) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('withdraw'), how)
   }
 
-  async canSwap(who: Account, where: Account, tokenIn?: Account, tokenOut?: Account, amountIn: BigNumberish = 0, slippage: BigNumberish = 0, data = '0x'): Promise<boolean> {
-    const how = tokenIn && tokenOut ? this.encodeSwap(toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data) : '0x'
+  async canSwap(
+    who: Account,
+    where: Account,
+    tokenIn?: Account,
+    tokenOut?: Account,
+    amountIn: BigNumberish = 0,
+    slippage: BigNumberish = 0,
+    data = '0x'
+  ): Promise<boolean> {
+    const how =
+      tokenIn && tokenOut ? this.encodeSwap(toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('swap'), how)
   }
 
-  async canJoin(who: Account, where: Account, strategy?: string, amount: BigNumberish = 0, data = '0x'): Promise<boolean> {
+  async canJoin(
+    who: Account,
+    where: Account,
+    strategy?: string,
+    amount: BigNumberish = 0,
+    data = '0x'
+  ): Promise<boolean> {
     const how = strategy ? this.encodeJoin(strategy, amount, data) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('join'), how)
   }
 
-  async canExit(who: Account, where: Account, strategy?: string, ratio: BigNumberish = 0, emergency = false, data = '0x'): Promise<boolean> {
+  async canExit(
+    who: Account,
+    where: Account,
+    strategy?: string,
+    ratio: BigNumberish = 0,
+    emergency = false,
+    data = '0x'
+  ): Promise<boolean> {
     const how = strategy ? this.encodeExit(strategy, ratio, emergency, data) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('exit'), how)
   }
@@ -149,8 +176,17 @@ export default class Agreement {
     return defaultAbiCoder.encode(['address', 'uint256', 'address'], [toAddress(token), amount, toAddress(recipient)])
   }
 
-  encodeSwap(tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data: string): string {
-    return defaultAbiCoder.encode(['address', 'address', 'uint256', 'uint256', 'bytes'], [toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data])
+  encodeSwap(
+    tokenIn: Account,
+    tokenOut: Account,
+    amountIn: BigNumberish,
+    slippage: BigNumberish,
+    data: string
+  ): string {
+    return defaultAbiCoder.encode(
+      ['address', 'address', 'uint256', 'uint256', 'bytes'],
+      [toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data]
+    )
   }
 
   encodeJoin(strategy: Account, amount: BigNumberish, data: string): string {
@@ -158,6 +194,9 @@ export default class Agreement {
   }
 
   encodeExit(strategy: Account, ratio: BigNumberish, emergency: boolean, data: string): string {
-    return defaultAbiCoder.encode(['address', 'uint256', 'bool', 'bytes'], [toAddress(strategy), ratio, emergency, data])
+    return defaultAbiCoder.encode(
+      ['address', 'uint256', 'bool', 'bytes'],
+      [toAddress(strategy), ratio, emergency, data]
+    )
   }
 }

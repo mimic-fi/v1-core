@@ -1,6 +1,7 @@
 import { assertEvent, deploy, fp, getSigners } from '@mimic-fi/v1-helpers'
-
 import { toAddresses } from '@mimic-fi/v1-vault/test/helpers/types'
+
+import ARTIFACTS from './artifacts'
 
 // Vault config
 const SWAP_RATE = fp(1.01)
@@ -12,7 +13,8 @@ const DEPOSIT_FEE = fp(0.02) // 2%
 const WITHDRAW_FEE = fp(0.01) // 2%
 const PERFORMANCE_FEE = fp(0.15) // 15%
 const MAX_SWAP_SLIPPAGE = fp(0.1) // 10%
-const ALLOWED = 0 // any
+const STRATEGIES_ALLOWED = 0 // any
+const TOKENS_ALLOWED = 0 // any
 
 // Strategies config
 const DAI_STRATEGY_RATE = fp(1.02)
@@ -24,29 +26,42 @@ async function benchmark(): Promise<void> {
   const withdrawers = toAddresses([withdrawer1, withdrawer2])
 
   // Deploy architecture
-  const swapConnector = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock')
-  const priceOracle = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock')
-  const vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [PROTOCOL_FEE, priceOracle.address, swapConnector.address, [], []], admin)
-  const factory = await deploy('@mimic-fi/v1-agreements/artifacts/contracts/AgreementFactory.sol/AgreementFactory', [vault.address])
+  const swapConnector = await deploy(ARTIFACTS.swapConnector)
+  const priceOracle = await deploy(ARTIFACTS.priceOracle)
+  const vault = await deploy(ARTIFACTS.vault, [PROTOCOL_FEE, priceOracle.address, swapConnector.address, [], []], admin)
+  const factory = await deploy(ARTIFACTS.agreementFactory, [vault.address])
   console.log('swap connector:', swapConnector.address)
   console.log('price oracle:', priceOracle.address)
   console.log('vault:', vault.address)
   console.log('factory:', factory.address)
 
   // Deploy tokens
-  const DAI = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['DAI'])
-  const USDC = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['USDC'])
+  const DAI = await deploy(ARTIFACTS.token, ['DAI'])
+  const USDC = await deploy(ARTIFACTS.token, ['USDC'])
   const tokens = [DAI, USDC]
   await vault.connect(admin).setWhitelistedTokens(toAddresses(tokens), [true, true])
 
   // Deploy strategies
-  const strategyDAI = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [DAI.address])
-  const strategyUSDC = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [USDC.address])
+  const strategyDAI = await deploy(ARTIFACTS.strategy, [DAI.address])
+  const strategyUSDC = await deploy(ARTIFACTS.strategy, [USDC.address])
   const strategies = [strategyDAI, strategyUSDC]
   await vault.connect(admin).setWhitelistedStrategies(toAddresses(strategies), [true, true])
 
   // Deploy agreement
-  const agreementTx = await factory.create(AGREEMENT_NAME, feeCollector.address, DEPOSIT_FEE, WITHDRAW_FEE, PERFORMANCE_FEE, MAX_SWAP_SLIPPAGE, managers, withdrawers, [], ALLOWED, [], ALLOWED)
+  const agreementTx = await factory.create(
+    AGREEMENT_NAME,
+    feeCollector.address,
+    DEPOSIT_FEE,
+    WITHDRAW_FEE,
+    PERFORMANCE_FEE,
+    MAX_SWAP_SLIPPAGE,
+    managers,
+    withdrawers,
+    [],
+    TOKENS_ALLOWED,
+    [],
+    STRATEGIES_ALLOWED
+  )
   const { args } = await assertEvent(agreementTx, 'AgreementCreated', { name: AGREEMENT_NAME })
   const agreement = args.agreement
   console.log('agreement:', agreement)
@@ -91,4 +106,4 @@ async function benchmark(): Promise<void> {
   await strategyUSDC.mockRate(USDC_STRATEGY_RATE.mul(101).div(100))
 }
 
-benchmark().then().catch(console.error)
+benchmark().catch(console.error)

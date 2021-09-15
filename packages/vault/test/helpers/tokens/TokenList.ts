@@ -1,8 +1,8 @@
 import { BigNumberish } from '@mimic-fi/v1-helpers'
 
+import { Account, NAry, TxParams } from '../types'
 import Token from './Token'
 import TokensDeployer from './TokensDeployer'
-import { Account, NAry, TxParams } from '../types'
 
 export default class TokenList {
   tokens: Token[]

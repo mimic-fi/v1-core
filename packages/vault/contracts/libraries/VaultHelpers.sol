@@ -14,9 +14,9 @@
 
 pragma solidity ^0.8.0;
 
-import "./BytesHelpers.sol";
+import './BytesHelpers.sol';
 
-import "../interfaces/IVault.sol";
+import '../interfaces/IVault.sol';
 
 library VaultHelpers {
     using BytesHelpers for bytes;
@@ -54,26 +54,6 @@ library VaultHelpers {
         bytes data;
     }
 
-    function encodeDeposit(address token, uint256 amount) internal pure returns (bytes memory) {
-        return abi.encode(token, amount);
-    }
-
-    function encodeWithdraw(address token, uint256 amount, address recipient) internal pure returns (bytes memory) {
-        return abi.encode(token, amount, recipient);
-    }
-
-    function encodeSwap(address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal pure returns (bytes memory) {
-        return abi.encode(tokenIn, tokenOut, amountIn, slippage, data);
-    }
-
-    function encodeJoin(address strategy, uint256 amount, bytes memory data) internal pure returns (bytes memory) {
-        return abi.encode(strategy, amount, data);
-    }
-
-    function encodeExit(address strategy, uint256 ratio, bool emergency, bytes memory data) internal pure returns (bytes memory) {
-        return abi.encode(strategy, ratio, emergency, data);
-    }
-
     function decodeDeposit(bytes memory self) internal pure returns (DepositParams memory) {
         (address token, uint256 amount) = abi.decode(self, (address, uint256));
         return DepositParams({ token: token, amount: amount });
@@ -85,7 +65,10 @@ library VaultHelpers {
     }
 
     function decodeSwap(bytes memory self) internal pure returns (SwapParams memory) {
-        (address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) = abi.decode(self, (address, address, uint256, uint256, bytes));
+        (address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) = abi.decode(
+            self,
+            (address, address, uint256, uint256, bytes)
+        );
         return SwapParams({ tokenIn: tokenIn, tokenOut: tokenOut, amountIn: amountIn, slippage: slippage, data: data });
     }
 
@@ -95,7 +78,10 @@ library VaultHelpers {
     }
 
     function decodeExit(bytes memory self) internal pure returns (ExitParams memory) {
-        (address strategy, uint256 ratio, bool emergency, bytes memory data) = abi.decode(self, (address, uint256, bool, bytes));
+        (address strategy, uint256 ratio, bool emergency, bytes memory data) = abi.decode(
+            self,
+            (address, uint256, bool, bytes)
+        );
         return ExitParams({ strategy: strategy, ratio: ratio, emergency: emergency, data: data });
     }
 
@@ -146,7 +132,11 @@ library VaultHelpers {
         }
     }
 
-    function populateWithPreviousOutput(bytes memory currentCall, bytes memory previousCall, bytes memory previousResult) internal pure {
+    function populateWithPreviousOutput(
+        bytes memory currentCall,
+        bytes memory previousCall,
+        bytes memory previousResult
+    ) internal pure {
         if (isDeposit(previousCall) || isSwap(previousCall) || isExit(previousCall)) {
             uint256 previousOutput = abi.decode(previousResult, (uint256));
             if (isSwap(currentCall)) {

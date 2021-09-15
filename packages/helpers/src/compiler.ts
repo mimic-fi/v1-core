@@ -1,6 +1,6 @@
 import fs from 'fs'
-import path from 'path'
 import { HardhatRuntimeEnvironment, RunSuperFunction } from 'hardhat/types'
+import path from 'path'
 
 const DIRECTORIES = ['artifacts']
 

@@ -9,9 +9,7 @@
   "scripts": {
     "build": "yarn compile",
     "compile": "hardhat compile",
-    "lint": "yarn lint:solidity && yarn lint:typescript",
-    "lint:solidity": "solhint 'contracts/**/*.sol'",
-    "lint:typescript": "eslint . --ext .ts",
+    "lint": "eslint . --ext .ts",
     "test": "echo 'Not tests for now'",
     "benchmark": "yarn compile && yarn benchmark:bytecode && yarn benchmark:gas && yarn benchmark:simulation",
     "benchmark:gas": "hardhat run ../benchmark/scripts/benchmark-gas.ts",
@@ -27,18 +25,14 @@
     "@mimic-fi/v1-helpers": "0.0.4",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@typescript-eslint/eslint-plugin": "^4.1.1",
-    "@typescript-eslint/parser": "^4.1.1",
-    "eslint": "^7.9.0",
-    "eslint-plugin-mocha-no-only": "^1.1.1",
-    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-config-mimic": "^0.0.2",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.0.8",
     "hardhat": "^2.4.1",
-    "prettier": "^2.2.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.10",
-    "solhint": "^3.2.1",
     "ts-node": "^8.5.4",
     "typescript": "^4.3.4"
+  },
+  "eslintConfig": {
+    "extends": "eslint-config-mimic"
   }
 }

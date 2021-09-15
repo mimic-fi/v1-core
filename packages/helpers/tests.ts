@@ -1,5 +1,5 @@
-import { task, types } from 'hardhat/config'
 import { TASK_TEST } from 'hardhat/builtin-tasks/task-names'
+import { task, types } from 'hardhat/config'
 
 import { overrideTestTaskForDeployments } from './src/tests'
 

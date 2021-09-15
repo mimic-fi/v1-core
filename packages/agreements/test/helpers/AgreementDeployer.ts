@@ -1,8 +1,7 @@
 import { deploy, fp, getSigners } from '@mimic-fi/v1-helpers'
 
-import { toAddress, toAddresses, AgreementDeployment, RawAgreementDeployment } from './types'
-
 import Agreement from './Agreement'
+import { AgreementDeployment, RawAgreementDeployment, toAddress, toAddresses } from './types'
 
 const ALLOWED_STRATEGIES = {
   any: 0,
@@ -13,7 +12,20 @@ const ALLOWED_STRATEGIES = {
 const AgreementDeployer = {
   async deploy(params: RawAgreementDeployment = {}): Promise<Agreement> {
     const parsedParams = await this.parseParams(params)
-    const { vault, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies } = parsedParams
+    const {
+      vault,
+      feeCollector,
+      depositFee,
+      withdrawFee,
+      performanceFee,
+      maxSwapSlippage,
+      managers,
+      withdrawers,
+      tokens,
+      allowedTokens,
+      strategies,
+      allowedStrategies,
+    } = parsedParams
 
     const agreement = await deploy('Agreement', [], params.from)
     await agreement.initialize(
@@ -31,7 +43,21 @@ const AgreementDeployer = {
       ALLOWED_STRATEGIES[allowedStrategies]
     )
 
-    return new Agreement(agreement, vault, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies)
+    return new Agreement(
+      agreement,
+      vault,
+      feeCollector,
+      depositFee,
+      withdrawFee,
+      performanceFee,
+      maxSwapSlippage,
+      managers,
+      withdrawers,
+      tokens,
+      allowedTokens,
+      strategies,
+      allowedStrategies
+    )
   },
 
   async parseParams(params: RawAgreementDeployment): Promise<AgreementDeployment> {
@@ -52,7 +78,20 @@ const AgreementDeployer = {
 
     const strategies = params.strategies ?? []
     const allowedStrategies = params.allowedStrategies ?? 'any'
-    return { vault, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowedTokens, strategies, allowedStrategies }
+    return {
+      vault,
+      feeCollector,
+      depositFee,
+      withdrawFee,
+      performanceFee,
+      maxSwapSlippage,
+      managers,
+      withdrawers,
+      tokens,
+      allowedTokens,
+      strategies,
+      allowedStrategies,
+    }
   },
 }
 

@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import "../interfaces/ISwapConnector.sol";
+import '../interfaces/ISwapConnector.sol';
 
-import "../libraries/FixedPoint.sol";
+import '../libraries/FixedPoint.sol';
 
 contract SwapConnectorMock is ISwapConnector {
     using FixedPoint for uint256;
@@ -22,7 +22,7 @@ contract SwapConnectorMock is ISwapConnector {
         return amountIn.mul(mockedRate);
     }
 
-    function swap(address /* tokenIn */, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory)
+    function swap(address, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory)
         external
         override
         returns (uint256 remainingIn, uint256 amountOut)

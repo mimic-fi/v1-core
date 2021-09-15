@@ -1,5 +1,5 @@
-import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { BigNumber } from 'ethers'
 
 import { getForkedNetwork } from './tests'
 

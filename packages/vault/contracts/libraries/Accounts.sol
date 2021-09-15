@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: GPL-3.0-or-later
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,13 +14,13 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import '@openzeppelin/contracts/utils/Address.sol';
+import '@openzeppelin/contracts/utils/math/Math.sol';
 
-import "./FixedPoint.sol";
-import "./BytesHelpers.sol";
+import './FixedPoint.sol';
+import './BytesHelpers.sol';
 
-import "../interfaces/IPortfolio.sol";
+import '../interfaces/IPortfolio.sol';
 
 library Accounts {
     using FixedPoint for uint256;
@@ -47,10 +46,14 @@ library Accounts {
         return amount.sub(depositFeeAmount);
     }
 
-    function getWithdrawAmount(address self, address token, uint256 amount, uint256 vaultBalance) internal view returns (uint256) {
+    function getWithdrawAmount(address self, address token, uint256 amount, uint256 vaultBalance)
+        internal
+        view
+        returns (uint256)
+    {
         Accounts.Data memory account = Accounts.parse(self);
         uint256 portfolioBalance = getTokenBalance(account, token);
-        require(vaultBalance.add(portfolioBalance) >= amount, "ACCOUNTING_INSUFFICIENT_BALANCE");
+        require(vaultBalance.add(portfolioBalance) >= amount, 'ACCOUNTING_INSUFFICIENT_BALANCE');
         uint256 fromAccount = Math.min(portfolioBalance, amount);
         (uint256 withdrawFee, ) = getWithdrawFee(account);
         uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
@@ -58,7 +61,11 @@ library Accounts {
         return amount.sub(withdrawFeeAmount);
     }
 
-    function getExitAmount(address self, uint256 deposited, uint256 amount, uint256 protocolFee) internal view returns (uint256) {
+    function getExitAmount(address self, uint256 deposited, uint256 amount, uint256 protocolFee)
+        internal
+        view
+        returns (uint256)
+    {
         if (deposited >= amount) return amount;
         uint256 gains = amount - deposited;
         uint256 protocolFeeAmount = gains.mulUp(protocolFee);
@@ -92,7 +99,11 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).getSupportedCallbacks() : bytes2(0x00);
     }
 
-    function canPerform(Data memory self, address who, address where, bytes32 what, bytes memory how) internal view returns (bool) {
+    function canPerform(Data memory self, address who, address where, bytes32 what, bytes memory how)
+        internal
+        view
+        returns (bool)
+    {
         return self.isPortfolio ? IPortfolio(self.addr).canPerform(who, where, what, how) : false;
     }
 
@@ -108,31 +119,53 @@ library Accounts {
         }
     }
 
-    function beforeWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient) internal {
+    function beforeWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient)
+        internal
+    {
         if (supportsBeforeWithdraw(self.callbacks)) {
             IPortfolio(self.addr).beforeWithdraw(sender, token, amount, recipient);
         }
     }
 
-    function afterWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient) internal {
+    function afterWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient)
+        internal
+    {
         if (supportsAfterWithdraw(self.callbacks)) {
             IPortfolio(self.addr).afterWithdraw(sender, token, amount, recipient);
         }
     }
 
-    function beforeSwap(Data memory self, address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
+    function beforeSwap(
+        Data memory self,
+        address sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) internal {
         if (supportsBeforeSwap(self.callbacks)) {
             IPortfolio(self.addr).beforeSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
         }
     }
 
-    function afterSwap(Data memory self, address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) internal {
+    function afterSwap(
+        Data memory self,
+        address sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) internal {
         if (supportsAfterSwap(self.callbacks)) {
             IPortfolio(self.addr).afterSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
         }
     }
 
-    function beforeJoin(Data memory self, address sender, address strategy, uint256 amount, bytes memory data) internal {
+    function beforeJoin(Data memory self, address sender, address strategy, uint256 amount, bytes memory data)
+        internal
+    {
         if (supportsBeforeJoin(self.callbacks)) {
             IPortfolio(self.addr).beforeJoin(sender, strategy, amount, data);
         }
@@ -144,13 +177,27 @@ library Accounts {
         }
     }
 
-    function beforeExit(Data memory self, address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) internal {
+    function beforeExit(
+        Data memory self,
+        address sender,
+        address strategy,
+        uint256 ratio,
+        bool emergency,
+        bytes memory data
+    ) internal {
         if (supportsBeforeExit(self.callbacks)) {
             IPortfolio(self.addr).beforeExit(sender, strategy, ratio, emergency, data);
         }
     }
 
-    function afterExit(Data memory self, address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) internal {
+    function afterExit(
+        Data memory self,
+        address sender,
+        address strategy,
+        uint256 ratio,
+        bool emergency,
+        bytes memory data
+    ) internal {
         if (supportsAfterExit(self.callbacks)) {
             IPortfolio(self.addr).afterExit(sender, strategy, ratio, emergency, data);
         }

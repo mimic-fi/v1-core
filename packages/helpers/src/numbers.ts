@@ -32,10 +32,16 @@ function parseScientific(num: string): string {
 
   if (exponentSign === -1) {
     zeros -= integer.length
-    num = zeros < 0 ? integer.slice(0, zeros) + '.' + integer.slice(zeros) + decimals : '0.' + '0'.repeat(zeros) + integer + decimals
+    num =
+      zeros < 0
+        ? integer.slice(0, zeros) + '.' + integer.slice(zeros) + decimals
+        : '0.' + '0'.repeat(zeros) + integer + decimals
   } else {
     if (decimals) zeros -= decimals.length
-    num = zeros < 0 ? integer + decimals.slice(0, zeros) + '.' + decimals.slice(zeros) : integer + decimals + '0'.repeat(zeros)
+    num =
+      zeros < 0
+        ? integer + decimals.slice(0, zeros) + '.' + decimals.slice(zeros)
+        : integer + decimals + '0'.repeat(zeros)
   }
 
   return numberSign < 0 ? '-' + num : num

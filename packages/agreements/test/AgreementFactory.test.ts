@@ -1,6 +1,6 @@
+import { assertEvent, deploy, fp, getSigners, instanceAt } from '@mimic-fi/v1-helpers'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
-import { assertEvent, deploy, fp, getSigners, instanceAt } from '@mimic-fi/v1-helpers'
 
 import { toAddresses } from './helpers/types'
 

@@ -1,7 +1,6 @@
-import { Contract } from 'ethers'
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-
 import { BigNumberish } from '@mimic-fi/v1-helpers'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { Contract } from 'ethers'
 
 export type NAry<T> = T | Array<T>
 
