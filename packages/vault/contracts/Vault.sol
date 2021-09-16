@@ -272,14 +272,15 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         require(currentBalance >= amountIn, 'ACCOUNTING_INSUFFICIENT_BALANCE');
 
         uint256 remainingIn;
-        // scope to avoid stack too deep
+        uint256 minAmountOut;
+        ISwapConnector connector = ISwapConnector(swapConnector);
+        // scopes to avoid stack too deep
         {
             uint256 price = IPriceOracle(priceOracle).getTokenPrice(tokenOut, tokenIn);
-            uint256 minAmountOut = amountIn.mulUp(price).mulUp(FixedPoint.ONE - slippage);
-
-            ISwapConnector connector = ISwapConnector(swapConnector);
+            minAmountOut = amountIn.mulUp(price).mulUp(FixedPoint.ONE - slippage);
             require(connector.getAmountOut(tokenIn, tokenOut, amountIn) >= minAmountOut, 'EXPECTED_SWAP_MIN_AMOUNT');
-
+        }
+        {
             _safeTransfer(tokenIn, swapConnector, amountIn);
             uint256 preBalanceIn = IERC20(tokenIn).balanceOf(address(this));
             uint256 preBalanceOut = IERC20(tokenOut).balanceOf(address(this));
