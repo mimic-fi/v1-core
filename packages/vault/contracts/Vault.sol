@@ -85,33 +85,33 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     }
 
     function query(bytes[] memory data, bool[] memory readsOutput)
-        external
+        public
         override(IVault, VaultQuery)
         returns (bytes[] memory results)
     {
         return VaultQuery.query(data, readsOutput);
     }
 
-    function setProtocolFee(uint256 newProtocolFee) external override nonReentrant onlyOwner {
+    function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
         require(newProtocolFee <= MAX_PROTOCOL_FEE, 'PROTOCOL_FEE_TOO_HIGH');
         protocolFee = newProtocolFee;
         emit ProtocolFeeSet(newProtocolFee);
     }
 
-    function setPriceOracle(address newPriceOracle) external override nonReentrant onlyOwner {
+    function setPriceOracle(address newPriceOracle) public override nonReentrant onlyOwner {
         require(newPriceOracle != address(0), 'PRICE_ORACLE_ZERO_ADDRESS');
         priceOracle = newPriceOracle;
         emit PriceOracleSet(newPriceOracle);
     }
 
-    function setSwapConnector(address newSwapConnector) external override nonReentrant onlyOwner {
+    function setSwapConnector(address newSwapConnector) public override nonReentrant onlyOwner {
         require(newSwapConnector != address(0), 'SWAP_CONNECTOR_ZERO_ADDRESS');
         swapConnector = newSwapConnector;
         emit SwapConnectorSet(newSwapConnector);
     }
 
     function setWhitelistedTokens(address[] memory tokens, bool[] memory whitelisted)
-        external
+        public
         override
         nonReentrant
         onlyOwner
@@ -126,7 +126,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     }
 
     function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisted)
-        external
+        public
         override
         nonReentrant
         onlyOwner
