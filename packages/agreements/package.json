@@ -38,6 +38,7 @@
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.0.8",
     "hardhat": "^2.4.1",
+    "hardhat-local-networks-config-plugin": "^0.0.6",
     "mocha": "^6.2.3",
     "solhint-config-mimic": "^0.0.1",
     "ts-node": "^8.5.4",
