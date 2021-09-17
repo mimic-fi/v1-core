@@ -7,11 +7,11 @@
     "node": ">=12.0.0"
   },
   "scripts": {
-    "build": "yarn compile",
+    "build": "echo 'No build for now'",
     "compile": "hardhat compile",
     "lint": "eslint . --ext .ts",
     "test": "echo 'Not tests for now'",
-    "benchmark": "yarn compile && yarn benchmark:bytecode && yarn benchmark:gas && yarn benchmark:simulation",
+    "benchmark": "yarn benchmark:bytecode && yarn benchmark:gas && yarn benchmark:simulation",
     "benchmark:gas": "hardhat run ../benchmark/scripts/benchmark-gas.ts",
     "benchmark:bytecode": "hardhat run ../benchmark/scripts/benchmark-bytecode.ts",
     "benchmark:simulation": "hardhat run ../benchmark/scripts/benchmark-simulation.ts"

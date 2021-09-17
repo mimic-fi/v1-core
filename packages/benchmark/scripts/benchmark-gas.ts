@@ -1,23 +1,19 @@
 import { assertEvent, deploy, fp, getSigner, getSigners, instanceAt, MAX_UINT256 } from '@mimic-fi/v1-helpers'
 import { Contract } from 'ethers'
 
+import ARTIFACTS from './artifacts'
+
 async function benchmark(): Promise<void> {
   const protocolFee = fp(0.01)
-  const priceOracle = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock')
-  const swapConnector = await deploy(
-    '@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock'
-  )
-  const token1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['DAI'])
-  const token2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['USDC'])
+  const priceOracle = await deploy(ARTIFACTS.priceOracle)
+  const swapConnector = await deploy(ARTIFACTS.swapConnector)
+  const token1 = await deploy(ARTIFACTS.token, ['DAI'])
+  const token2 = await deploy(ARTIFACTS.token, ['USDC'])
   const tokens = [token1.address, token2.address]
-  const strategy1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [
-    token1.address,
-  ])
-  const strategy2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [
-    token2.address,
-  ])
+  const strategy1 = await deploy(ARTIFACTS.strategy, [token1.address])
+  const strategy2 = await deploy(ARTIFACTS.strategy, [token2.address])
   const strategies = [strategy1.address, strategy2.address]
-  const vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [
+  const vault = await deploy(ARTIFACTS.vault, [
     protocolFee,
     priceOracle.address,
     swapConnector.address,
@@ -45,24 +41,21 @@ async function benchmark(): Promise<void> {
 }
 
 async function benchmarkAgreement(vault: Contract, tokens: string[], strategies: string[]): Promise<Contract> {
-  const factory = await deploy('@mimic-fi/v1-agreements/artifacts/contracts/AgreementFactory.sol/AgreementFactory', [
-    vault.address,
-  ])
+  const factory = await deploy(ARTIFACTS.agreementFactory, [vault.address])
 
   const name = 'Test Agreement'
   const depositFee = fp(0.005)
   const withdrawFee = fp(0.003)
   const performanceFee = fp(0.00001)
   const maxSwapSlippage = fp(0.1)
-  const [manager1, manager2, withdrawer1, withdrawer2, feeCollector] = (await getSigners()).map(
-    (signer) => signer.address
-  )
-  const managers = [manager1, manager2]
-  const withdrawers = [withdrawer1, withdrawer2]
+  const [manager1, manager2, withdrawer1, withdrawer2, feeCollector] = await getSigners()
+  const managers = [manager1.address, manager2.address]
+  const withdrawers = [withdrawer1.address, withdrawer2.address]
   const allowed = 2
+
   const agreement1Tx = await factory.create(
     name,
-    feeCollector,
+    feeCollector.address,
     depositFee,
     withdrawFee,
     performanceFee,
@@ -74,57 +67,61 @@ async function benchmarkAgreement(vault: Contract, tokens: string[], strategies:
     strategies,
     allowed
   )
+
   const agreement2Tx = await factory.create(
     name,
-    feeCollector,
+    feeCollector.address,
     depositFee,
     withdrawFee,
     performanceFee,
     maxSwapSlippage,
-    [manager1],
-    [withdrawer1],
+    [manager1.address],
+    [withdrawer1.address],
     tokens,
     allowed,
     strategies,
     allowed
   )
+
   const agreement3Tx = await factory.create(
     name,
-    feeCollector,
+    feeCollector.address,
     depositFee,
     withdrawFee,
     performanceFee,
     maxSwapSlippage,
-    [manager1],
-    [withdrawer1],
+    [manager1.address],
+    [withdrawer1.address],
     tokens,
     allowed,
     [strategies[0]],
     allowed
   )
+
   const agreement4Tx = await factory.create(
     name,
-    feeCollector,
+    feeCollector.address,
     depositFee,
     withdrawFee,
     performanceFee,
     maxSwapSlippage,
-    [manager1],
-    [withdrawer1],
+    [manager1.address],
+    [withdrawer1.address],
     tokens,
     allowed,
     [],
     allowed
   )
+
   const agreement5Tx = await factory.create(
     name,
-    feeCollector,
+    feeCollector.address,
     depositFee,
     withdrawFee,
     performanceFee,
     maxSwapSlippage,
-    [manager1],
-    [withdrawer1],
+    [manager1.address],
+    [withdrawer1.address],
     [],
     allowed,
     [],
