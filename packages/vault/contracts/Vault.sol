@@ -37,8 +37,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
-    uint256 internal constant MAX_SLIPPAGE = 2e17; // 20%
-    uint256 internal constant MAX_PROTOCOL_FEE = 1e17; // 10%
+    uint256 internal constant MAX_SLIPPAGE = 1e18; // 100%
+    uint256 internal constant MAX_PROTOCOL_FEE = 2e17; // 20%
 
     struct Accounting {
         mapping (address => uint256) balance;
@@ -46,6 +46,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         mapping (address => uint256) invested;
     }
 
+    uint256 public override maxSlippage;
     uint256 public override protocolFee;
     address public override priceOracle;
     address public override swapConnector;
@@ -55,12 +56,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     mapping (address => Accounting) internal accountings;
 
     constructor(
+        uint256 _maxSlippage,
         uint256 _protocolFee,
         address _priceOracle,
         address _swapConnector,
         address[] memory _whitelistedTokens,
         address[] memory _whitelistedStrategies
     ) {
+        setMaxSlippage(_maxSlippage);
         setProtocolFee(_protocolFee);
         setPriceOracle(_priceOracle);
         setSwapConnector(_swapConnector);
@@ -90,6 +93,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         returns (bytes[] memory results)
     {
         return VaultQuery.query(data, readsOutput);
+    }
+
+    function setMaxSlippage(uint256 newMaxSlippage) public override nonReentrant onlyOwner {
+        require(newMaxSlippage <= MAX_SLIPPAGE, 'MAX_SLIPPAGE_TOO_HIGH');
+        maxSlippage = newMaxSlippage;
+        emit MaxSlippageSet(newMaxSlippage);
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
@@ -265,7 +274,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         bytes memory data
     ) internal returns (uint256 amountOut) {
         require(tokenIn != tokenOut, 'SWAP_SAME_TOKEN');
-        require(slippage <= MAX_SLIPPAGE, 'SWAP_MAX_SLIPPAGE');
+        require(slippage <= maxSlippage, 'SWAP_MAX_SLIPPAGE');
 
         Accounting storage accounting = accountings[account.addr];
         uint256 currentBalance = accounting.balance[tokenIn];

@@ -1,28 +1,37 @@
-import { deploy, getSigner } from '@mimic-fi/v1-helpers'
+import { deploy, fp, getSigner } from '@mimic-fi/v1-helpers'
 
 import { RawVaultDeployment, toAddresses, VaultDeployment } from '../types'
 import Vault from './Vault'
 
 const VaultDeployer = {
   async deploy(params: RawVaultDeployment = {}): Promise<Vault> {
-    const { priceOracle, swapConnector, protocolFee, tokens, strategies, admin } = await this.parseParams(params)
+    const parsedParams = await this.parseParams(params)
+    const { maxSlippage, protocolFee, priceOracle, swapConnector, tokens, strategies, admin } = parsedParams
     const vault = await deploy(
       'Vault',
-      [protocolFee, priceOracle.address, swapConnector.address, toAddresses(tokens), toAddresses(strategies)],
+      [
+        maxSlippage,
+        protocolFee,
+        priceOracle.address,
+        swapConnector.address,
+        toAddresses(tokens),
+        toAddresses(strategies),
+      ],
       admin
     )
-    return new Vault(vault, priceOracle, swapConnector, protocolFee, tokens, strategies, admin)
+    return new Vault(vault, maxSlippage, protocolFee, priceOracle, swapConnector, tokens, strategies, admin)
   },
 
   async parseParams(params: RawVaultDeployment): Promise<VaultDeployment> {
     const mocked = params.mocked ?? false
+    const maxSlippage = params.maxSlippage ?? fp(20)
+    const protocolFee = params.protocolFee ?? 0
     const priceOracle = params.priceOracle ?? (await deploy('PriceOracleMock'))
     const swapConnector = params.swapConnector ?? (await deploy('SwapConnectorMock'))
-    const protocolFee = params.protocolFee ?? 0
     const tokens = params.tokens ?? []
     const strategies = params.strategies ?? []
     const admin = params.from ?? (await getSigner())
-    return { mocked, priceOracle, swapConnector, protocolFee, tokens, strategies, admin }
+    return { mocked, maxSlippage, protocolFee, priceOracle, swapConnector, tokens, strategies, admin }
   },
 }
 

@@ -38,6 +38,8 @@ dataSources:
           handler: handleExit
         - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,uint256)
           handler: handleSwap
+        - event: MaxSlippageSet(uint256)
+          handler: handleMaxSlippageSet
         - event: ProtocolFeeSet(uint256)
           handler: handleProtocolFeeSet
         - event: WhitelistedTokenSet(indexed address,bool)

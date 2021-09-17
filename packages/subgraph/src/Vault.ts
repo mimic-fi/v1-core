@@ -4,7 +4,7 @@ import { loadOrCreateERC20 } from './ERC20';
 import { loadOrCreateStrategy, createLastRate } from './Strategy';
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
-import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
+import { Deposit, Withdraw, Join, Exit, Swap, MaxSlippageSet, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
 import {
   Vault as VaultEntity,
   Strategy as StrategyEntity,
@@ -82,6 +82,12 @@ export function handleSwap(event: Swap): void {
   balanceOut.save()
 }
 
+export function handleMaxSlippageSet(event: MaxSlippageSet): void {
+  let vault = loadOrCreateVault(event.address)
+  vault.maxSlippage = event.params.maxSlippage
+  vault.save()
+}
+
 export function handleProtocolFeeSet(event: ProtocolFeeSet): void {
   let vault = loadOrCreateVault(event.address)
   vault.protocolFee = event.params.protocolFee
@@ -119,6 +125,7 @@ function loadOrCreateVault(vaultAddress: Address): VaultEntity {
     vault = new VaultEntity(VAULT_ID)
     vault.strategies = []
     vault.address = vaultAddress.toHexString()
+    vault.maxSlippage = BigInt.fromI32(0)
     vault.protocolFee = BigInt.fromI32(0)
     vault.save()
   }

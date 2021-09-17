@@ -1,6 +1,7 @@
 type Vault @entity {
   id: ID!
   address: String!
+  maxSlippage: BigInt!
   protocolFee: BigInt!
   accounts: [Account!] @derivedFrom(field: "vault")
   strategies: [Strategy!]! # @derivedFrom(field: "vault")

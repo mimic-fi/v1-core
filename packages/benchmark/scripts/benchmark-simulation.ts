@@ -5,6 +5,7 @@ import ARTIFACTS from './artifacts'
 
 // Vault config
 const SWAP_RATE = fp(1.01)
+const MAX_SLIPPAGE = fp(0.2) // 20 %
 const PROTOCOL_FEE = fp(0.001) // 0.1 %
 
 // Agreement config
@@ -25,10 +26,13 @@ async function benchmark(): Promise<void> {
   const managers = toAddresses([manager1, manager2])
   const withdrawers = toAddresses([withdrawer1, withdrawer2])
 
-  // Deploy architecture
+  // Deploy dependencies
   const swapConnector = await deploy(ARTIFACTS.swapConnector)
   const priceOracle = await deploy(ARTIFACTS.priceOracle)
-  const vault = await deploy(ARTIFACTS.vault, [PROTOCOL_FEE, priceOracle.address, swapConnector.address, [], []], admin)
+  const vaultArgs = [MAX_SLIPPAGE, PROTOCOL_FEE, priceOracle.address, swapConnector.address, [], []]
+
+  // Deploy architecture
+  const vault = await deploy(ARTIFACTS.vault, vaultArgs, admin)
   const factory = await deploy(ARTIFACTS.agreementFactory, [vault.address])
   console.log('swap connector:', swapConnector.address)
   console.log('price oracle:', priceOracle.address)

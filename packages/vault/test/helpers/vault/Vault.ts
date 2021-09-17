@@ -10,9 +10,10 @@ import VaultDeployer from './VaultDeployer'
 
 export default class Vault {
   instance: Contract
+  maxSlippage: BigNumberish
+  protocolFee: BigNumberish
   priceOracle: Contract
   swapConnector: Contract
-  protocolFee: BigNumberish
   tokens: Contract[]
   strategies: Contract[]
   admin: SignerWithAddress
@@ -23,17 +24,19 @@ export default class Vault {
 
   constructor(
     instance: Contract,
+    maxSlippage: BigNumberish,
+    protocolFee: BigNumberish,
     priceOracle: Contract,
     swapConnector: Contract,
-    protocolFee: BigNumberish,
     tokens: Contract[],
     strategies: Contract[],
     admin: SignerWithAddress
   ) {
     this.instance = instance
+    this.maxSlippage = maxSlippage
+    this.protocolFee = protocolFee
     this.priceOracle = priceOracle
     this.swapConnector = swapConnector
-    this.protocolFee = protocolFee
     this.tokens = tokens
     this.strategies = strategies
     this.admin = admin
@@ -46,6 +49,10 @@ export default class Vault {
   getSelector(method: string): string {
     const sighash = this.instance.interface.getSighash(method)
     return `0x${sighash.replace('0x', '').padEnd(64, '0')}`
+  }
+
+  async getMaxSlippage(): Promise<BigNumber> {
+    return this.instance.maxSlippage()
   }
 
   async getProtocolFee(): Promise<BigNumber> {
@@ -227,6 +234,11 @@ export default class Vault {
   async batch(data: string[], readsOutput: boolean[], { from }: TxParams = {}): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.batch(data, readsOutput)
+  }
+
+  async setMaxSlippage(maxSlippage: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
+    const vault = this.instance.connect(from || this.admin)
+    return vault.setMaxSlippage(maxSlippage)
   }
 
   async setProtocolFee(fee: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
