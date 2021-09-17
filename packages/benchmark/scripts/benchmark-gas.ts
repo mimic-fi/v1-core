@@ -4,6 +4,7 @@ import { Contract } from 'ethers'
 import ARTIFACTS from './artifacts'
 
 async function benchmark(): Promise<void> {
+  const maxSlippage = fp(0.2)
   const protocolFee = fp(0.01)
   const priceOracle = await deploy(ARTIFACTS.priceOracle)
   const swapConnector = await deploy(ARTIFACTS.swapConnector)
@@ -14,6 +15,7 @@ async function benchmark(): Promise<void> {
   const strategy2 = await deploy(ARTIFACTS.strategy, [token2.address])
   const strategies = [strategy1.address, strategy2.address]
   const vault = await deploy(ARTIFACTS.vault, [
+    maxSlippage,
     protocolFee,
     priceOracle.address,
     swapConnector.address,

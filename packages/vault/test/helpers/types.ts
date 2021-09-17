@@ -12,6 +12,7 @@ export type TxParams = {
 
 export type RawVaultDeployment = {
   mocked?: boolean
+  maxSlippage?: BigNumberish
   protocolFee?: BigNumberish
   priceOracle?: Contract
   swapConnector?: Contract
@@ -22,6 +23,7 @@ export type RawVaultDeployment = {
 
 export type VaultDeployment = {
   mocked: boolean
+  maxSlippage: BigNumberish
   protocolFee: BigNumberish
   priceOracle: Contract
   swapConnector: Contract

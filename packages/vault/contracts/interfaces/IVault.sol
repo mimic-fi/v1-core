@@ -15,6 +15,12 @@
 pragma solidity >=0.5.0 <0.9.0;
 
 interface IVault {
+    event MaxSlippageSet(uint256 maxSlippage);
+    event ProtocolFeeSet(uint256 protocolFee);
+    event PriceOracleSet(address priceOracle);
+    event SwapConnectorSet(address swapConnector);
+    event WhitelistedTokenSet(address indexed token, bool whitelisted);
+    event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
     event Deposit(address indexed account, address indexed token, uint256 amount, uint256 depositFee);
     event Withdraw(
         address indexed account,
@@ -23,6 +29,14 @@ interface IVault {
         uint256 fromVault,
         uint256 withdrawFee,
         address recipient
+    );
+    event Swap(
+        address indexed account,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 remainingIn,
+        uint256 amountOut
     );
     event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares);
     event Exit(
@@ -34,19 +48,8 @@ interface IVault {
         uint256 protocolFee,
         uint256 performanceFee
     );
-    event Swap(
-        address indexed account,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        uint256 amountIn,
-        uint256 remainingIn,
-        uint256 amountOut
-    );
-    event ProtocolFeeSet(uint256 protocolFee);
-    event PriceOracleSet(address priceOracle);
-    event SwapConnectorSet(address swapConnector);
-    event WhitelistedTokenSet(address indexed token, bool whitelisted);
-    event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
+
+    function maxSlippage() external view returns (uint256);
 
     function protocolFee() external view returns (uint256);
 
@@ -91,6 +94,8 @@ interface IVault {
     function exit(address account, address strategy, uint256 ratio, bool emergency, bytes memory data)
         external
         returns (uint256 received);
+
+    function setMaxSlippage(uint256 newMaxSlippage) external;
 
     function setProtocolFee(uint256 newProtocolFee) external;
 
