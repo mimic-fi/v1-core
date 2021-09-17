@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity >= 0.5.0 < 0.9.0;
+pragma solidity >=0.5.0 <0.9.0;
 
 interface IPortfolio {
     /**
@@ -29,7 +29,7 @@ interface IPortfolio {
      * - Least significant bit #9: after exit
      * - Remaining most significant 6 bits are ignored
      *
-     * For example, if a Portfolio supports "before join" and "after exit" it should respond "1001000000" (0x240).
+     * For example, if a Portfolio supports 'before join' and 'after exit' it should respond '1001000000' (0x240).
      */
     function getSupportedCallbacks() external view returns (bytes2);
 
@@ -51,9 +51,23 @@ interface IPortfolio {
 
     function afterWithdraw(address sender, address token, uint256 amount, address recipient) external;
 
-    function beforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
+    function beforeSwap(
+        address sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) external;
 
-    function afterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external;
+    function afterSwap(
+        address sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) external;
 
     function beforeJoin(address sender, address strategy, uint256 amount, bytes memory data) external;
 

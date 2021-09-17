@@ -1,10 +1,9 @@
+import { deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
-import { deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
-
-import { Account, toAddress, toAddresses } from './helpers/types'
 
 import Agreement from './helpers/Agreement'
+import { Account, toAddress, toAddresses } from './helpers/types'
 
 describe('Agreement', () => {
   describe('withdrawers', () => {
@@ -397,7 +396,14 @@ describe('Agreement', () => {
       vault = await deploy('VaultMock')
       customToken = await deploy('TokenMock')
       customStrategy = await deploy('StrategyMock')
-      agreement = await Agreement.create({ vault, allowedStrategies: 'none', strategies: [customStrategy], allowedTokens: 'none', tokens: [customToken], maxSwapSlippage })
+      agreement = await Agreement.create({
+        vault,
+        allowedStrategies: 'none',
+        strategies: [customStrategy],
+        allowedTokens: 'none',
+        tokens: [customToken],
+        maxSwapSlippage,
+      })
     })
 
     const itDoesNotAcceptAnyAction = () => {
@@ -467,17 +473,24 @@ describe('Agreement', () => {
           await vault.mockWhitelistedTokens([whitelistedToken.address])
 
           // valid token out, valid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage)).to.be.true
+          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage)).to.be
+            .true
           // valid token out, invalid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1))).to.be.false
+          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1)))
+            .to.be.false
           // invalid token out, valid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage)).to.be.false
+          expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage))
+            .to.be.false
           // invalid token out, invalid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage.add(1))).to.be.false
+          expect(
+            await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage.add(1))
+          ).to.be.false
           // invalid token out, valid slippage
-          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage)).to.be.false
+          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage)).to.be
+            .false
           // invalid token out, invalid slippage
-          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1))).to.be.false
+          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1)))
+            .to.be.false
         })
 
         it('accepts operating with allowed strategies', async () => {
@@ -573,7 +586,9 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.revertedWith('SENDER_NOT_VAULT')
+          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.revertedWith(
+            'SENDER_NOT_VAULT'
+          )
         })
       })
     })
@@ -597,7 +612,9 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS)).to.be.revertedWith('SENDER_NOT_VAULT')
+          await expect(
+            agreement.instance.beforeWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS)
+          ).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
     })

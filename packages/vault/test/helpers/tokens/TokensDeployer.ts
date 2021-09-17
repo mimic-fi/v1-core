@@ -1,7 +1,6 @@
 import { deploy, getSigner } from '@mimic-fi/v1-helpers'
 
 import { NAry, TxParams } from '../types'
-
 import Token from './Token'
 import TokenList from './TokenList'
 

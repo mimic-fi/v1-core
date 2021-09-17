@@ -1,12 +1,12 @@
-import path from 'path'
 import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
 import 'hardhat-local-networks-config-plugin'
 
+import { overrideFunctions } from '@mimic-fi/v1-helpers'
+import { TASK_COMPILE } from 'hardhat/builtin-tasks/task-names'
 import { task } from 'hardhat/config'
 import { homedir } from 'os'
-import { TASK_COMPILE } from 'hardhat/builtin-tasks/task-names'
-import { overrideFunctions } from '@mimic-fi/v1-helpers'
+import path from 'path'
 
 task(TASK_COMPILE).setAction(overrideFunctions(['query']))
 

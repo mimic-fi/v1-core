@@ -1,13 +1,15 @@
 import { getArtifact } from '@mimic-fi/v1-helpers'
 
+import ARTIFACTS from './artifacts'
+
 async function benchmark(): Promise<void> {
-  const Vault = await getArtifact('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault')
-  const Agreement = await getArtifact('@mimic-fi/v1-agreements/artifacts/contracts/Agreement.sol/Agreement')
-  const AgreementFactory = await getArtifact('@mimic-fi/v1-agreements/artifacts/contracts/AgreementFactory.sol/AgreementFactory')
+  const Vault = await getArtifact(ARTIFACTS.vault)
+  const Agreement = await getArtifact(ARTIFACTS.agreement)
+  const AgreementFactory = await getArtifact(ARTIFACTS.agreementFactory)
 
   console.log(`- Vault: ${Vault.deployedBytecode.length / 2} bytes`)
   console.log(`- Agreement: ${Agreement.deployedBytecode.length / 2} bytes`)
   console.log(`- AgreementFactory: ${AgreementFactory.deployedBytecode.length / 2} bytes`)
 }
 
-benchmark().then().catch(console.error)
+benchmark().catch(console.error)

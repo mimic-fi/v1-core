@@ -1,17 +1,29 @@
-import { Contract } from 'ethers'
 import { assertEvent, deploy, fp, getSigner, getSigners, instanceAt, MAX_UINT256 } from '@mimic-fi/v1-helpers'
+import { Contract } from 'ethers'
 
 async function benchmark(): Promise<void> {
   const protocolFee = fp(0.01)
   const priceOracle = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock')
-  const swapConnector = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock')
+  const swapConnector = await deploy(
+    '@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock'
+  )
   const token1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['DAI'])
   const token2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/TokenMock.sol/TokenMock', ['USDC'])
   const tokens = [token1.address, token2.address]
-  const strategy1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token1.address])
-  const strategy2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [token2.address])
+  const strategy1 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [
+    token1.address,
+  ])
+  const strategy2 = await deploy('@mimic-fi/v1-vault/artifacts/contracts/test/StrategyMock.sol/StrategyMock', [
+    token2.address,
+  ])
   const strategies = [strategy1.address, strategy2.address]
-  const vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [protocolFee, priceOracle.address, swapConnector.address, tokens, strategies])
+  const vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [
+    protocolFee,
+    priceOracle.address,
+    swapConnector.address,
+    tokens,
+    strategies,
+  ])
 
   await token1.mint(swapConnector.address, fp(1000000))
   await token2.mint(swapConnector.address, fp(1000000))
@@ -33,22 +45,91 @@ async function benchmark(): Promise<void> {
 }
 
 async function benchmarkAgreement(vault: Contract, tokens: string[], strategies: string[]): Promise<Contract> {
-  const factory = await deploy('@mimic-fi/v1-agreements/artifacts/contracts/AgreementFactory.sol/AgreementFactory', [vault.address])
+  const factory = await deploy('@mimic-fi/v1-agreements/artifacts/contracts/AgreementFactory.sol/AgreementFactory', [
+    vault.address,
+  ])
 
   const name = 'Test Agreement'
   const depositFee = fp(0.005)
   const withdrawFee = fp(0.003)
   const performanceFee = fp(0.00001)
   const maxSwapSlippage = fp(0.1)
-  const [manager1, manager2, withdrawer1, withdrawer2, feeCollector] = (await getSigners()).map((signer) => signer.address)
+  const [manager1, manager2, withdrawer1, withdrawer2, feeCollector] = (await getSigners()).map(
+    (signer) => signer.address
+  )
   const managers = [manager1, manager2]
   const withdrawers = [withdrawer1, withdrawer2]
   const allowed = 2
-  const agreement1Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, managers, withdrawers, tokens, allowed, strategies, allowed)
-  const agreement2Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowed, strategies, allowed)
-  const agreement3Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowed, [strategies[0]], allowed)
-  const agreement4Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], tokens, allowed, [], allowed)
-  const agreement5Tx = await factory.create(name, feeCollector, depositFee, withdrawFee, performanceFee, maxSwapSlippage, [manager1], [withdrawer1], [], allowed, [], allowed)
+  const agreement1Tx = await factory.create(
+    name,
+    feeCollector,
+    depositFee,
+    withdrawFee,
+    performanceFee,
+    maxSwapSlippage,
+    managers,
+    withdrawers,
+    tokens,
+    allowed,
+    strategies,
+    allowed
+  )
+  const agreement2Tx = await factory.create(
+    name,
+    feeCollector,
+    depositFee,
+    withdrawFee,
+    performanceFee,
+    maxSwapSlippage,
+    [manager1],
+    [withdrawer1],
+    tokens,
+    allowed,
+    strategies,
+    allowed
+  )
+  const agreement3Tx = await factory.create(
+    name,
+    feeCollector,
+    depositFee,
+    withdrawFee,
+    performanceFee,
+    maxSwapSlippage,
+    [manager1],
+    [withdrawer1],
+    tokens,
+    allowed,
+    [strategies[0]],
+    allowed
+  )
+  const agreement4Tx = await factory.create(
+    name,
+    feeCollector,
+    depositFee,
+    withdrawFee,
+    performanceFee,
+    maxSwapSlippage,
+    [manager1],
+    [withdrawer1],
+    tokens,
+    allowed,
+    [],
+    allowed
+  )
+  const agreement5Tx = await factory.create(
+    name,
+    feeCollector,
+    depositFee,
+    withdrawFee,
+    performanceFee,
+    maxSwapSlippage,
+    [manager1],
+    [withdrawer1],
+    [],
+    allowed,
+    [],
+    allowed
+  )
 
   console.log(`- 2 managers, 2 withdrawers, 2 tokens, 2 strategies: ${(await agreement1Tx.wait()).gasUsed}`)
   console.log(`- 1 managers, 1 withdrawers, 2 tokens, 2 strategies: ${(await agreement2Tx.wait()).gasUsed}`)
@@ -91,4 +172,4 @@ async function benchmarkVault(vault: Contract, account: string, strategies: stri
   console.log(`- Second withdraw: \t${(await withdraw2Tx.wait()).gasUsed}`)
 }
 
-benchmark().then().catch(console.error)
+benchmark().catch(console.error)

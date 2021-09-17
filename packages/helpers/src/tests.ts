@@ -1,9 +1,13 @@
-import { RunSuperFunction, HardhatRuntimeEnvironment, HttpNetworkConfig, HardhatNetworkConfig } from 'hardhat/types'
+import { HardhatNetworkConfig, HardhatRuntimeEnvironment, HttpNetworkConfig, RunSuperFunction } from 'hardhat/types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
-export async function overrideTestTaskForDeployments(args: any, hre: HardhatRuntimeEnvironment, run: RunSuperFunction<any>): Promise<void> {
+export async function overrideTestTaskForDeployments(
+  args: any,
+  hre: HardhatRuntimeEnvironment,
+  run: RunSuperFunction<any>
+): Promise<void> {
   if (hre.network.name === 'hardhat' && !args.fork) await runNormalTests(args, hre, run)
   else if (hre.network.name === 'hardhat' && args.fork) await runForkTests(args, hre, run)
   else await runDeployTests(args, hre, run)

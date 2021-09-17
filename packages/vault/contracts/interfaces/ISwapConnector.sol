@@ -12,10 +12,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity >= 0.5.0 < 0.9.0;
+pragma solidity >=0.5.0 <0.9.0;
 
 interface ISwapConnector {
-    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256 amountOut);
+    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn)
+        external
+        view
+        returns (uint256 amountOut);
 
     function swap(
         address tokenIn,

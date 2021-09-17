@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 
-import "../interfaces/IPortfolio.sol";
+import '../interfaces/IPortfolio.sol';
 
 contract PortfolioMock is IPortfolio {
     using SafeMath for uint256;
@@ -38,7 +38,13 @@ contract PortfolioMock is IPortfolio {
     uint256 public performanceFee;
     address public feeCollector;
 
-    constructor(address _vault, uint256 _depositFee, uint256 _withdrawFee, uint256 _performanceFee, address _feeCollector) {
+    constructor(
+        address _vault,
+        uint256 _depositFee,
+        uint256 _withdrawFee,
+        uint256 _performanceFee,
+        address _feeCollector
+    ) {
         vault = _vault;
         depositFee = _depositFee;
         withdrawFee = _withdrawFee;
@@ -62,29 +68,35 @@ contract PortfolioMock is IPortfolio {
         IERC20(token).approve(vault, amount);
     }
 
-    function getTokenBalance(address token) external override view returns (uint256) {
+    function getTokenBalance(address token) external view override returns (uint256) {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function getDepositFee() external override view returns (uint256 fee, address collector) {
+    function getDepositFee() external view override returns (uint256 fee, address collector) {
         return (depositFee, feeCollector);
     }
 
-    function getWithdrawFee() external override view returns (uint256 fee, address collector) {
+    function getWithdrawFee() external view override returns (uint256 fee, address collector) {
         return (withdrawFee, feeCollector);
     }
 
-    function getPerformanceFee() external override view returns (uint256 fee, address collector) {
+    function getPerformanceFee() external view override returns (uint256 fee, address collector) {
         return (performanceFee, feeCollector);
     }
 
-    function canPerform(address who, address where, bytes32 what, bytes memory how) external override view returns (bool) {
-        if (mockedCanPerformData.who == address(0)) return mockedCanPerform;
-        if (mockedCanPerformData.who != who || mockedCanPerformData.where != where || mockedCanPerformData.what != what) return false;
-        return keccak256(mockedCanPerformData.how) == keccak256(how);
+    function canPerform(address who, address where, bytes32 what, bytes memory how)
+        external
+        view
+        override
+        returns (bool)
+    {
+        MockedCanPerformData memory mocked = mockedCanPerformData;
+        if (mocked.who == address(0)) return mockedCanPerform;
+        if (mocked.who != who || mocked.where != where || mocked.what != what) return false;
+        return keccak256(mocked.how) == keccak256(how);
     }
 
-    function getSupportedCallbacks() external override view returns (bytes2) {
+    function getSupportedCallbacks() external view override returns (bytes2) {
         return mockedSupportedCallbacks;
     }
 
@@ -104,11 +116,25 @@ contract PortfolioMock is IPortfolio {
         emit AfterWithdraw(sender, token, amount, recipient);
     }
 
-    function beforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external override {
+    function beforeSwap(
+        address sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) external override {
         emit BeforeSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
     }
 
-    function afterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes memory data) external override {
+    function afterSwap(
+        address sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 slippage,
+        bytes memory data
+    ) external override {
         emit AfterSwap(sender, tokenIn, tokenOut, amountIn, slippage, data);
     }
 
@@ -120,11 +146,17 @@ contract PortfolioMock is IPortfolio {
         emit AfterJoin(sender, strategy, amount, data);
     }
 
-    function beforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external override {
+    function beforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data)
+        external
+        override
+    {
         emit BeforeExit(sender, strategy, ratio, emergency, data);
     }
 
-    function afterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external override {
+    function afterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data)
+        external
+        override
+    {
         emit AfterExit(sender, strategy, ratio, emergency, data);
     }
 }

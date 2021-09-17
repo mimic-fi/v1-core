@@ -14,8 +14,8 @@
 
 pragma solidity ^0.8.0;
 
-import "../interfaces/IPriceOracle.sol";
-import "../libraries/FixedPoint.sol";
+import '../interfaces/IPriceOracle.sol';
+import '../libraries/FixedPoint.sol';
 
 contract PriceOracleMock is IPriceOracle {
     uint256 public mockedRate;
@@ -24,7 +24,7 @@ contract PriceOracleMock is IPriceOracle {
         mockedRate = FixedPoint.ONE;
     }
 
-    function getTokenPrice(address /* token */, address /* base */) external override view returns (uint256) {
+    function getTokenPrice(address, address) external view override returns (uint256) {
         return mockedRate;
     }
 

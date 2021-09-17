@@ -17,11 +17,11 @@ pragma solidity ^0.8.0;
 contract Proxy {
     address public immutable implementation;
 
-    constructor (address _implementation) {
+    constructor(address _implementation) {
         implementation = _implementation;
     }
 
-    fallback () external payable virtual {
+    fallback() external payable virtual {
         // solhint-disable-previous-line no-complex-fallback
         // solhint-disable-next-line no-inline-assembly
         address impl = implementation;
@@ -30,8 +30,12 @@ contract Proxy {
             let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())
             switch result
-                case 0 { revert(0, returndatasize()) }
-                default { return(0, returndatasize()) }
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 }

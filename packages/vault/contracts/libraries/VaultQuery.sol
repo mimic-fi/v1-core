@@ -14,10 +14,10 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Address.sol";
+import '@openzeppelin/contracts/utils/Address.sol';
 
-import "./VaultHelpers.sol";
-import "../interfaces/IVault.sol";
+import './VaultHelpers.sol';
+import '../interfaces/IVault.sol';
 
 /**
  * @dev Answering specific queries to the like the result of a join or an exit may be too difficult.
@@ -72,7 +72,7 @@ contract VaultQuery {
         bytes memory result = Address.functionDelegateCall(address(this), batchData);
 
         assembly {
-            // Send a custom error signature "QueryError(bytes[])" which is 0x492e5b2c
+            // Send a custom error signature 'QueryError(bytes[])' which is 0x492e5b2c
             mstore(sub(result, 32), 0x00000000000000000000000000000000000000000000000000000000492e5b2c)
             let start := sub(result, 4)
             let size := add(returndatasize(), 36) // sig + length + data

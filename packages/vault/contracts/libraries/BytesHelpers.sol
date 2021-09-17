@@ -20,11 +20,13 @@ library BytesHelpers {
     }
 
     function toBytes4(bytes memory self) internal pure returns (bytes4) {
-        return bytes4(self[0]) | bytes4(self[1]) >> 8 | bytes4(self[2]) >> 16 | bytes4(self[3]) >> 24;
+        return bytes4(self[0]) | (bytes4(self[1]) >> 8) | (bytes4(self[2]) >> 16) | (bytes4(self[3]) >> 24);
     }
 
     function toBytes32(bytes4 self) internal pure returns (bytes32 result) {
-        assembly { result := self }
+        assembly {
+            result := self
+        }
     }
 
     function isBitSet(bytes2 self, uint256 pos) internal pure returns (bool) {

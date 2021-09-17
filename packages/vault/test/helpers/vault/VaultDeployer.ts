@@ -1,13 +1,16 @@
 import { deploy, getSigner } from '@mimic-fi/v1-helpers'
 
-import { toAddresses, RawVaultDeployment, VaultDeployment } from '../types'
-
+import { RawVaultDeployment, toAddresses, VaultDeployment } from '../types'
 import Vault from './Vault'
 
 const VaultDeployer = {
   async deploy(params: RawVaultDeployment = {}): Promise<Vault> {
     const { priceOracle, swapConnector, protocolFee, tokens, strategies, admin } = await this.parseParams(params)
-    const vault = await deploy('Vault', [protocolFee, priceOracle.address, swapConnector.address, toAddresses(tokens), toAddresses(strategies)], admin)
+    const vault = await deploy(
+      'Vault',
+      [protocolFee, priceOracle.address, swapConnector.address, toAddresses(tokens), toAddresses(strategies)],
+      admin
+    )
     return new Vault(vault, priceOracle, swapConnector, protocolFee, tokens, strategies, admin)
   },
 

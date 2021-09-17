@@ -3,10 +3,9 @@ import { BigNumberish, bn } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber, Contract, ContractTransaction } from 'ethers'
 
-import { toAddresses, toAddress, NAry, Account, TxParams, RawVaultDeployment } from '../types'
-
 import Token from '../tokens/Token'
 import TokenList from '../tokens/TokenList'
+import { Account, NAry, RawVaultDeployment, toAddress, toAddresses, TxParams } from '../types'
 import VaultDeployer from './VaultDeployer'
 
 export default class Vault {
@@ -22,7 +21,15 @@ export default class Vault {
     return VaultDeployer.deploy(params)
   }
 
-  constructor(instance: Contract, priceOracle: Contract, swapConnector: Contract, protocolFee: BigNumberish, tokens: Contract[], strategies: Contract[], admin: SignerWithAddress) {
+  constructor(
+    instance: Contract,
+    priceOracle: Contract,
+    swapConnector: Contract,
+    protocolFee: BigNumberish,
+    tokens: Contract[],
+    strategies: Contract[],
+    admin: SignerWithAddress
+  ) {
     this.instance = instance
     this.priceOracle = priceOracle
     this.swapConnector = swapConnector
@@ -69,22 +76,44 @@ export default class Vault {
     return this.instance.getAccountInvestment(toAddress(account), toAddress(strategy))
   }
 
-  async getDepositAmount(account: Account, token: Account, amount: BigNumberish, params: TxParams = {}): Promise<BigNumber> {
+  async getDepositAmount(
+    account: Account,
+    token: Account,
+    amount: BigNumberish,
+    params: TxParams = {}
+  ): Promise<BigNumber> {
     const call = await this.encodeDepositCall(account, token, amount)
     return this.singleQuery(call, params)
   }
 
-  async deposit(account: Account, token: Account, amount: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
+  async deposit(
+    account: Account,
+    token: Account,
+    amount: BigNumberish,
+    { from }: TxParams = {}
+  ): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.deposit(toAddress(account), toAddress(token), amount)
   }
 
-  async getWithdrawAmount(account: Account, token: Account, amount: BigNumberish, recipient: Account, params: TxParams = {}): Promise<BigNumber> {
+  async getWithdrawAmount(
+    account: Account,
+    token: Account,
+    amount: BigNumberish,
+    recipient: Account,
+    params: TxParams = {}
+  ): Promise<BigNumber> {
     const call = await this.encodeWithdrawCall(account, token, amount, recipient)
     return this.singleQuery(call, params)
   }
 
-  async withdraw(account: Account, token: Account, amount: BigNumberish, recipient: Account, { from }: TxParams = {}): Promise<ContractTransaction> {
+  async withdraw(
+    account: Account,
+    token: Account,
+    amount: BigNumberish,
+    recipient: Account,
+    { from }: TxParams = {}
+  ): Promise<ContractTransaction> {
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
   }
@@ -119,14 +148,26 @@ export default class Vault {
     return vault.swap(toAddress(account), tokenIn.address, tokenOut.address, amountIn, slippage, data)
   }
 
-  async getJoinAmount(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<BigNumber> {
+  async getJoinAmount(
+    account: Account,
+    strategy: Account,
+    amount: BigNumberish,
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
+  ): Promise<BigNumber> {
     const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
     const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const call = await this.encodeJoinCall(account, strategy, amount, data)
     return this.singleQuery(call, { from })
   }
 
-  async join(account: Account, strategy: Account, amount: BigNumberish, dataOrParams: string | TxParams = '0x', params: TxParams = {}): Promise<ContractTransaction> {
+  async join(
+    account: Account,
+    strategy: Account,
+    amount: BigNumberish,
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
+  ): Promise<ContractTransaction> {
     const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
     const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const vault = from ? this.instance.connect(from) : this.instance
@@ -143,7 +184,12 @@ export default class Vault {
   ): Promise<BigNumber> {
     const emergency = typeof emergencyOrDataOrParams === 'boolean' ? emergencyOrDataOrParams : false
     const data = typeof emergencyOrDataOrParams === 'string' ? emergencyOrDataOrParams : (dataOrParams as string)
-    const from = typeof emergencyOrDataOrParams === 'object' ? emergencyOrDataOrParams?.from : typeof dataOrParams === 'object' ? dataOrParams.from : params?.from
+    const from =
+      typeof emergencyOrDataOrParams === 'object'
+        ? emergencyOrDataOrParams?.from
+        : typeof dataOrParams === 'object'
+        ? dataOrParams.from
+        : params?.from
     const call = await this.encodeExitCall(account, strategy, ratio, emergency, data)
     return this.singleQuery(call, { from })
   }
@@ -158,7 +204,12 @@ export default class Vault {
   ): Promise<ContractTransaction> {
     const emergency = typeof emergencyOrDataOrParams === 'boolean' ? emergencyOrDataOrParams : false
     const data = typeof emergencyOrDataOrParams === 'string' ? emergencyOrDataOrParams : (dataOrParams as string)
-    const from = typeof emergencyOrDataOrParams === 'object' ? emergencyOrDataOrParams?.from : typeof dataOrParams === 'object' ? dataOrParams.from : params?.from
+    const from =
+      typeof emergencyOrDataOrParams === 'object'
+        ? emergencyOrDataOrParams?.from
+        : typeof dataOrParams === 'object'
+        ? dataOrParams.from
+        : params?.from
     const vault = from ? this.instance.connect(from) : this.instance
     return vault.exit(toAddress(account), toAddress(strategy), ratio, emergency, data)
   }
@@ -193,13 +244,21 @@ export default class Vault {
     return vault.setSwapConnector(toAddress(connector))
   }
 
-  async setWhitelistedTokens(tokens: TokenList, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {
+  async setWhitelistedTokens(
+    tokens: TokenList,
+    whitelisted?: NAry<boolean>,
+    { from }: TxParams = {}
+  ): Promise<ContractTransaction> {
     if (!whitelisted) whitelisted = Array(tokens.length).fill(true)
     const vault = this.instance.connect(from || this.admin)
     return vault.setWhitelistedTokens(tokens.addresses, whitelisted)
   }
 
-  async setWhitelistedStrategies(strategies: NAry<Account>, whitelisted?: NAry<boolean>, { from }: TxParams = {}): Promise<ContractTransaction> {
+  async setWhitelistedStrategies(
+    strategies: NAry<Account>,
+    whitelisted?: NAry<boolean>,
+    { from }: TxParams = {}
+  ): Promise<ContractTransaction> {
     if (!Array.isArray(strategies)) strategies = [strategies]
     if (!whitelisted) whitelisted = Array(strategies.length).fill(true)
     const vault = this.instance.connect(from || this.admin)
@@ -214,8 +273,17 @@ export default class Vault {
     return defaultAbiCoder.encode(['address', 'uint256', 'address'], [toAddress(token), amount, toAddress(recipient)])
   }
 
-  encodeSwapParams(tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data: string): string {
-    return defaultAbiCoder.encode(['address', 'address', 'uint256', 'uint256', 'bytes'], [toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data])
+  encodeSwapParams(
+    tokenIn: Account,
+    tokenOut: Account,
+    amountIn: BigNumberish,
+    slippage: BigNumberish,
+    data: string
+  ): string {
+    return defaultAbiCoder.encode(
+      ['address', 'address', 'uint256', 'uint256', 'bytes'],
+      [toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data]
+    )
   }
 
   encodeJoinParams(strategy: Account, amount: BigNumberish, data: string): string {
@@ -223,7 +291,10 @@ export default class Vault {
   }
 
   encodeExitParams(strategy: Account, ratio: BigNumberish, emergency: boolean, data: string): string {
-    return defaultAbiCoder.encode(['address', 'uint256', 'bool', 'bytes'], [toAddress(strategy), ratio, emergency, data])
+    return defaultAbiCoder.encode(
+      ['address', 'uint256', 'bool', 'bytes'],
+      [toAddress(strategy), ratio, emergency, data]
+    )
   }
 
   async encodeDepositCall(account: Account, token: Account, amount: BigNumberish): Promise<string> {
@@ -231,8 +302,18 @@ export default class Vault {
     return tx?.data || '0x'
   }
 
-  async encodeWithdrawCall(account: Account, token: Account, amount: BigNumberish, recipient: Account): Promise<string> {
-    const tx = await this.instance.populateTransaction.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
+  async encodeWithdrawCall(
+    account: Account,
+    token: Account,
+    amount: BigNumberish,
+    recipient: Account
+  ): Promise<string> {
+    const tx = await this.instance.populateTransaction.withdraw(
+      toAddress(account),
+      toAddress(token),
+      amount,
+      toAddress(recipient)
+    )
     return tx?.data || '0x'
   }
 
@@ -241,13 +322,39 @@ export default class Vault {
     return tx?.data || '0x'
   }
 
-  async encodeExitCall(account: Account, strategy: Account, amount: BigNumberish, emergency = false, data = '0x'): Promise<string> {
-    const tx = await this.instance.populateTransaction.exit(toAddress(account), toAddress(strategy), amount, emergency, data)
+  async encodeExitCall(
+    account: Account,
+    strategy: Account,
+    amount: BigNumberish,
+    emergency = false,
+    data = '0x'
+  ): Promise<string> {
+    const tx = await this.instance.populateTransaction.exit(
+      toAddress(account),
+      toAddress(strategy),
+      amount,
+      emergency,
+      data
+    )
     return tx?.data || '0x'
   }
 
-  async encodeSwapCall(account: Account, tokenIn: Account, tokenOut: Account, amountIn: BigNumberish, slippage: BigNumberish, data = '0x'): Promise<string> {
-    const tx = await this.instance.populateTransaction.swap(toAddress(account), toAddress(tokenIn), toAddress(tokenOut), amountIn, slippage, data)
+  async encodeSwapCall(
+    account: Account,
+    tokenIn: Account,
+    tokenOut: Account,
+    amountIn: BigNumberish,
+    slippage: BigNumberish,
+    data = '0x'
+  ): Promise<string> {
+    const tx = await this.instance.populateTransaction.swap(
+      toAddress(account),
+      toAddress(tokenIn),
+      toAddress(tokenOut),
+      amountIn,
+      slippage,
+      data
+    )
     return tx?.data || '0x'
   }
 }

@@ -14,11 +14,11 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import "../interfaces/IStrategy.sol";
+import '../interfaces/IStrategy.sol';
 
-import "../libraries/FixedPoint.sol";
+import '../libraries/FixedPoint.sol';
 
 contract StrategyMock is IStrategy {
     using FixedPoint for uint256;
@@ -33,12 +33,12 @@ contract StrategyMock is IStrategy {
         mockedRate = FixedPoint.ONE;
     }
 
-    function getTokenBalance() external override view returns (uint256) {
+    function getTokenBalance() external view override returns (uint256) {
         return mockedRate.mul(getTotalShares);
     }
 
-    function getMetadataURI() external override pure returns (string memory) {
-        return "./strategies/metadata.json";
+    function getMetadataURI() external pure override returns (string memory) {
+        return './strategies/metadata.json';
     }
 
     function onJoin(uint256 amount, bytes memory) external override returns (uint256 shares) {

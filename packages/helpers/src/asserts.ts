@@ -1,6 +1,6 @@
 import { expect } from 'chai'
-import { Interface, LogDescription } from 'ethers/lib/utils'
 import { BigNumber, ContractTransaction } from 'ethers'
+import { Interface, LogDescription } from 'ethers/lib/utils'
 
 // Ported from @openzeppelin/test-helpers to use with Ethers. The Test Helpers don't
 // yet have Typescript typings, so we're being lax about them here.
@@ -44,7 +44,12 @@ export async function assertEvent(tx: ContractTransaction, eventName: string, ev
   return event
 }
 
-export async function assertIndirectEvent(tx: ContractTransaction, emitter: Interface, eventName: string, eventArgs = {}): Promise<any> {
+export async function assertIndirectEvent(
+  tx: ContractTransaction,
+  emitter: Interface,
+  eventName: string,
+  eventArgs = {}
+): Promise<any> {
   const receipt = await tx.wait()
   const decodedEvents = receipt.logs
     .map((log) => {
@@ -93,7 +98,11 @@ export async function assertNoEvent(tx: ContractTransaction, eventName: string):
   }
 }
 
-export async function assertNoIndirectEvent(tx: ContractTransaction, emitter: Interface, eventName: string): Promise<void> {
+export async function assertNoIndirectEvent(
+  tx: ContractTransaction,
+  emitter: Interface,
+  eventName: string
+): Promise<void> {
   const receipt = await tx.wait()
   const decodedEvents = receipt.logs
     .map((log) => {
@@ -121,6 +130,9 @@ function contains(args: { [key: string]: any | undefined }, key: string, value: 
     expect(args[key]).to.equal(value, `expected event argument '${key}' to have value ${expected} but got ${actual}`)
   } else {
     const expected = typeof args[key] === 'string' && typeof value === 'object' && value.address ? value.address : value
-    expect(args[key]).to.be.deep.equal(expected, `expected event argument '${key}' to have value ${value} but got ${args[key]}`)
+    expect(args[key]).to.be.deep.equal(
+      expected,
+      `expected event argument '${key}' to have value ${value} but got ${args[key]}`
+    )
   }
 }
