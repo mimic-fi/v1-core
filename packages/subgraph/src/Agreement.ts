@@ -63,6 +63,10 @@ export function handleAllowedStrategiesSet(event: AllowedStrategiesSet): void {
 
 export function handleParamsSet(event: ParamsSet): void {
   let id = event.address.toHexString()
+  let agreement = AgreementEntity.load(id)
+  agreement.maxSlippage = event.params.maxSwapSlippage
+  agreement.save()
+
   let portfolio = PortfolioEntity.load(id) || new PortfolioEntity(id)
   portfolio.depositFee = event.params.depositFee
   portfolio.withdrawFee = event.params.withdrawFee
@@ -79,6 +83,7 @@ export function loadOrCreateAgreement(address: Address): AgreementEntity {
     agreement = new AgreementEntity(id)
     agreement.portfolio = id
     agreement.name = ''
+    agreement.maxSlippage = BigInt.fromI32(0)
     agreement.managers = []
     agreement.withdrawers = []
     agreement.customTokens = []
