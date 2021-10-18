@@ -1,6 +1,6 @@
 # Core
 
-> Mimic is a trustless non-custodial portfolio management protocol
+> Mimic is a delegated yield aggregator protocol, trustless and non-custodial.
 
 This monorepo holds the key components of the Mimic Finance protocol:
 - [Vault](./packages/vault): Main entry point and orchestrator of the protocol rules.
