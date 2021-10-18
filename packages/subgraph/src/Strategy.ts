@@ -1,8 +1,8 @@
-import {Address, BigInt, ethereum, log} from '@graphprotocol/graph-ts'
+import { Address, BigInt, ethereum, log } from '@graphprotocol/graph-ts'
 
-import {loadOrCreateERC20} from './ERC20'
-import {Strategy as StrategyContract} from '../types/Vault/Strategy'
-import {Rate as RateEntity, Strategy as StrategyEntity, Vault as VaultEntity} from '../types/schema'
+import { loadOrCreateERC20 } from './ERC20'
+import { Strategy as StrategyContract } from '../types/Vault/Strategy'
+import { Rate as RateEntity, Strategy as StrategyEntity, Vault as VaultEntity } from '../types/schema'
 
 let ONE = BigInt.fromString('1000000000000000000')
 
