@@ -113,7 +113,7 @@ export function handleBlock(block: ethereum.Block): void {
     let strategies = vault.strategies;
     for (let i: i32 = 0; i < strategies.length; i++) {
       let strategy = StrategyEntity.load(strategies[i])
-      if (strategy !== null) createLastRate(strategy!, block.timestamp)
+      if (strategy !== null) createLastRate(strategy!, block)
     }
   }
 }

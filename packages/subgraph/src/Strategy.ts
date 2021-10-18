@@ -1,8 +1,8 @@
-import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
+import { Address, BigInt, ethereum, log } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20'
 import { Strategy as StrategyContract } from '../types/Vault/Strategy'
-import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } from '../types/schema'
+import { Rate as RateEntity, Strategy as StrategyEntity, Vault as VaultEntity } from '../types/schema'
 
 let ONE = BigInt.fromString('1000000000000000000')
 
@@ -19,7 +19,7 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
     strategy.shares = BigInt.fromI32(0)
     strategy.deposited = BigInt.fromI32(0)
     strategy.save()
-    createLastRate(strategy!, event.block.timestamp)
+    createLastRate(strategy!, event.block)
   }
 
   let strategies = vault.strategies;
@@ -30,23 +30,60 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
   return strategy!
 }
 
-export function createLastRate(strategy: StrategyEntity, timestamp: BigInt): void {
-  let strategyContract = StrategyContract.bind(Address.fromString(strategy.id))
-  let shares = strategyContract.getTotalShares()
-  let value = shares.isZero() ? BigInt.fromI32(0) : strategyContract.getTokenBalance().times(ONE).div(shares)
+export function createLastRate(strategy: StrategyEntity, block: ethereum.Block): void {
+  let currentRate = getStrategyRate(Address.fromString(strategy.id))
 
-  if (strategy.lastRate === null || RateEntity.load(strategy.lastRate)!.value.notEqual(value)) {
-    let rateId = strategy.id + '-' + timestamp.toString()
-    let rate = new RateEntity(rateId)
-    rate.value = value
-    rate.strategy = strategy.id
-    rate.timestamp = timestamp
-    rate.save()
-
-    strategy.lastRate = rateId
-    strategy.deposited = shares.isZero() ? BigInt.fromI32(0) : shares.times(value).div(ONE)
-    strategy.save()
+  if (strategy.lastRate === null) {
+    storeLastRate(strategy, currentRate, BigInt.fromI32(0), block);
+  } else {
+    let lastRate = RateEntity.load(strategy.lastRate)!
+    if (lastRate.value.notEqual(currentRate)) {
+      let elapsed = block.number.minus(lastRate.block)
+      let accumulated = lastRate.accumulated.plus(lastRate.value.times(elapsed))
+      storeLastRate(strategy, currentRate, accumulated, block);
+    }
   }
+}
+
+function storeLastRate(strategy: StrategyEntity, currentRate: BigInt, accumulated: BigInt, block: ethereum.Block): void {
+  let shares = getStrategyShares(Address.fromString(strategy.id))
+  let rateId = strategy.id + '-' + block.timestamp.toString()
+  let rate = new RateEntity(rateId)
+  rate.value = currentRate
+  rate.accumulated = accumulated
+  rate.shares = shares
+  rate.strategy = strategy.id
+  rate.timestamp = block.timestamp
+  rate.block = block.number
+  rate.save()
+
+  strategy.lastRate = rateId
+  strategy.deposited = shares.isZero() ? BigInt.fromI32(0) : shares.times(currentRate).div(ONE)
+  strategy.save()
+}
+
+export function getStrategyRate(address: Address): BigInt {
+  let strategyContract = StrategyContract.bind(address)
+  let rateCall = strategyContract.try_getRate();
+
+  if (!rateCall.reverted) {
+    return rateCall.value
+  }
+
+  log.warning('getRate() call reverted for {}', [address.toHexString()])
+  return BigInt.fromI32(0)
+}
+
+export function getStrategyShares(address: Address): BigInt {
+  let strategyContract = StrategyContract.bind(address)
+  let sharesCall = strategyContract.try_getTotalShares();
+
+  if (!sharesCall.reverted) {
+    return sharesCall.value
+  }
+
+  log.warning('getTotalShares() call reverted for {}', [address.toHexString()])
+  return BigInt.fromI32(0)
 }
 
 export function getStrategyMetadata(address: Address): string {
