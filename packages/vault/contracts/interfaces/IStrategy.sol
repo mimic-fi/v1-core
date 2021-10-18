@@ -17,7 +17,7 @@ pragma solidity >=0.5.0 <0.9.0;
 interface IStrategy {
     function getToken() external view returns (address);
 
-    function getTokenBalance() external view returns (uint256);
+    function getRate() external view returns (uint256);
 
     function getTotalShares() external view returns (uint256);
 
