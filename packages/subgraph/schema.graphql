@@ -23,6 +23,9 @@ type Strategy @entity {
 type Rate @entity {
   id: ID!
   value: BigInt!
+  accumulated: BigInt!
+  shares: BigInt!
+  block: BigInt!
   timestamp: BigInt!
   strategy: Strategy!
 }
