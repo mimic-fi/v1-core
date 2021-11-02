@@ -1,7 +1,7 @@
 import { Agreement } from '../types/templates'
 import { AgreementCreated } from '../types/AgreementFactory/AgreementFactory'
 
-import { loadOrCreateAgreement } from './Agreement';
+import { loadOrCreateAgreement } from './Agreement'
 
 export function handleCreate(event: AgreementCreated): void {
   Agreement.create(event.params.agreement)

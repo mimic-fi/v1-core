@@ -2720,50 +2720,6 @@ describe('Vault', () => {
     })
   })
 
-  describe('set max slippage', () => {
-    let from: SignerWithAddress
-
-    context('when the sender is the admin', () => {
-      beforeEach('set sender', async () => {
-        from = admin
-      })
-
-      context('when the new max slippage is below the max', () => {
-        const newMaxSlippage = fp(0.04)
-
-        it('updates the max slippage', async () => {
-          await vault.setMaxSlippage(newMaxSlippage, { from })
-
-          expect(await vault.getMaxSlippage()).to.be.equal(newMaxSlippage)
-        })
-
-        it('emits an event', async () => {
-          const tx = await vault.setMaxSlippage(newMaxSlippage, { from })
-
-          await assertEvent(tx, 'MaxSlippageSet', { maxSlippage: newMaxSlippage })
-        })
-      })
-
-      context('when the new max slippage is above the max', () => {
-        const newMaxSlippage = fp(1).add(1)
-
-        it('reverts', async () => {
-          await expect(vault.setMaxSlippage(newMaxSlippage, { from })).to.be.revertedWith('MAX_SLIPPAGE_TOO_HIGH')
-        })
-      })
-    })
-
-    context('when the sender is not the admin', () => {
-      beforeEach('set sender', async () => {
-        from = other
-      })
-
-      it('reverts', async () => {
-        await expect(vault.setMaxSlippage(fp(1), { from })).to.be.revertedWith('Ownable: caller is not the owner')
-      })
-    })
-  })
-
   describe('set protocol fee', () => {
     let from: SignerWithAddress
 

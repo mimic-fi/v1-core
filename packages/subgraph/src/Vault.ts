@@ -1,10 +1,11 @@
-import { BigInt, Address, ethereum } from '@graphprotocol/graph-ts'
+import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
 
-import { loadOrCreateERC20 } from './ERC20';
-import { loadOrCreateStrategy, createLastRate } from './Strategy';
+import { loadOrCreateERC20 } from './ERC20'
+import { loadOrCreateStrategy, createLastRate } from './Strategy'
+import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
-import { Deposit, Withdraw, Join, Exit, Swap, MaxSlippageSet, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
+import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
 import {
   Vault as VaultEntity,
   Strategy as StrategyEntity,
@@ -82,12 +83,6 @@ export function handleSwap(event: Swap): void {
   balanceOut.save()
 }
 
-export function handleMaxSlippageSet(event: MaxSlippageSet): void {
-  let vault = loadOrCreateVault(event.address)
-  vault.maxSlippage = event.params.maxSlippage
-  vault.save()
-}
-
 export function handleProtocolFeeSet(event: ProtocolFeeSet): void {
   let vault = loadOrCreateVault(event.address)
   vault.protocolFee = event.params.protocolFee
@@ -97,20 +92,20 @@ export function handleProtocolFeeSet(event: ProtocolFeeSet): void {
 export function handleWhitelistedTokenSet(event: WhitelistedTokenSet): void {
   let token = loadOrCreateERC20(event.params.token)
   token.whitelisted = event.params.whitelisted
-  token.save();
+  token.save()
 }
 
 export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): void {
   let vault = loadOrCreateVault(event.address)
   let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.whitelisted = event.params.whitelisted
-  strategy.save();
+  strategy.save()
 }
 
 export function handleBlock(block: ethereum.Block): void {
   let vault = VaultEntity.load(VAULT_ID)
   if (vault !== null && vault.strategies !== null) {
-    let strategies = vault.strategies;
+    let strategies = vault.strategies
     for (let i: i32 = 0; i < strategies.length; i++) {
       let strategy = StrategyEntity.load(strategies[i])
       if (strategy !== null) createLastRate(strategy!, block)
@@ -128,6 +123,9 @@ function loadOrCreateVault(vaultAddress: Address): VaultEntity {
     vault.maxSlippage = BigInt.fromI32(0)
     vault.protocolFee = BigInt.fromI32(0)
     vault.save()
+  } else if (vault.maxSlippage.equals(BigInt.fromI32(0))) {
+    vault.maxSlippage = getMaxSlippage(vaultAddress)
+    vault.save()
   }
 
   return vault!
@@ -141,7 +139,7 @@ function loadOrCreateAccount(accountAddress: Address, vaultAddress: Address): Ac
     account = new AccountEntity(id)
     account.vault = vaultAddress.toHexString()
     account.save()
-    tryDecodingPortfolio(accountAddress);
+    tryDecodingPortfolio(accountAddress)
   }
 
   return account!
@@ -197,4 +195,16 @@ function tryDecodingPortfolio(accountAddress: Address): void {
       portfolio.save()
     }
   }
+}
+
+function getMaxSlippage(address: Address): BigInt {
+  let vaultContract = VaultContract.bind(address)
+  let maxSlippageCall = vaultContract.try_maxSlippage()
+
+  if (!maxSlippageCall.reverted) {
+    return maxSlippageCall.value
+  }
+
+  log.warning('maxSlippage() call reverted for {}', [address.toHexString()])
+  return BigInt.fromI32(0)
 }
