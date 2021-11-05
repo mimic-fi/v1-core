@@ -1,14 +1,13 @@
-import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
+import { BigInt, Address, log } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20'
-import { loadOrCreateStrategy, createLastRate } from './Strategy'
+import { loadOrCreateStrategy } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
 import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
 import {
   Vault as VaultEntity,
-  Strategy as StrategyEntity,
   Account as AccountEntity,
   AccountBalance as AccountBalanceEntity,
   AccountStrategy as AccountStrategyEntity,
@@ -39,7 +38,7 @@ export function handleJoin(event: Join): void {
   let vault = loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
   strategy.shares = strategy.shares.plus(event.params.shares)
   strategy.save()
 
@@ -57,7 +56,7 @@ export function handleExit(event: Exit): void {
   let vault = loadOrCreateVault(event.address)
   loadOrCreateAccount(event.params.account, event.address)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
   strategy.shares = strategy.shares.minus(event.params.shares)
   strategy.save()
 
@@ -97,20 +96,9 @@ export function handleWhitelistedTokenSet(event: WhitelistedTokenSet): void {
 
 export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): void {
   let vault = loadOrCreateVault(event.address)
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
   strategy.whitelisted = event.params.whitelisted
   strategy.save()
-}
-
-export function handleBlock(block: ethereum.Block): void {
-  let vault = VaultEntity.load(VAULT_ID)
-  if (vault !== null && vault.strategies !== null) {
-    let strategies = vault.strategies
-    for (let i: i32 = 0; i < strategies.length; i++) {
-      let strategy = StrategyEntity.load(strategies[i])
-      if (strategy !== null) createLastRate(strategy!, block)
-    }
-  }
 }
 
 function loadOrCreateVault(vaultAddress: Address): VaultEntity {

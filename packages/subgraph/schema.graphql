@@ -13,21 +13,8 @@ type Strategy @entity {
   token: ERC20!
   metadata: String!
   whitelisted: Boolean!
-  deposited: BigInt!
   shares: BigInt!
-  lastRate: Rate
-  rates: [Rate!] @derivedFrom(field: "strategy")
   accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
-}
-
-type Rate @entity {
-  id: ID!
-  value: BigInt!
-  accumulated: BigInt!
-  shares: BigInt!
-  block: BigInt!
-  timestamp: BigInt!
-  strategy: Strategy!
 }
 
 type Account @entity {
