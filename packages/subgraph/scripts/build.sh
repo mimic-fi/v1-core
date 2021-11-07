@@ -49,7 +49,7 @@ if [[ -z $VAULT ]]; then
   VAULT=${!VAULT_VAR}
 fi
 
-# Validate court address
+# Validate Vault address
 if [[ -z $VAULT ]]; then
   echo 'Please make sure a Vault address is provided'
   exit 1
@@ -61,7 +61,7 @@ if [[ -z $AGREEMENT_FACTORY ]]; then
   AGREEMENT_FACTORY=${!AGREEMENT_FACTORY_VAR}
 fi
 
-# Validate court address
+# Validate Agreement Factory address
 if [[ -z $AGREEMENT_FACTORY ]]; then
   echo 'Please make sure an Agreement Factory address is provided'
   exit 1
