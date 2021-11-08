@@ -1,4 +1,4 @@
-import { deploy, fp, getSigner, getSigners, MAX_UINT256, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { deploy, fp, getSigner, getSigners, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 
@@ -569,14 +569,14 @@ describe('Agreement', () => {
 
     describe('before deposit', () => {
       context('when the sender is the vault', () => {
-        it('grants infinite allowance for the given token', async () => {
+        it('grants allowance for the given token and amount', async () => {
           const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
           expect(previousTokenAllowance).to.be.equal(0)
 
-          await vault.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, token.address, 0)
+          await vault.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, token.address, 10)
 
           const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
-          expect(currentTokenAllowance).to.be.equal(MAX_UINT256)
+          expect(currentTokenAllowance).to.be.equal(10)
         })
       })
 
@@ -595,14 +595,36 @@ describe('Agreement', () => {
 
     describe('before withdraw', () => {
       context('when the sender is the vault', () => {
-        it('grants infinite allowance for the given token', async () => {
-          const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
-          expect(previousTokenAllowance).to.be.equal(0)
+        beforeEach('mint tokens', async () => {
+          await token.mint(agreement.address, 5)
+        })
 
-          await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, 0, ZERO_ADDRESS)
+        context('when requesting more than the agreement balance', () => {
+          const amount = 10
 
-          const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
-          expect(currentTokenAllowance).to.be.equal(MAX_UINT256)
+          it('grants allowance for the current balance', async () => {
+            const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
+            expect(previousTokenAllowance).to.be.equal(0)
+
+            await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, amount, ZERO_ADDRESS)
+
+            const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
+            expect(currentTokenAllowance).to.be.equal(5)
+          })
+        })
+
+        context('when requesting less than the agreement balance', () => {
+          const amount = 3
+
+          it('grants allowance for the requested amount', async () => {
+            const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
+            expect(previousTokenAllowance).to.be.equal(0)
+
+            await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, amount, ZERO_ADDRESS)
+
+            const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
+            expect(currentTokenAllowance).to.be.equal(amount)
+          })
         })
       })
 

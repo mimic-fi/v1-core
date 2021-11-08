@@ -8,4 +8,8 @@ contract TokenMock is ERC20 {
     constructor() ERC20('Token', 'TKN') {
         // solhint-disable-previous-line no-empty-blocks
     }
+
+    function mint(address account, uint256 amount) external {
+        _mint(account, amount);
+    }
 }

@@ -18,6 +18,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
+import '@openzeppelin/contracts/utils/math/Math.sol';
 
 import '@mimic-fi/v1-vault/contracts/interfaces/IStrategy.sol';
 import '@mimic-fi/v1-vault/contracts/interfaces/IVault.sol';
@@ -85,7 +86,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         _setAllowedStrategies(_customStrategies, _allowedStrategies);
     }
 
-    function getTokenBalance(address token) external view override returns (uint256) {
+    function getTokenBalance(address token) public view override returns (uint256) {
         return IERC20(token).balanceOf(address(this));
     }
 
@@ -156,16 +157,16 @@ contract Agreement is IAgreement, ReentrancyGuard {
         return bytes2(0x0005);
     }
 
-    function beforeDeposit(address, address token, uint256) external override onlyVault {
-        _approveToken(token);
+    function beforeDeposit(address, address token, uint256 amount) external override onlyVault {
+        _safeApprove(token, amount);
     }
 
     function afterDeposit(address, address, uint256) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function beforeWithdraw(address, address token, uint256, address) external override onlyVault {
-        _approveToken(token);
+    function beforeWithdraw(address, address token, uint256 amount, address) external override onlyVault {
+        _safeApprove(token, Math.min(amount, getTokenBalance(token)));
     }
 
     function afterWithdraw(address, address, uint256, address) external override onlyVault {
@@ -196,14 +197,9 @@ contract Agreement is IAgreement, ReentrancyGuard {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function _approveToken(address token) internal {
-        uint256 allowance = IERC20(token).allowance(address(this), vault);
-        if (allowance < type(uint256).max) {
-            if (allowance > 0) {
-                // Some tokens revert when changing non-zero approvals
-                IERC20(token).safeApprove(vault, 0);
-            }
-            IERC20(token).safeApprove(vault, type(uint256).max);
+    function _safeApprove(address token, uint256 amount) internal {
+        if (amount > 0) {
+            IERC20(token).safeApprove(vault, amount);
         }
     }
 
