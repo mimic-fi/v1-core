@@ -95,8 +95,6 @@ interface IVault {
         external
         returns (uint256 received);
 
-    function setMaxSlippage(uint256 newMaxSlippage) external;
-
     function setProtocolFee(uint256 newProtocolFee) external;
 
     function setPriceOracle(address newPriceOracle) external;

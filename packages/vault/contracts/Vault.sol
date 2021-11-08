@@ -46,7 +46,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         mapping (address => uint256) invested;
     }
 
-    uint256 public override maxSlippage;
+    uint256 public immutable override maxSlippage;
+
     uint256 public override protocolFee;
     address public override priceOracle;
     address public override swapConnector;
@@ -63,7 +64,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         address[] memory _whitelistedTokens,
         address[] memory _whitelistedStrategies
     ) {
-        setMaxSlippage(_maxSlippage);
+        require(_maxSlippage <= MAX_SLIPPAGE, 'MAX_SLIPPAGE_TOO_HIGH');
+        maxSlippage = _maxSlippage;
+
         setProtocolFee(_protocolFee);
         setPriceOracle(_priceOracle);
         setSwapConnector(_swapConnector);
@@ -93,12 +96,6 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         returns (bytes[] memory results)
     {
         return VaultQuery.query(data, readsOutput);
-    }
-
-    function setMaxSlippage(uint256 newMaxSlippage) public override nonReentrant onlyOwner {
-        require(newMaxSlippage <= MAX_SLIPPAGE, 'MAX_SLIPPAGE_TOO_HIGH');
-        maxSlippage = newMaxSlippage;
-        emit MaxSlippageSet(newMaxSlippage);
     }
 
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {

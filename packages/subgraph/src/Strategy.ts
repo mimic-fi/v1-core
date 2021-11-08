@@ -22,10 +22,10 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
     createLastRate(strategy!, event.block)
   }
 
-  let strategies = vault.strategies;
-  strategies.push(id);
-  vault.strategies = strategies;
-  vault.save();
+  let strategies = vault.strategies
+  strategies.push(id)
+  vault.strategies = strategies
+  vault.save()
 
   return strategy!
 }
@@ -34,13 +34,13 @@ export function createLastRate(strategy: StrategyEntity, block: ethereum.Block):
   let currentRate = getStrategyRate(Address.fromString(strategy.id))
 
   if (strategy.lastRate === null) {
-    storeLastRate(strategy, currentRate, BigInt.fromI32(0), block);
+    storeLastRate(strategy, currentRate, BigInt.fromI32(0), block)
   } else {
     let lastRate = RateEntity.load(strategy.lastRate)!
     if (lastRate.value.notEqual(currentRate)) {
       let elapsed = block.number.minus(lastRate.block)
       let accumulated = lastRate.accumulated.plus(lastRate.value.times(elapsed))
-      storeLastRate(strategy, currentRate, accumulated, block);
+      storeLastRate(strategy, currentRate, accumulated, block)
     }
   }
 }
@@ -64,7 +64,7 @@ function storeLastRate(strategy: StrategyEntity, currentRate: BigInt, accumulate
 
 export function getStrategyRate(address: Address): BigInt {
   let strategyContract = StrategyContract.bind(address)
-  let rateCall = strategyContract.try_getRate();
+  let rateCall = strategyContract.try_getRate()
 
   if (!rateCall.reverted) {
     return rateCall.value
@@ -76,7 +76,7 @@ export function getStrategyRate(address: Address): BigInt {
 
 export function getStrategyShares(address: Address): BigInt {
   let strategyContract = StrategyContract.bind(address)
-  let sharesCall = strategyContract.try_getTotalShares();
+  let sharesCall = strategyContract.try_getTotalShares()
 
   if (!sharesCall.reverted) {
     return sharesCall.value
@@ -88,7 +88,7 @@ export function getStrategyShares(address: Address): BigInt {
 
 export function getStrategyMetadata(address: Address): string {
   let strategyContract = StrategyContract.bind(address)
-  let metadataCall = strategyContract.try_getMetadataURI();
+  let metadataCall = strategyContract.try_getMetadataURI()
 
   if (!metadataCall.reverted) {
     return metadataCall.value
@@ -100,7 +100,7 @@ export function getStrategyMetadata(address: Address): string {
 
 export function getStrategyToken(address: Address): string {
   let strategyContract = StrategyContract.bind(address)
-  let tokenCall = strategyContract.try_getToken();
+  let tokenCall = strategyContract.try_getToken()
 
   if (!tokenCall.reverted) {
     let token = loadOrCreateERC20(tokenCall.value)

@@ -6,7 +6,7 @@ import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as Po
 export function handleWithdrawersSet(event: WithdrawersSet): void {
   let agreement = loadOrCreateAgreement(event.address)
   let withdrawers = agreement.withdrawers
-  let eventWithdrawers = event.params.withdrawers;
+  let eventWithdrawers = event.params.withdrawers
 
   for (let i: i32 = 0; i < eventWithdrawers.length; i++) {
     let withdrawer = eventWithdrawers[i]
