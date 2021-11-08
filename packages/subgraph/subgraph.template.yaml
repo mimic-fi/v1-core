@@ -46,8 +46,6 @@ dataSources:
           handler: handleWhitelistedTokenSet
         - event: WhitelistedStrategySet(indexed address,bool)
           handler: handleWhitelistedStrategySet
-      blockHandlers:
-        - handler: handleBlock
       file: ./src/Vault.ts
   - kind: ethereum/contract
     name: AgreementFactory
