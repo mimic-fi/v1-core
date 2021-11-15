@@ -587,13 +587,6 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.0.tgz#87de7af9c231826fdd68ac7258f77c429e0e5fcf"
   integrity sha512-wdppn25U8z/2yiaT6YGquE6X8sSv7hNMWSXYSSU1jGv/yd6XqjXgTDJ8KP4NgjTXfJ3GbRjeeb8RTV7a/VpM+w==
 
-"@mimic-fi/v1-vault@0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@mimic-fi/v1-vault/-/v1-vault-0.0.1.tgz#dedbc50996e7a7d9e59b8fde30c72376069033d7"
-  integrity sha512-H4TQ3d5HkcX4oGZ7w1eCS8NdTM8K0OmbQvvxOPBFWhZJUn6TSxPxHXymlLoQUEQhl7oFx3UtP2itW7DRvD+LRw==
-  dependencies:
-    "@openzeppelin/contracts" "^4.1.0"
-
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz#7619c2eb21b25483f6d167548b4cfd5a7488c3d5"
