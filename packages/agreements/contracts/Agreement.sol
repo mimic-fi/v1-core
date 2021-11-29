@@ -14,6 +14,7 @@
 
 pragma solidity ^0.8.0;
 
+import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -26,7 +27,7 @@ import '@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol';
 
 import './IAgreement.sol';
 
-contract Agreement is IAgreement, ReentrancyGuard {
+contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using Address for address;
     using SafeERC20 for IERC20;
     using VaultHelpers for bytes;
@@ -77,7 +78,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
         Allowed _allowedTokens,
         address[] memory _customStrategies,
         Allowed _allowedStrategies
-    ) external {
+    ) external initializer {
         _setVault(_vault);
         _setParams(_feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage);
         _setManagers(_managers);
