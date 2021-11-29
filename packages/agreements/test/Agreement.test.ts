@@ -243,8 +243,8 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing none', () => {
-      const allowedStrategies = 'none'
+    context('when allowing a custom set', () => {
+      const allowedStrategies = 'custom'
 
       context('without a custom set', () => {
         it('does not any strategy', async () => {
@@ -333,8 +333,8 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing none', () => {
-      const allowedTokens = 'none'
+    context('when allowing a custom set', () => {
+      const allowedTokens = 'custom'
 
       context('without a custom set of tokens', () => {
         it('does not allow any token', async () => {
@@ -398,9 +398,9 @@ describe('Agreement', () => {
       customStrategy = await deploy('StrategyMock')
       agreement = await Agreement.create({
         vault,
-        allowedStrategies: 'none',
+        allowedStrategies: 'custom',
         strategies: [customStrategy],
-        allowedTokens: 'none',
+        allowedTokens: 'custom',
         tokens: [customToken],
         maxSwapSlippage,
       })

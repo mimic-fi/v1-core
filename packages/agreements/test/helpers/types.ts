@@ -10,7 +10,7 @@ export type TxParams = {
   from?: SignerWithAddress
 }
 
-export type Allowed = 'any' | 'whitelisted' | 'none'
+export type Allowed = 'any' | 'whitelisted' | 'custom'
 
 export type RawAgreementDeployment = {
   vault?: Contract

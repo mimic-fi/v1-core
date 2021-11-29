@@ -5,7 +5,7 @@ import { AgreementDeployment, RawAgreementDeployment, toAddress, toAddresses } f
 
 const ALLOWED_STRATEGIES = {
   any: 0,
-  none: 1,
+  custom: 1,
   whitelisted: 2,
 }
 

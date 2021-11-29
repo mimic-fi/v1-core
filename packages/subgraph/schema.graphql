@@ -70,7 +70,7 @@ type Manager @entity {
 
 enum Allowed {
   Any
-  None
+  Custom
   Whitelisted
 }
 

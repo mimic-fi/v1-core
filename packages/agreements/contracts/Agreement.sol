@@ -34,7 +34,7 @@ contract Agreement is IAgreement, ReentrancyGuard {
 
     enum Allowed {
         Any,
-        None,
+        Custom,
         Whitelisted
     }
 
