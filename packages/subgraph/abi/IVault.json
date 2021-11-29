@@ -127,7 +127,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "priceOracle",
         "type": "address"
@@ -196,7 +196,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "swapConnector",
         "type": "address"
@@ -564,19 +564,6 @@
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "newMaxSlippage",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMaxSlippage",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

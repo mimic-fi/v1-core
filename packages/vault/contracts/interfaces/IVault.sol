@@ -17,8 +17,8 @@ pragma solidity >=0.5.0 <0.9.0;
 interface IVault {
     event MaxSlippageSet(uint256 maxSlippage);
     event ProtocolFeeSet(uint256 protocolFee);
-    event PriceOracleSet(address priceOracle);
-    event SwapConnectorSet(address swapConnector);
+    event PriceOracleSet(address indexed priceOracle);
+    event SwapConnectorSet(address indexed swapConnector);
     event WhitelistedTokenSet(address indexed token, bool whitelisted);
     event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
     event Deposit(address indexed account, address indexed token, uint256 amount, uint256 depositFee);
