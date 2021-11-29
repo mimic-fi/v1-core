@@ -11,7 +11,7 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
   if (strategy === null) {
     strategy = new StrategyEntity(id)
     strategy.vault = vault.id
-    strategy.token = getStrategyToken(strategyAddress)
+    strategy.token = getStrategyToken(strategyAddress).toHexString()
     strategy.whitelisted = false
     strategy.metadata = getStrategyMetadata(strategyAddress)
     strategy.shares = BigInt.fromI32(0)
@@ -38,15 +38,15 @@ export function getStrategyMetadata(address: Address): string {
   return 'Unknown'
 }
 
-export function getStrategyToken(address: Address): string {
+export function getStrategyToken(address: Address): Address {
   let strategyContract = StrategyContract.bind(address)
   let tokenCall = strategyContract.try_getToken()
 
   if (!tokenCall.reverted) {
-    let token = loadOrCreateERC20(tokenCall.value)
-    return token.id
+    loadOrCreateERC20(tokenCall.value)
+    return tokenCall.value
   }
 
   log.warning('getToken() call reverted for {}', [address.toHexString()])
-  return 'Unknown'
+  return Address.fromString('0x0000000000000000000000000000000000000000')
 }
