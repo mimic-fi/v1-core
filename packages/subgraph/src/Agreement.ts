@@ -109,8 +109,8 @@ function loadOrCreateManager(managerAddress: Address): ManagerEntity {
 }
 
 function parseAllowed(allowedStrategies: BigInt): string {
-  if (allowedStrategies.equals(BigInt.fromI32(0))) return 'Any'
-  if (allowedStrategies.equals(BigInt.fromI32(1))) return 'Custom'
-  if (allowedStrategies.equals(BigInt.fromI32(2))) return 'Whitelisted'
+  if (allowedStrategies.equals(BigInt.fromI32(0))) return 'Custom'
+  if (allowedStrategies.equals(BigInt.fromI32(1))) return 'Whitelisted'
+  if (allowedStrategies.equals(BigInt.fromI32(2))) return 'Any'
   return 'unknown'
 }

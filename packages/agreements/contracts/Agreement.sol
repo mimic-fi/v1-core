@@ -33,9 +33,9 @@ contract Agreement is IAgreement, ReentrancyGuard {
     using VaultHelpers for bytes32;
 
     enum Allowed {
-        Any,
         Custom,
-        Whitelisted
+        Whitelisted,
+        Any
     }
 
     uint256 internal constant MAX_DEPOSIT_FEE = 1e18; // 100%

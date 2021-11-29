@@ -4,9 +4,9 @@ import Agreement from './Agreement'
 import { AgreementDeployment, RawAgreementDeployment, toAddress, toAddresses } from './types'
 
 const ALLOWED_STRATEGIES = {
-  any: 0,
-  custom: 1,
-  whitelisted: 2,
+  custom: 0,
+  whitelisted: 1,
+  any: 2,
 }
 
 const AgreementDeployer = {
