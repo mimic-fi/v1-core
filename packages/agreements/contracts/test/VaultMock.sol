@@ -5,6 +5,8 @@ pragma solidity 0.8.0;
 import '@mimic-fi/v1-vault/contracts/interfaces/IPortfolio.sol';
 
 contract VaultMock {
+    uint256 public maxSlippage = 1e18;
+
     mapping (address => bool) public isTokenWhitelisted;
     mapping (address => bool) public isStrategyWhitelisted;
 

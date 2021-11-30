@@ -42,7 +42,6 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     uint256 internal constant MAX_DEPOSIT_FEE = 1e18; // 100%
     uint256 internal constant MAX_WITHDRAW_FEE = 1e18; // 100%
     uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
-    uint256 internal constant MAX_SWAP_SLIPPAGE = 1e18; // 100%
 
     address public override vault;
     address public override feeCollector;
@@ -259,7 +258,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         require(_performanceFee <= MAX_PERFORMANCE_FEE, 'PERFORMANCE_FEE_TOO_HIGH');
         performanceFee = _performanceFee;
 
-        require(_maxSwapSlippage <= MAX_SWAP_SLIPPAGE, 'MAX_SWAP_SLIPPAGE_TOO_HIGH');
+        require(_maxSwapSlippage <= IVault(vault).maxSlippage(), 'MAX_SWAP_SLIPPAGE_TOO_HIGH');
         maxSwapSlippage = _maxSwapSlippage;
 
         emit ParamsSet(_feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage);

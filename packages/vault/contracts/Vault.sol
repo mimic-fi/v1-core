@@ -37,7 +37,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
-    uint256 internal constant MAX_SLIPPAGE = 1e18; // 100%
+    uint256 internal constant MAX_SLIPPAGE = 2e17; // 20%
     uint256 internal constant MAX_PROTOCOL_FEE = 2e17; // 20%
 
     struct Accounting {
