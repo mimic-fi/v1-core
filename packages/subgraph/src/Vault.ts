@@ -1,7 +1,7 @@
-import { BigInt, Address, log } from '@graphprotocol/graph-ts'
+import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20'
-import { loadOrCreateStrategy } from './Strategy'
+import { loadOrCreateStrategy, getStrategyBalance } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
@@ -9,6 +9,7 @@ import { Deposit, Withdraw, Join, Exit, Swap, ProtocolFeeSet, WhitelistedTokenSe
 import {
   Vault as VaultEntity,
   Account as AccountEntity,
+  Strategy as StrategyEntity,
   AccountBalance as AccountBalanceEntity,
   AccountStrategy as AccountStrategyEntity,
   Portfolio as PortfolioEntity,
@@ -99,6 +100,21 @@ export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): voi
   let strategy = loadOrCreateStrategy(event.params.strategy, vault)
   strategy.whitelisted = event.params.whitelisted
   strategy.save()
+}
+
+export function handleBlock(block: ethereum.Block): void {
+  let vault = VaultEntity.load(VAULT_ID)
+  if (vault !== null && vault.strategies !== null) {
+    let strategies = vault.strategies
+    for (let i: i32 = 0; i < strategies.length; i++) {
+      let strategy = StrategyEntity.load(strategies[i])
+      if (strategy !== null) {
+        let strategyAddress = Address.fromString(strategy.id)
+        strategy.deposited = getStrategyBalance(strategyAddress)
+        strategy.save()
+      }
+    }
+  }
 }
 
 function loadOrCreateVault(vaultAddress: Address): VaultEntity {
