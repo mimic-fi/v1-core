@@ -19,6 +19,8 @@ interface IStrategy {
 
     function getTotalShares() external view returns (uint256);
 
+    function getTokenBalance() external view returns (uint256);
+
     function getMetadataURI() external view returns (string memory);
 
     function onJoin(uint256 amount, bytes memory data) external returns (uint256 shares);
