@@ -15,6 +15,8 @@
 pragma solidity >=0.5.0 <0.9.0;
 
 interface IStrategy {
+    event SetMetadataURI(string metadataURI);
+
     function getToken() external view returns (address);
 
     function getTotalShares() external view returns (uint256);
