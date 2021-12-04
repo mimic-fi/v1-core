@@ -69,8 +69,8 @@ type Manager @entity {
 }
 
 enum Allowed {
-  Custom
-  Whitelisted
+  OnlyCustom
+  CustomAndWhitelisted
   Any
 }
 

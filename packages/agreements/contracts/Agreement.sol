@@ -34,8 +34,8 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using VaultHelpers for bytes32;
 
     enum Allowed {
-        Custom,
-        Whitelisted,
+        OnlyCustom,
+        CustomAndWhitelisted,
         Any
     }
 
@@ -107,7 +107,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
             return true;
         }
 
-        return allowedTokens == Allowed.Whitelisted && IVault(vault).isTokenWhitelisted(token);
+        return allowedTokens == Allowed.CustomAndWhitelisted && IVault(vault).isTokenWhitelisted(token);
     }
 
     function isStrategyAllowed(address strategy) public view override returns (bool) {
@@ -115,7 +115,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
             return true;
         }
 
-        return allowedStrategies == Allowed.Whitelisted && IVault(vault).isStrategyWhitelisted(strategy);
+        return allowedStrategies == Allowed.CustomAndWhitelisted && IVault(vault).isStrategyWhitelisted(strategy);
     }
 
     function canPerform(address who, address where, bytes32 what, bytes memory how)

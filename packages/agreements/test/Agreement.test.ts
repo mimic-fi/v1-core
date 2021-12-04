@@ -243,8 +243,8 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing a custom set', () => {
-      const allowedStrategies = 'custom'
+    context('when allowing only custom', () => {
+      const allowedStrategies = 'onlyCustom'
 
       context('without a custom set', () => {
         it('does not any strategy', async () => {
@@ -269,8 +269,8 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing whitelisted', () => {
-      const allowedStrategies = 'whitelisted'
+    context('when allowing custom and whitelisted', () => {
+      const allowedStrategies = 'customAndWhitelisted'
 
       context('without a custom set', () => {
         it('allows any whitelisted strategy', async () => {
@@ -333,8 +333,8 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing a custom set', () => {
-      const allowedTokens = 'custom'
+    context('when allowing only custom', () => {
+      const allowedTokens = 'onlyCustom'
 
       context('without a custom set of tokens', () => {
         it('does not allow any token', async () => {
@@ -359,8 +359,8 @@ describe('Agreement', () => {
       })
     })
 
-    context('when allowing whitelisted', () => {
-      const allowedTokens = 'whitelisted'
+    context('when allowing custom and whitelisted', () => {
+      const allowedTokens = 'customAndWhitelisted'
 
       context('without a custom set of tokens', () => {
         it('allows any whitelisted token', async () => {
@@ -398,9 +398,9 @@ describe('Agreement', () => {
       customStrategy = await deploy('StrategyMock')
       agreement = await Agreement.create({
         vault,
-        allowedStrategies: 'custom',
+        allowedStrategies: 'onlyCustom',
         strategies: [customStrategy],
-        allowedTokens: 'custom',
+        allowedTokens: 'onlyCustom',
         tokens: [customToken],
         maxSwapSlippage,
       })
