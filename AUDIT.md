@@ -52,7 +52,7 @@ Consider modifying the contract logic to not allow the usage of custom tokens or
 
 #### Action
 
-Addressed in [c94d8dbb0383afbf77112f1b22f5e0ccb309ff25](https://github.com/mimic-fi/core/commit/c94d8dbb0383afbf77112f1b22f5e0ccb309ff25)
+Addressed in [6df3a4130a74625c9482c99606ae901217b2](https://github.com/mimic-fi/core/commit/6df3a4130a74625c9482c99606ae901217b2)
 
 ### 4.3. Default enumerator value is not set to `None`
 
