@@ -13,6 +13,7 @@ type Strategy @entity {
   token: ERC20!
   metadata: String!
   whitelisted: Boolean!
+  deposited: BigInt!
   shares: BigInt!
   accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
 }
