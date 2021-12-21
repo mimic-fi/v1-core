@@ -11,10 +11,12 @@
     "build:kovan": "NETWORK=kovan ./scripts/build.sh",
     "build:rinkeby": "NETWORK=rinkeby ./scripts/build.sh",
     "build:mainnet": "NETWORK=mainnet ./scripts/build.sh",
+    "build:matic": "NETWORK=matic ./scripts/build.sh",
     "deploy:localhost": "NETWORK=localhost ./scripts/deploy.sh",
     "deploy:kovan": "NETWORK=kovan ./scripts/deploy.sh",
     "deploy:rinkeby": "NETWORK=rinkeby ./scripts/deploy.sh",
-    "deploy:mainnet": "NETWORK=mainnet ./scripts/deploy.sh"
+    "deploy:mainnet": "NETWORK=mainnet ./scripts/deploy.sh",
+    "deploy:matic": "NETWORK=matic ./scripts/deploy.sh"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.20.1",
