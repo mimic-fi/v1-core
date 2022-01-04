@@ -43,7 +43,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     struct Accounting {
         mapping (address => uint256) balance;
         mapping (address => uint256) shares;
-        mapping (address => uint256) invested;
+        mapping (address => uint256) investedValue;
     }
 
     uint256 public immutable override maxSlippage;
@@ -55,6 +55,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     mapping (address => bool) public override isStrategyWhitelisted;
 
     mapping (address => Accounting) internal accountings;
+
+    mapping (address => uint256) totalShares;
 
     constructor(
         uint256 _maxSlippage,
@@ -83,10 +85,10 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         external
         view
         override
-        returns (uint256 invested, uint256 shares)
+        returns (uint256 investedValue, uint256 shares)
     {
         Accounting storage accounting = accountings[addr];
-        invested = accounting.invested[strategy];
+        investedValue = accounting.investedValue[strategy];
         shares = accounting.shares[strategy];
     }
 
@@ -318,9 +320,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         accounting.balance[token] = currentBalance.sub(amount);
 
         _safeTransfer(token, strategy, amount);
-        shares = IStrategy(strategy).onJoin(amount, data);
+        (uint256 value, uint256 totalValue) = IStrategy(strategy).onJoin(amount, data);
+        shares = value.mul(totalShares[strategy]).divDown(totalValue);
+        totalShares[strategy] = totalShares[strategy].add(shares);
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
-        accounting.invested[strategy] = accounting.invested[strategy].add(amount);
+        accounting.investedValue[strategy] = accounting.investedValue[strategy].add(value);
         emit Join(account.addr, strategy, amount, shares);
     }
 
@@ -332,6 +336,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         address token;
         uint256 amount;
+        uint256 exitingValue;
+        uint256 totalUserValue;
         uint256 exitingShares;
         Accounting storage accounting = accountings[account.addr];
         // scope to avoid stack too deep
@@ -339,38 +345,56 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             uint256 currentShares = accounting.shares[strategy];
             exitingShares = currentShares.mulDown(ratio);
             require(exitingShares > 0, 'EXIT_SHARES_ZERO');
-            require(currentShares >= exitingShares, 'ACCOUNT_INSUFFICIENT_SHARES');
+            uint256 _totalShares = totalShares[strategy];
             accounting.shares[strategy] = currentShares - exitingShares;
 
-            (token, amount) = IStrategy(strategy).onExit(exitingShares, emergency, data);
+            uint256 valueRatio = exitingShares.divUp(_totalShares);
+            totalShares[strategy] = _totalShares - exitingShares;
+
+            (token, amount, exitingValue) = IStrategy(strategy).onExit(valueRatio, emergency, data);
             _safeTransferFrom(token, strategy, address(this), amount);
+
+            totalUserValue = exitingValue.mul(currentShares).divUp(_totalShares).divUp(valueRatio);
         }
 
-        uint256 invested = accounting.invested[strategy];
-        uint256 deposited = invested.mulUp(ratio);
-        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(account, token, deposited, amount);
+        uint256 investedValue = accounting.investedValue[strategy];
 
-        accounting.invested[strategy] = invested.sub(deposited);
+        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(
+            account,
+            token,
+            amount,
+            exitingValue,
+            investedValue,
+            totalUserValue
+        );
+
+        accounting.investedValue[strategy] = investedValue.sub(exitingValue);
+
         received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(received);
-        emit Exit(account.addr, strategy, deposited, amount, exitingShares, protocolFeeAmount, performanceFeeAmount);
+        emit Exit(account.addr, strategy, exitingValue, amount, exitingShares, protocolFeeAmount, performanceFeeAmount);
     }
 
-    function _payExitFees(Accounts.Data memory account, address token, uint256 deposited, uint256 received)
-        private
-        returns (uint256 protocolFeeAmount, uint256 performanceFeeAmount)
-    {
-        if (deposited >= received) {
+    function _payExitFees(
+        Accounts.Data memory account,
+        address token,
+        uint256 amount,
+        uint256 exitingValue,
+        uint256 investedValue,
+        uint256 totalUserValue
+    ) private returns (uint256 protocolFeeAmount, uint256 performanceFeeAmount) {
+        if (investedValue >= totalUserValue) {
             return (0, 0);
         }
 
-        uint256 gains = received - deposited;
-        protocolFeeAmount = gains.mulUp(protocolFee);
+        uint256 valueGains = Math.min(investedValue - totalUserValue, exitingValue);
+        uint256 tokenGains = amount.mul(valueGains).divDown(exitingValue);
+        protocolFeeAmount = tokenGains.mulUp(protocolFee);
         _safeTransfer(token, owner(), protocolFeeAmount);
 
-        uint256 gainsAfterProtocolFees = gains.sub(protocolFeeAmount);
+        uint256 tokenGainsAfterProtocolFees = tokenGains.sub(protocolFeeAmount);
         (uint256 performanceFee, address feeCollector) = account.getPerformanceFee();
-        performanceFeeAmount = gainsAfterProtocolFees.mulDown(performanceFee);
+        performanceFeeAmount = tokenGainsAfterProtocolFees.mulDown(performanceFee);
         _safeTransfer(token, feeCollector, performanceFeeAmount);
     }
 
