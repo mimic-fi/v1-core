@@ -391,9 +391,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             return (0, 0);
         }
 
-        uint256 valueGains = Math.min(investedValue - totalUserValue, exitingValue);
-        uint256 tokenGains = amount.mul(valueGains).divDown(exitingValue);
-        protocolFeeAmount = tokenGains.mulUp(protocolFee);
+        uint256 valueGains = investedValue - totalUserValue;
+        uint256 tokenGains = valueGains > exitingValue ? amount : amount.mul(valueGains).divDown(exitingValue);
+        protocolFeeAmount = tokenGains.mulDown(protocolFee);
         _safeTransfer(token, owner(), protocolFeeAmount);
 
         uint256 tokenGainsAfterProtocolFees = tokenGains.sub(protocolFeeAmount);
