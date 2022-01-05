@@ -25,5 +25,5 @@ interface IStrategy {
 
     function onExit(uint256 ratio, bool emergency, bytes memory data)
         external
-        returns (address token, uint256 amount, uint256 value);
+        returns (address token, uint256 amount, uint256 value, uint256 totalValue);
 }

@@ -42,8 +42,7 @@ interface IVault {
     event Exit(
         address indexed account,
         address indexed strategy,
-        uint256 amountInvested,
-        uint256 amountReceived,
+        uint256 amount,
         uint256 shares,
         uint256 protocolFee,
         uint256 performanceFee

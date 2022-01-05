@@ -321,10 +321,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         _safeTransfer(token, strategy, amount);
         (uint256 value, uint256 totalValue) = IStrategy(strategy).onJoin(amount, data);
-        shares = value.mul(totalShares[strategy]).divDown(totalValue);
-        totalShares[strategy] = totalShares[strategy].add(shares);
+
+        uint256 _totalShares = totalShares[strategy];
+        shares = _totalShares == 0 ? value : value.mul(_totalShares).divDown(totalValue.sub(value));
+        totalShares[strategy] = _totalShares.add(shares);
+
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
         accounting.investedValue[strategy] = accounting.investedValue[strategy].add(value);
+
         emit Join(account.addr, strategy, amount, shares);
     }
 
@@ -337,24 +341,24 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         address token;
         uint256 amount;
         uint256 exitingValue;
-        uint256 totalUserValue;
-        uint256 exitingShares;
+        uint256 totalValue;
         Accounting storage accounting = accountings[account.addr];
         // scope to avoid stack too deep
         {
             uint256 currentShares = accounting.shares[strategy];
-            exitingShares = currentShares.mulDown(ratio);
+            uint256 exitingShares = currentShares.mulDown(ratio);
             require(exitingShares > 0, 'EXIT_SHARES_ZERO');
-            uint256 _totalShares = totalShares[strategy];
             accounting.shares[strategy] = currentShares - exitingShares;
 
-            uint256 valueRatio = exitingShares.divUp(_totalShares);
-            totalShares[strategy] = _totalShares - exitingShares;
+            uint256 valueRatio = exitingShares.divDown(totalShares[strategy]);
 
-            (token, amount, exitingValue) = IStrategy(strategy).onExit(valueRatio, emergency, data);
+            (token, amount, exitingValue, totalValue) = IStrategy(strategy).onExit(valueRatio, emergency, data);
             _safeTransferFrom(token, strategy, address(this), amount);
 
-            totalUserValue = exitingValue.mul(currentShares).divUp(_totalShares).divUp(valueRatio);
+            //Total value by user
+            totalValue = totalValue.add(exitingValue).mul(currentShares).divUp(totalShares[strategy]);
+
+            totalShares[strategy] = totalShares[strategy] - exitingShares;
         }
 
         uint256 investedValue = accounting.investedValue[strategy];
@@ -365,14 +369,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             amount,
             exitingValue,
             investedValue,
-            totalUserValue
+            totalValue
         );
 
         accounting.investedValue[strategy] = investedValue.sub(exitingValue);
 
         received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(received);
-        emit Exit(account.addr, strategy, exitingValue, amount, exitingShares, protocolFeeAmount, performanceFeeAmount);
+        emit Exit(account.addr, strategy, amount, ratio, protocolFeeAmount, performanceFeeAmount);
     }
 
     function _payExitFees(
