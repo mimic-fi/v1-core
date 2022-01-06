@@ -33,18 +33,14 @@ contract StrategyMock is IStrategy {
         mockedRate = FixedPoint.ONE;
     }
 
-    function getTokenBalance() external view returns (uint256) {
-        return mockedRate.mul(getTotalValue);
-    }
-
     function getMetadataURI() external pure override returns (string memory) {
         return './strategies/metadata.json';
     }
 
     function onJoin(uint256 amount, bytes memory) external override returns (uint256 value, uint256 totalValue) {
         value = amount.div(mockedRate);
-        getTotalValue += value;
-        totalValue = getTotalValue;
+        getTotalValue += amount;
+        totalValue = getTotalValue.div(mockedRate);
     }
 
     function onExit(uint256 ratio, bool, bytes memory) external override returns (address, uint256, uint256, uint256) {

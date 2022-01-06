@@ -30,7 +30,7 @@ describe('Vault', () => {
 
   before('setup signers', async () => {
     // eslint-disable-next-line prettier/prettier
-    [admin, account, other, feeCollector] = await getSigners()
+    ;[admin, account, other, feeCollector] = await getSigners()
   })
 
   beforeEach('deploy vault, tokens, and portfolio', async () => {
@@ -1340,14 +1340,14 @@ describe('Vault', () => {
     })
   })
 
-  describe('join', () => {
+  describe.only('join', () => {
     let strategy: Contract
 
     beforeEach('deploy strategy', async () => {
       strategy = await deploy('StrategyMock', [token.address])
     })
 
-    context('when the account is an EOA', () => {
+    context.only('when the account is an EOA', () => {
       context('when the sender is the EOA', () => {
         let from: SignerWithAddress
 
@@ -1356,18 +1356,26 @@ describe('Vault', () => {
         })
 
         context('when the sender has deposited enough tokens', async () => {
-          const amount = fp(500)
+          const previousAmount = fp(100)
+          const amount = fp(200)
 
           beforeEach('deposit tokens', async () => {
-            await token.mint(account, amount)
-            await token.approve(vault, amount, { from: account })
-            await vault.deposit(account, token, amount, { from: account })
+            const total = previousAmount.add(amount)
+            await token.mint(account, total)
+            await token.approve(vault, total, { from: account })
+            await vault.deposit(account, token, total, { from: account })
           })
 
-          const itJoinsAsExpected = (rate: BigNumberish) => {
-            const expectedShares = amount.mul(fp(1)).div(rate)
+          const itJoinsAsExpected = (rate: BigNumberish, emptyStategy = true) => {
+            const currentValue = emptyStategy ? fp(0) : previousAmount.mul(fp(1)).div(rate)
+            const currentShares = emptyStategy ? fp(0) : previousAmount
+            const expectedValue = amount.mul(fp(1)).div(rate)
+            const expectedShares = emptyStategy ? expectedValue : currentShares.mul(expectedValue).div(currentValue)
 
             beforeEach('mock strategy rate', async () => {
+              if (!emptyStategy) {
+                await vault.join(account, strategy, previousAmount, { from })
+              }
               await strategy.mockRate(rate)
             })
 
@@ -1403,17 +1411,16 @@ describe('Vault', () => {
               await vault.join(account, strategy, amount, { from })
 
               const currentInvestment = await vault.getAccountInvestment(account, strategy)
-              expect(currentInvestment.invested).to.be.equal(previousInvestment.invested.add(amount))
-              expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.add(expectedShares))
+              expect(currentInvestment.investedValue).to.be.equal(previousInvestment.investedValue.add(expectedValue))
             })
 
             it('allocates the expected number of shares to the user', async () => {
-              const previousShares = await strategy.getTotalShares()
+              const previousInvestment = await vault.getAccountInvestment(account, strategy)
 
               await vault.join(account, strategy, amount, { from })
 
-              const currentShares = await strategy.getTotalShares()
-              expect(currentShares).to.be.equal(previousShares.add(expectedShares))
+              const currentInvestment = await vault.getAccountInvestment(account, strategy)
+              expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.add(expectedShares))
             })
 
             it('emits an event', async () => {
@@ -1432,19 +1439,38 @@ describe('Vault', () => {
             })
           }
 
-          context('with a rate lower than one', async () => {
-            const rate = fp(0.95)
-            itJoinsAsExpected(rate)
+          context('strategy not previously joined', async () => {
+            context('with a rate lower than one', async () => {
+              const rate = fp(0.5)
+              itJoinsAsExpected(rate)
+            })
+
+            context('with a rate equal to one', async () => {
+              const rate = fp(1)
+              itJoinsAsExpected(rate)
+            })
+
+            context('with a rate higher to one', async () => {
+              const rate = fp(1.5)
+              itJoinsAsExpected(rate)
+            })
           })
 
-          context('with a rate equal to one', async () => {
-            const rate = fp(1)
-            itJoinsAsExpected(rate)
-          })
+          context('strategy  previously joined', async () => {
+            context('with a rate lower than one', async () => {
+              const rate = fp(0.5)
+              itJoinsAsExpected(rate, false)
+            })
 
-          context('with a rate higher to one', async () => {
-            const rate = fp(1.05)
-            itJoinsAsExpected(rate)
+            context('with a rate equal to one', async () => {
+              const rate = fp(1)
+              itJoinsAsExpected(rate, false)
+            })
+
+            context('with a rate higher to one', async () => {
+              const rate = fp(2)
+              itJoinsAsExpected(rate, false)
+            })
           })
         })
 
@@ -1537,7 +1563,7 @@ describe('Vault', () => {
               await vault.join(portfolio, strategy, amount, { from })
 
               const currentInvestment = await vault.getAccountInvestment(portfolio, strategy)
-              expect(currentInvestment.invested).to.be.equal(previousInvestment.invested.add(amount))
+              expect(currentInvestment.investedValue).to.be.equal(previousInvestment.investedValue.add(amount))
               expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.add(expectedShares))
             })
 
@@ -1806,7 +1832,7 @@ describe('Vault', () => {
                 await vault.exit(account, strategy, ratio, { from })
 
                 const currentInvestment = await vault.getAccountInvestment(account, strategy)
-                expect(currentInvestment.invested).to.be.equal(previousInvestment.invested.sub(shares))
+                expect(currentInvestment.investedValue).to.be.equal(previousInvestment.investedValue.sub(shares))
                 expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.sub(shares))
               })
 
@@ -2012,7 +2038,7 @@ describe('Vault', () => {
                 await vault.exit(portfolio, strategy, ratio, { from })
 
                 const currentInvestment = await vault.getAccountInvestment(portfolio, strategy)
-                expect(currentInvestment.invested).to.be.equal(previousInvestment.invested.sub(shares))
+                expect(currentInvestment.investedValue).to.be.equal(previousInvestment.investedValue.sub(shares))
                 expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.sub(shares))
               })
 
