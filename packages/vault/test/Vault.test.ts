@@ -1340,7 +1340,7 @@ describe('Vault', () => {
     })
   })
 
-  describe.only('join', () => {
+  describe('join', () => {
     let strategy: Contract
 
     beforeEach('deploy strategy', async () => {
@@ -1355,7 +1355,7 @@ describe('Vault', () => {
           from = account
         })
 
-        context.only('when the sender has deposited enough tokens', async () => {
+        context('when the sender has deposited enough tokens', async () => {
           const previousAmount = fp(100)
           const amount = fp(200)
 

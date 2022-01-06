@@ -26,7 +26,7 @@ contract StrategyMock is IStrategy {
     uint256 public mockedRate;
 
     address public override getToken;
-    uint256 public getTotalValue;
+    uint256 private totalAmount;
 
     constructor(address _token) {
         getToken = _token;
@@ -39,16 +39,17 @@ contract StrategyMock is IStrategy {
 
     function onJoin(uint256 amount, bytes memory) external override returns (uint256 value, uint256 totalValue) {
         value = amount.div(mockedRate);
-        getTotalValue += amount;
-        totalValue = getTotalValue.div(mockedRate);
+        totalAmount += amount;
+        totalValue = totalAmount.div(mockedRate);
     }
 
     function onExit(uint256 ratio, bool, bytes memory) external override returns (address, uint256, uint256, uint256) {
-        uint256 value = getTotalValue.mul(ratio);
-        getTotalValue -= value;
-        uint256 amount = value.mul(mockedRate);
+        uint256 amount = totalAmount.mul(ratio);
+        totalAmount -= amount;
+        uint256 value = amount.div(mockedRate);
+        uint256 totalValue = totalAmount.div(mockedRate);
         IERC20(getToken).approve(msg.sender, amount);
-        return (getToken, amount, value, getTotalValue);
+        return (getToken, amount, value, totalValue);
     }
 
     function mockRate(uint256 newMockedRate) external {
