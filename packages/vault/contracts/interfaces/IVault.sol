@@ -43,7 +43,7 @@ interface IVault {
         address indexed account,
         address indexed strategy,
         uint256 amount,
-        uint256 shares,
+        uint256 ratio,
         uint256 protocolFee,
         uint256 performanceFee
     );

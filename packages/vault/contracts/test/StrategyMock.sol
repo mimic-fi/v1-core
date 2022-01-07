@@ -23,36 +23,31 @@ import '../libraries/FixedPoint.sol';
 contract StrategyMock is IStrategy {
     using FixedPoint for uint256;
 
-    uint256 public mockedRate;
-
     address public override getToken;
-    uint256 private totalAmount;
 
     constructor(address _token) {
         getToken = _token;
-        mockedRate = FixedPoint.ONE;
     }
 
     function getMetadataURI() external pure override returns (string memory) {
         return './strategies/metadata.json';
     }
 
-    function onJoin(uint256 amount, bytes memory) external override returns (uint256 value, uint256 totalValue) {
-        value = amount.div(mockedRate);
-        totalAmount += amount;
-        totalValue = totalAmount.div(mockedRate);
+    function onJoin(uint256 amount, bytes memory) external view override returns (uint256, uint256) {
+        uint256 totalAmount = IERC20(getToken).balanceOf(address(this));
+        return (amount, totalAmount);
     }
 
     function onExit(uint256 ratio, bool, bytes memory) external override returns (address, uint256, uint256, uint256) {
+        uint256 totalAmount = IERC20(getToken).balanceOf(address(this));
         uint256 amount = totalAmount.mul(ratio);
-        totalAmount -= amount;
-        uint256 value = amount.div(mockedRate);
-        uint256 totalValue = totalAmount.div(mockedRate);
         IERC20(getToken).approve(msg.sender, amount);
-        return (getToken, amount, value, totalValue);
+        return (getToken, amount, amount, totalAmount - amount);
     }
 
-    function mockRate(uint256 newMockedRate) external {
-        mockedRate = newMockedRate;
+    function burn(uint256 ratio) external {
+        uint256 totalAmount = IERC20(getToken).balanceOf(address(this));
+        uint256 amountToBurn = totalAmount.mul(ratio);
+        IERC20(getToken).transfer(address(1), amountToBurn);
     }
 }

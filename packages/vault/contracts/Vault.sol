@@ -56,7 +56,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
     mapping (address => Accounting) internal accountings;
 
-    mapping (address => uint256) totalShares;
+    mapping (address => uint256) internal totalShares;
 
     constructor(
         uint256 _maxSlippage,
@@ -363,8 +363,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         uint256 investedValue = accounting.investedValue[strategy];
 
-        (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(
+        uint256 protocolFeeAmount;
+        uint256 performanceFeeAmount;
+        (protocolFeeAmount, performanceFeeAmount, exitingValue) = _payExitFees(
             account,
+            ratio,
             token,
             amount,
             exitingValue,
@@ -381,17 +384,20 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
     function _payExitFees(
         Accounts.Data memory account,
+        uint256 ratio,
         address token,
         uint256 amount,
         uint256 exitingValue,
         uint256 investedValue,
         uint256 totalUserValue
-    ) private returns (uint256 protocolFeeAmount, uint256 performanceFeeAmount) {
+    ) private returns (uint256 protocolFeeAmount, uint256 performanceFeeAmount, uint256 exitingValueWithoutGains) {
         if (investedValue >= totalUserValue) {
-            return (0, 0);
+            //Handle losses
+            return (0, 0, Math.max(exitingValue, investedValue.mul(ratio)));
         }
 
-        uint256 valueGains = investedValue - totalUserValue;
+        uint256 valueGains = totalUserValue - investedValue;
+
         uint256 tokenGains = valueGains > exitingValue ? amount : amount.mul(valueGains).divDown(exitingValue);
         protocolFeeAmount = tokenGains.mulDown(protocolFee);
         _safeTransfer(token, owner(), protocolFeeAmount);
@@ -400,6 +406,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         (uint256 performanceFee, address feeCollector) = account.getPerformanceFee();
         performanceFeeAmount = tokenGainsAfterProtocolFees.mulDown(performanceFee);
         _safeTransfer(token, feeCollector, performanceFeeAmount);
+
+        exitingValueWithoutGains = exitingValue - valueGains;
     }
 
     function _safeTransfer(address token, address to, uint256 amount) internal {

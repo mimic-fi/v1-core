@@ -30,7 +30,7 @@ describe('Vault', () => {
 
   before('setup signers', async () => {
     // eslint-disable-next-line prettier/prettier
-    ;[admin, account, other, feeCollector] = await getSigners()
+    [admin, account, other, feeCollector] = await getSigners()
   })
 
   beforeEach('deploy vault, tokens, and portfolio', async () => {
@@ -1365,20 +1365,29 @@ describe('Vault', () => {
             await vault.deposit(account, token, amount, { from: account })
           })
 
-          const itJoinsAsExpected = (rate: BigNumberish, emptyStategy = true) => {
-            const currentValue = emptyStategy ? fp(0) : previousAmount.mul(fp(1)).div(rate)
+          const itJoinsAsExpected = (rate: BigNumber, emptyStategy = true) => {
+            const currentValue = emptyStategy ? fp(0) : previousAmount.mul(rate).div(fp(1))
             const currentShares = emptyStategy ? fp(0) : previousAmount
-            const expectedValue = amount.mul(fp(1)).div(rate)
+            const expectedValue = amount
             const expectedShares = emptyStategy ? expectedValue : currentShares.mul(expectedValue).div(currentValue)
 
-            beforeEach('mock strategy rate', async () => {
+            beforeEach('other joins strategy', async () => {
               if (!emptyStategy) {
                 await token.mint(other, previousAmount)
                 await token.approve(vault, previousAmount, { from: other })
                 await vault.deposit(other, token, previousAmount, { from: other })
                 await vault.join(other, strategy, previousAmount, { from: other })
               }
-              await strategy.mockRate(rate)
+            })
+
+            beforeEach('burn losses or mint gains', async () => {
+              if (!emptyStategy) {
+                if (rate.lt(fp(1))) {
+                  await strategy.burn(rate)
+                } else if (rate.gt(fp(1))) {
+                  await token.mint(strategy, previousAmount.mul(rate.sub(fp(1))).div(fp(1)))
+                }
+              }
             })
 
             it('transfers the tokens to the strategy', async () => {
@@ -1453,7 +1462,7 @@ describe('Vault', () => {
             })
 
             context('with a rate higher to one', async () => {
-              const rate = fp(1.5)
+              const rate = fp(2)
               itJoinsAsExpected(rate)
             })
           })
@@ -1527,20 +1536,29 @@ describe('Vault', () => {
             await vault.deposit(portfolio, token, depositedAmount, { from })
           })
 
-          const itJoinsAsExpected = (rate: BigNumberish, emptyStategy = true) => {
-            const currentValue = emptyStategy ? fp(0) : previousAmount.mul(fp(1)).div(rate)
+          const itJoinsAsExpected = (rate: BigNumber, emptyStategy = true) => {
+            const currentValue = emptyStategy ? fp(0) : previousAmount.mul(rate).div(fp(1))
             const currentShares = emptyStategy ? fp(0) : previousAmount
-            const expectedValue = amount.mul(fp(1)).div(rate)
+            const expectedValue = amount
             const expectedShares = emptyStategy ? expectedValue : currentShares.mul(expectedValue).div(currentValue)
 
-            beforeEach('mock strategy rate', async () => {
+            beforeEach('other joins strategy', async () => {
               if (!emptyStategy) {
                 await token.mint(other, previousAmount)
                 await token.approve(vault, previousAmount, { from: other })
                 await vault.deposit(other, token, previousAmount, { from: other })
                 await vault.join(other, strategy, previousAmount, { from: other })
               }
-              await strategy.mockRate(rate)
+            })
+
+            beforeEach('burn losses or mint gains', async () => {
+              if (!emptyStategy) {
+                if (rate.lt(fp(1))) {
+                  await strategy.burn(rate)
+                } else if (rate.gt(fp(1))) {
+                  await token.mint(strategy, previousAmount.mul(rate.sub(fp(1))).div(fp(1)))
+                }
+              }
             })
 
             it('transfers the tokens to the strategy', async () => {
@@ -1604,8 +1622,7 @@ describe('Vault', () => {
           }
 
           context('with a rate lower than one', async () => {
-            const rate = fp(0.95)
-
+            const rate = fp(0.05)
             itJoinsAsExpected(rate)
 
             describe('authorization', async () => {
@@ -1714,7 +1731,7 @@ describe('Vault', () => {
           })
 
           context('with a rate higher to one', async () => {
-            const rate = fp(1.05)
+            const rate = fp(2)
             itJoinsAsExpected(rate)
           })
         })
@@ -1762,10 +1779,9 @@ describe('Vault', () => {
         })
 
         context('when the account has enough shares', async () => {
-          const shares = fp(500)
+          const amount = fp(150)
 
           beforeEach('join strategy', async () => {
-            const amount = shares // mocked rate is 1 initially
             await token.mint(account, amount)
             await token.approve(vault, amount, { from: account })
             await vault.deposit(account, token, amount, { from: account })
@@ -1773,17 +1789,30 @@ describe('Vault', () => {
           })
 
           context('when the given ratio is valid', async () => {
-            const ratio = fp(1)
+            const itExitsAsExpected = (rate: BigNumber, ratio: BigNumber) => {
+              let investedAmountUsed: BigNumber
+              let gains: BigNumber
 
-            const itExitsAsExpected = (rate: BigNumber) => {
-              const expectedAmount = shares.mul(rate).div(fp(1))
-              const gains = expectedAmount.gt(shares) ? expectedAmount.sub(shares) : fp(0)
+              const totalAmount = amount.mul(rate).div(fp(1))
+              const exitAmount = totalAmount.mul(ratio).div(fp(1))
+              if (totalAmount.gt(amount)) {
+                const totalGains = totalAmount.sub(amount)
+
+                if (exitAmount <= totalGains) {
+                  gains = exitAmount
+                  investedAmountUsed = fp(0)
+                } else {
+                  gains = totalGains
+                  investedAmountUsed = exitAmount.sub(gains)
+                }
+              } else {
+                gains = fp(0)
+                const investedByRatio = amount.mul(ratio).div(fp(1))
+                investedAmountUsed = exitAmount.gt(investedByRatio) ? exitAmount : investedByRatio
+              }
+
               const expectedProtocolFee = gains.gt(0) ? gains.mul(protocolFee).div(fp(1)) : fp(0)
-              const expectedAmountAfterFees = expectedAmount.sub(expectedProtocolFee)
-
-              beforeEach('mock strategy rate', async () => {
-                await strategy.mockRate(rate)
-              })
+              const expectedAmountAfterFees = exitAmount.sub(expectedProtocolFee)
 
               it('transfers the tokens to the vault', async () => {
                 const previousVaultBalance = await token.balanceOf(vault)
@@ -1801,7 +1830,7 @@ describe('Vault', () => {
                 expect(currentAccountBalance).to.be.equal(previousAccountBalance)
 
                 const currentStrategyBalance = await token.balanceOf(strategy)
-                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance.sub(expectedAmount))
+                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance.sub(exitAmount))
               })
 
               it('increases the account available balance in the vault', async () => {
@@ -1843,17 +1872,19 @@ describe('Vault', () => {
                 await vault.exit(account, strategy, ratio, { from })
 
                 const currentInvestment = await vault.getAccountInvestment(account, strategy)
-                expect(currentInvestment.investedValue).to.be.equal(previousInvestment.investedValue.sub(shares))
-                expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.sub(shares))
+                expect(currentInvestment.investedValue).to.be.equal(
+                  previousInvestment.investedValue.sub(investedAmountUsed)
+                )
               })
 
               it('redeems the expected number of shares of the account', async () => {
-                const previousShares = await strategy.getTotalShares()
+                const previousInvestment = await vault.getAccountInvestment(account, strategy)
 
                 await vault.exit(account, strategy, ratio, { from })
-
-                const currentShares = await strategy.getTotalShares()
-                expect(currentShares).to.be.equal(previousShares.sub(shares))
+                const currentInvestment = await vault.getAccountInvestment(account, strategy)
+                expect(currentInvestment.shares).to.be.equal(
+                  previousInvestment.shares.sub(amount.mul(ratio).div(fp(1)))
+                )
               })
 
               it('emits an event', async () => {
@@ -1862,38 +1893,71 @@ describe('Vault', () => {
                 await assertEvent(tx, 'Exit', {
                   account,
                   strategy,
-                  amountInvested: shares,
-                  // amountReceived: expectedAmountAfterFees, TODO: fix rounding
-                  shares,
+                  amount: exitAmount,
+                  ratio,
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   performanceFee: 0,
                 })
               })
 
               it('calculates the expected amount', async () => {
-                const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmount
-                expect(await vault.getExitAmount(account, strategy, ratio, { from })).to.be.equal(exitAmount)
+                expect(await vault.getExitAmount(account, strategy, ratio, { from })).to.be.equal(
+                  expectedAmountAfterFees
+                )
               })
             }
 
             context('when the user gain sth', async () => {
-              const rate = fp(1.05)
-
+              const rate = fp(2)
               beforeEach('fund strategy with gains', async () => {
-                await token.mint(strategy, shares)
+                await token.mint(strategy, amount.mul(rate.sub(fp(1))).div(fp(1)))
               })
 
-              itExitsAsExpected(rate)
+              context('when withdraws only gains', async () => {
+                const ratio = fp(0.5)
+                itExitsAsExpected(rate, ratio)
+              })
+
+              context('when withdraws more than gains', async () => {
+                const ratio = fp(0.75)
+                itExitsAsExpected(rate, ratio)
+              })
+
+              context('when withdraws all', async () => {
+                const ratio = fp(1)
+                itExitsAsExpected(rate, ratio)
+              })
             })
 
             context('when the user is even', async () => {
               const rate = fp(1)
-              itExitsAsExpected(rate)
+
+              context('when withdraws half', async () => {
+                const ratio = fp(0.5)
+                itExitsAsExpected(rate, ratio)
+              })
+
+              context('when withdraws all', async () => {
+                const ratio = fp(1)
+                itExitsAsExpected(rate, ratio)
+              })
             })
 
             context('when the user losses', async () => {
-              const rate = fp(0.95)
-              itExitsAsExpected(rate)
+              const rate = fp(0.5)
+              beforeEach('fund strategy with gains', async () => {
+                await strategy.burn(rate)
+              })
+
+              context('when withdraws half', async () => {
+                const ratio = fp(0.5)
+                itExitsAsExpected(rate, ratio)
+              })
+
+              context('when withdraws all', async () => {
+                const ratio = fp(1)
+                itExitsAsExpected(rate, ratio)
+              })
             })
           })
 
@@ -1944,10 +2008,9 @@ describe('Vault', () => {
         })
 
         context('when the portfolio has enough shares', async () => {
-          const shares = fp(500)
+          const amount = fp(150)
 
           beforeEach('join strategy', async () => {
-            const amount = shares // mocked rate is 1 initially
             const depositedAmount = amount.mul(fp(1)).div(fp(1).sub(depositFee))
             await token.mint(portfolio, depositedAmount)
             await portfolio.mockApproveTokens(token.address, depositedAmount)
@@ -1956,20 +2019,33 @@ describe('Vault', () => {
           })
 
           context('when the given ratio is valid', async () => {
-            const ratio = fp(1)
+            const itExitsAsExpected = (rate: BigNumber, ratio: BigNumber) => {
+              let investedAmountUsed: BigNumber
+              let gains: BigNumber
 
-            const itExitsAsExpected = (rate: BigNumber) => {
-              const expectedAmount = shares.mul(rate).div(fp(1))
-              const gains = expectedAmount.gt(shares) ? expectedAmount.sub(shares) : fp(0)
+              const totalAmount = amount.mul(rate).div(fp(1))
+              const exitAmount = totalAmount.mul(ratio).div(fp(1))
+              if (totalAmount.gt(amount)) {
+                const totalGains = totalAmount.sub(amount)
+
+                if (exitAmount <= totalGains) {
+                  gains = exitAmount
+                  investedAmountUsed = fp(0)
+                } else {
+                  gains = totalGains
+                  investedAmountUsed = exitAmount.sub(gains)
+                }
+              } else {
+                gains = fp(0)
+                const investedByRatio = amount.mul(ratio).div(fp(1))
+                investedAmountUsed = exitAmount.gt(investedByRatio) ? exitAmount : investedByRatio
+              }
+
               const expectedProtocolFee = gains.gt(0) ? gains.mul(protocolFee).div(fp(1)) : fp(0)
               const expectedPerformanceFee = gains.gt(0)
                 ? gains.sub(expectedProtocolFee).mul(performanceFee).div(fp(1))
                 : fp(0)
-              const expectedAmountAfterFees = expectedAmount.sub(expectedProtocolFee).sub(expectedPerformanceFee)
-
-              beforeEach('mock strategy rate', async () => {
-                await strategy.mockRate(rate)
-              })
+              const expectedAmountAfterFees = exitAmount.sub(expectedProtocolFee).sub(expectedPerformanceFee)
 
               it('transfers the tokens to the vault', async () => {
                 const previousVaultBalance = await token.balanceOf(vault)
@@ -1987,7 +2063,7 @@ describe('Vault', () => {
                 expect(currentPortfolioBalance).to.be.equal(previousPortfolioBalance)
 
                 const currentStrategyBalance = await token.balanceOf(strategy)
-                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance.sub(expectedAmount))
+                expect(currentStrategyBalance).to.be.equal(previousStrategyBalance.sub(exitAmount))
               })
 
               if (gains.gt(0)) {
@@ -2049,17 +2125,19 @@ describe('Vault', () => {
                 await vault.exit(portfolio, strategy, ratio, { from })
 
                 const currentInvestment = await vault.getAccountInvestment(portfolio, strategy)
-                expect(currentInvestment.investedValue).to.be.equal(previousInvestment.investedValue.sub(shares))
-                expect(currentInvestment.shares).to.be.equal(previousInvestment.shares.sub(shares))
+                expect(currentInvestment.investedValue).to.be.equal(
+                  previousInvestment.investedValue.sub(investedAmountUsed)
+                )
               })
 
               it('redeems the expected number of shares of the account', async () => {
-                const previousShares = await strategy.getTotalShares()
+                const previousInvestment = await vault.getAccountInvestment(portfolio, strategy)
 
                 await vault.exit(portfolio, strategy, ratio, { from })
-
-                const currentShares = await strategy.getTotalShares()
-                expect(currentShares).to.be.equal(previousShares.sub(shares))
+                const currentInvestment = await vault.getAccountInvestment(portfolio, strategy)
+                expect(currentInvestment.shares).to.be.equal(
+                  previousInvestment.shares.sub(amount.mul(ratio).div(fp(1)))
+                )
               })
 
               it('emits an event', async () => {
@@ -2068,28 +2146,28 @@ describe('Vault', () => {
                 await assertEvent(tx, 'Exit', {
                   account: portfolio,
                   strategy,
-                  amountInvested: shares,
-                  // amountReceived: expectedAmountAfterFees, TODO: fix rounding
-                  shares,
+                  amount: exitAmount,
+                  ratio,
                   // protocolFee: expectedProtocolFee, TODO: fix rounding
                   // performanceFee: expectedPerformanceFee, TODO: fix rounding
                 })
               })
 
               it('calculates the expected amount', async () => {
-                const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmount
+                const exitAmount = gains.gt(0) ? expectedAmountAfterFees : expectedAmountAfterFees
                 expect(await vault.getExitAmount(portfolio, strategy, ratio, { from })).to.be.equal(exitAmount)
               })
             }
 
             context('when the user gain sth', async () => {
-              const rate = fp(1.05)
+              const rate = fp(2)
+              const ratio = fp(1)
 
               beforeEach('fund strategy with gains', async () => {
-                await token.mint(strategy, shares)
+                await token.mint(strategy, amount.mul(rate.sub(fp(1))).div(fp(1)))
               })
 
-              itExitsAsExpected(rate)
+              itExitsAsExpected(rate, ratio)
 
               describe('authorization', async () => {
                 it('encodes the authorization as expected', async () => {
@@ -2201,12 +2279,18 @@ describe('Vault', () => {
 
             context('when the user is even', async () => {
               const rate = fp(1)
-              itExitsAsExpected(rate)
+              const ratio = fp(1)
+              itExitsAsExpected(rate, ratio)
             })
 
             context('when the user losses', async () => {
-              const rate = fp(0.95)
-              itExitsAsExpected(rate)
+              const rate = fp(0.5)
+              const ratio = fp(1)
+
+              beforeEach('fund strategy with gains', async () => {
+                await strategy.burn(rate)
+              })
+              itExitsAsExpected(rate, ratio)
             })
           })
 
@@ -2293,9 +2377,7 @@ describe('Vault', () => {
         await assertEvent(tx, 'Exit', {
           account: portfolio,
           strategy,
-          amountInvested: amount.div(2),
-          amountReceived: amount.div(2),
-          shares: amount.div(2),
+          amount: amount.div(2),
           protocolFee: 0,
           performanceFee: 0,
         })
@@ -2374,10 +2456,7 @@ describe('Vault', () => {
         context('when appending it to a join', () => {
           let join: string
 
-          const strategyRate = fp(0.95)
-
           beforeEach('populate swap', async () => {
-            await strategy.mockRate(strategyRate)
             join = await vault.encodeJoinCall(portfolio.address, strategy.address, MAX_UINT256, '0x99')
           })
 
@@ -2385,7 +2464,7 @@ describe('Vault', () => {
             const tx = await vault.instance.connect(from).batch([deposit, join], readsOutput)
 
             const expectedJoinAmount = depositedAmount.sub(expectedDepositFee)
-            const expectedShares = expectedJoinAmount.mul(fp(1)).div(strategyRate)
+            const expectedShares = expectedJoinAmount
 
             await assertEvent(tx, 'Deposit', {
               account: portfolio,
@@ -2522,17 +2601,14 @@ describe('Vault', () => {
         context('when appending it to a join', () => {
           let join: string
 
-          const strategyRate = fp(0.95)
-
           beforeEach('populate swap', async () => {
-            await strategy.mockRate(strategyRate)
             join = await vault.encodeJoinCall(portfolio.address, strategy.address, MAX_UINT256, '0x99')
           })
 
           it('batches actions correctly', async () => {
             const tx = await vault.instance.connect(from).batch([deposit, swap, join], readsOutput)
 
-            const expectedShares = expectedAmountOut.mul(fp(1)).div(strategyRate).add(1) // rounding error
+            const expectedShares = expectedAmountOut
 
             await assertEvent(tx, 'Deposit', {
               account: portfolio,
@@ -2596,7 +2672,6 @@ describe('Vault', () => {
 
         const readsOutput = [false, true, false, true]
         const ratio = fp(0.5)
-        const strategyRate = fp(1.05)
         const depositedAmount = fp(10000)
         const expectedDepositFees = depositedAmount.mul(depositFee).div(fp(1))
         const expectedJoinedAmount = depositedAmount.sub(expectedDepositFees)
@@ -2609,7 +2684,6 @@ describe('Vault', () => {
         })
 
         beforeEach('populate join', async () => {
-          await strategy.mockRate(strategyRate)
           join = await vault.encodeJoinCall(portfolio.address, strategy.address, MAX_UINT256, '0x99')
         })
 
@@ -2657,8 +2731,7 @@ describe('Vault', () => {
             await assertEvent(tx, 'Exit', {
               account: portfolio,
               strategy,
-              amountInvested: expectedJoinedAmount.div(2),
-              amountReceived: expectedReceivedAmount,
+              amount: expectedJoinedAmount.div(2),
             })
 
             await assertEvent(tx, 'Swap', {
@@ -2675,18 +2748,15 @@ describe('Vault', () => {
         context('when appending it to a join', () => {
           let secondJoin: string, secondStrategy: Contract
 
-          const secondStrategyRate = fp(0.7)
-
           beforeEach('populate second join', async () => {
             secondStrategy = await deploy('StrategyMock', [token.address])
-            await secondStrategy.mockRate(secondStrategyRate)
             secondJoin = await vault.encodeJoinCall(portfolio.address, secondStrategy.address, MAX_UINT256, '0x99')
           })
 
           it('batches actions correctly', async () => {
             const tx = await vault.instance.connect(from).batch([deposit, join, exit, secondJoin], readsOutput)
 
-            const expectedShares = expectedReceivedAmount.mul(fp(1)).div(secondStrategyRate) // rounding error
+            const expectedShares = expectedReceivedAmount
 
             await assertEvent(tx, 'Deposit', {
               account: portfolio,
@@ -2703,8 +2773,7 @@ describe('Vault', () => {
             await assertEvent(tx, 'Exit', {
               account: portfolio,
               strategy,
-              amountInvested: expectedJoinedAmount.div(2),
-              amountReceived: expectedReceivedAmount,
+              amount: expectedJoinedAmount.div(2),
             })
 
             await assertEvent(tx, 'Join', {
@@ -2741,8 +2810,7 @@ describe('Vault', () => {
             await assertEvent(tx, 'Exit', {
               account: portfolio,
               strategy,
-              amountInvested: expectedJoinedAmount.div(2),
-              amountReceived: expectedReceivedAmount,
+              amount: expectedJoinedAmount.div(2),
             })
 
             await assertEvent(tx, 'Withdraw', {
