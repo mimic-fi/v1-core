@@ -75,6 +75,10 @@ export default class Vault {
     return this.instance.isTokenWhitelisted(token.address)
   }
 
+  async getStrategyShares(strategy: Account): Promise<BigNumber> {
+    return this.instance.getStrategyShares(toAddress(strategy))
+  }
+
   async getAccountBalance(account: Account, token: Account): Promise<BigNumber> {
     return this.instance.getAccountBalance(toAddress(account), toAddress(token))
   }

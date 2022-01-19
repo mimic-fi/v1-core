@@ -92,6 +92,10 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         shares = accounting.shares[strategy];
     }
 
+    function getStrategyShares(address strategy) external view override returns (uint256) {
+        return totalShares[strategy];
+    }
+
     function query(bytes[] memory data, bool[] memory readsOutput)
         public
         override(IVault, VaultQuery)
