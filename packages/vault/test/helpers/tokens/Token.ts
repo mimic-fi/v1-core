@@ -30,6 +30,11 @@ export default class Token {
     await token.mint(toAddress(to), amount ?? MAX_UINT256)
   }
 
+  async burn(to: Account, amount: BigNumberish, { from }: TxParams = {}): Promise<void> {
+    const token = from ? this.instance.connect(from) : this.instance
+    await token.burn(toAddress(to), amount)
+  }
+
   async approve(to: Account, amount?: BigNumberish, { from }: TxParams = {}): Promise<ContractTransaction> {
     const token = from ? this.instance.connect(from) : this.instance
     return token.approve(toAddress(to), amount ?? MAX_UINT256)
