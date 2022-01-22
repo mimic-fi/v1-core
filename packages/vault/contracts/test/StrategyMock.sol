@@ -41,7 +41,7 @@ contract StrategyMock is IStrategy {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function onJoin(uint256 amount, bytes memory) external override returns (uint256, uint256) {
+    function onJoin(uint256 amount, bytes memory) external view override returns (uint256, uint256) {
         return (amount, getTotalValue());
     }
 
