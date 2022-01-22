@@ -32,9 +32,9 @@ dataSources:
           handler: handleDeposit
         - event: Withdraw(indexed address,indexed address,uint256,uint256,uint256,address)
           handler: handleWithdraw
-        - event: Join(indexed address,indexed address,uint256,uint256)
+        - event: Join(indexed address,indexed address,uint256)
           handler: handleJoin
-        - event: Exit(indexed address,indexed address,uint256,uint256,uint256,uint256,uint256)
+        - event: Exit(indexed address,indexed address,uint256,uint256,uint256)
           handler: handleExit
         - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,uint256)
           handler: handleSwap

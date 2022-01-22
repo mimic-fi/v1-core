@@ -15,7 +15,7 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
     strategy.whitelisted = false
     strategy.metadata = getStrategyMetadata(strategyAddress)
     strategy.shares = BigInt.fromI32(0)
-    strategy.deposited = BigInt.fromI32(0)
+    strategy.value = BigInt.fromI32(0)
     strategy.save()
   }
 
@@ -27,15 +27,15 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
   return strategy!
 }
 
-export function getStrategyBalance(address: Address): BigInt {
+export function getStrategyValue(address: Address): BigInt {
   let strategyContract = StrategyContract.bind(address)
-  let sharesCall = strategyContract.try_getTokenBalance()
+  let getTotalValueCall = strategyContract.try_getTotalValue()
 
-  if (!sharesCall.reverted) {
-    return sharesCall.value
+  if (!getTotalValueCall.reverted) {
+    return getTotalValueCall.value
   }
 
-  log.warning('getTokenBalance() call reverted for {}', [address.toHexString()])
+  log.warning('getTotalValue() call reverted for {}', [address.toHexString()])
   return BigInt.fromI32(0)
 }
 
