@@ -94,6 +94,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     function getAccountCurrentValue(address addr, address strategy) public view override returns (uint256) {
         Accounting storage accounting = accountings[addr];
         uint256 accountShares = accounting.shares[strategy];
+        if (accountShares == 0) return 0;
+
         uint256 totalShares = getStrategyShares[strategy];
         uint256 totalValue = IStrategy(strategy).getTotalValue();
         return totalValue.mulDown(accountShares).divDown(totalShares);

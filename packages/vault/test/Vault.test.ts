@@ -3066,4 +3066,87 @@ describe('Vault', () => {
       })
     })
   })
+
+  describe('integration', () => {
+    let strategy: Contract
+
+    beforeEach('deploy strategy', async () => {
+      strategy = await deploy('StrategyMock', [token.address])
+    })
+
+    const join = async (user: SignerWithAddress, amount: BigNumber) => {
+      await token.mint(user, amount)
+      await token.approve(vault, amount, { from: user })
+      await vault.deposit(user, token, amount, { from: user })
+      await vault.join(user, strategy, amount, { from: user })
+    }
+
+    const assertStrategy = async (shares: BigNumber, value: BigNumber) => {
+      expect(await strategy.getTotalValue()).to.be.equal(value)
+      expect(await vault.getStrategyShares(strategy)).to.be.equal(shares)
+    }
+
+    const assertUser = async (
+      user: SignerWithAddress,
+      shares: BigNumberish,
+      invested: BigNumberish,
+      currentValue: BigNumberish
+    ) => {
+      const investment = await vault.getAccountInvestment(user, strategy)
+      expect(investment.shares).to.be.equal(shares)
+      expect(investment.invested).to.be.equal(invested)
+      expect(await vault.getAccountCurrentValue(user, strategy)).to.be.equal(currentValue)
+    }
+
+    it('behaves as expected', async () => {
+      // user #1 joins with 10 tokens
+      await join(account, fp(10))
+      await assertStrategy(fp(10), fp(10))
+      await assertUser(account, fp(10), fp(10), fp(10))
+      await assertUser(other, 0, 0, 0)
+
+      // strategy appreciation of 10 tokens
+      await token.mint(strategy, fp(10))
+      await assertStrategy(fp(10), fp(20))
+      await assertUser(account, fp(10), fp(10), fp(20))
+      await assertUser(other, 0, 0, 0)
+
+      // user #2 joins with 5 tokens
+      await join(other, fp(5))
+      await assertStrategy(fp(12.5), fp(25))
+      await assertUser(account, fp(10), fp(10), fp(20))
+      await assertUser(other, fp(2.5), fp(5), fp(5))
+
+      // strategy appreciation of 5 tokens
+      await token.mint(strategy, fp(5))
+      await assertStrategy(fp(12.5), fp(30))
+      await assertUser(account, fp(10), fp(10), fp(24))
+      await assertUser(other, fp(2.5), fp(5), fp(6))
+
+      // user #1 exits with 10% (gains portion)
+      await vault.exit(account, strategy, fp(0.1), { from: account })
+      await assertStrategy(fp(11.5), fp(27.6))
+      await assertUser(account, fp(9), fp(10), fp(21.6))
+      await assertUser(other, fp(2.5), fp(5), fp(6))
+
+      // TODO: see why some wei is introduced by error
+      // user #1 exits with 60% (invested too)
+      await vault.exit(account, strategy, fp(0.6), { from: account })
+      await assertStrategy(fp(6.1), fp(14.64).add(23))
+      await assertUser(account, fp(3.6), fp(8.64).add(23), fp(8.64).add(13))
+      await assertUser(other, fp(2.5), fp(5), fp(6).add(9))
+
+      // strategy depreciation of 50%
+      await token.burn(strategy, fp(7.32).add(23))
+      await assertStrategy(fp(6.1), fp(7.32))
+      await assertUser(account, fp(3.6), fp(8.64).add(23), fp(4.32))
+      await assertUser(other, fp(2.5), fp(5), fp(3))
+
+      // user #2 exits with 50%
+      await vault.exit(other, strategy, fp(0.5), { from: other })
+      await assertStrategy(fp(4.85), fp(5.82).add(7))
+      await assertUser(account, fp(3.6), fp(8.64).add(23), fp(4.32).add(5))
+      await assertUser(other, fp(1.25), fp(1.5).add(7), fp(1.5).add(1))
+    })
+  })
 })
