@@ -388,7 +388,10 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(received);
-        accounting.invested[strategy] = Math.min(accountInvestedValue, currentAccountValue.sub(exitingValue));
+        accounting.invested[strategy] = accountInvestedValue >= currentAccountValue
+            ? accountInvestedValue.mulDown(ratio)
+            : Math.min(accountInvestedValue, currentAccountValue.sub(exitingValue));
+
         emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount);
     }
 

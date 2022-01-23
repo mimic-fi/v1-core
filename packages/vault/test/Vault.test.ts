@@ -1765,7 +1765,10 @@ describe('Vault', () => {
               it('decreases the account invested value in the vault', async () => {
                 const currentValue = await vault.getAccountCurrentValue(account, strategy)
                 const exitValue = await vault.getAccountValueRatio(account, strategy, ratio)
-                const expectedInvested = currentValue.sub(exitValue)
+                const previousInvestment = await vault.getAccountInvestment(account, strategy)
+                const expectedInvested = previousInvestment.invested.gte(currentValue)
+                  ? previousInvestment.invested.mul(ratio).div(fp(1))
+                  : currentValue.sub(exitValue)
 
                 await vault.exit(account, strategy, ratio, { from })
 
@@ -2025,7 +2028,10 @@ describe('Vault', () => {
               it('decreases the account invested value in the vault', async () => {
                 const currentValue = await vault.getAccountCurrentValue(portfolio, strategy)
                 const exitValue = await vault.getAccountValueRatio(portfolio, strategy, ratio)
-                const expectedInvested = currentValue.sub(exitValue)
+                const previousInvestment = await vault.getAccountInvestment(portfolio, strategy)
+                const expectedInvested = previousInvestment.invested.gte(currentValue)
+                  ? previousInvestment.invested.mul(ratio).div(fp(1))
+                  : currentValue.sub(exitValue)
 
                 await vault.exit(portfolio, strategy, ratio, { from })
 
@@ -3150,7 +3156,7 @@ describe('Vault', () => {
       await vault.exit(other, strategy, fp(0.5), { from: other })
       await assertStrategy(fp(4.85), fp(5.82))
       await assertUser(account, fp(3.6), fp(8.64), fp(4.32))
-      await assertUser(other, fp(1.25), fp(1.5), fp(1.5))
+      await assertUser(other, fp(1.25), fp(2.5), fp(1.5))
     })
   })
 })
