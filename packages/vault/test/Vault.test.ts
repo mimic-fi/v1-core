@@ -3082,8 +3082,8 @@ describe('Vault', () => {
     }
 
     const assertStrategy = async (shares: BigNumber, value: BigNumber) => {
-      expect(await strategy.getTotalValue()).to.be.equal(value)
-      expect(await vault.getStrategyShares(strategy)).to.be.equal(shares)
+      expectWithError(await strategy.getTotalValue(), value)
+      expectWithError(await vault.getStrategyShares(strategy), shares)
     }
 
     const assertUser = async (
@@ -3093,9 +3093,14 @@ describe('Vault', () => {
       currentValue: BigNumberish
     ) => {
       const investment = await vault.getAccountInvestment(user, strategy)
-      expect(investment.shares).to.be.equal(shares)
-      expect(investment.invested).to.be.equal(invested)
-      expect(await vault.getAccountCurrentValue(user, strategy)).to.be.equal(currentValue)
+      expectWithError(investment.shares, shares)
+      expectWithError(investment.invested, invested)
+      expectWithError(await vault.getAccountCurrentValue(user, strategy), currentValue)
+    }
+
+    const expectWithError = (actual: BigNumber, expected: BigNumberish) => {
+      expect(actual).to.be.at.least(bn(expected).sub(1))
+      expect(actual).to.be.at.most(bn(expected).add(1))
     }
 
     it('behaves as expected', async () => {
@@ -3129,24 +3134,23 @@ describe('Vault', () => {
       await assertUser(account, fp(9), fp(10), fp(21.6))
       await assertUser(other, fp(2.5), fp(5), fp(6))
 
-      // TODO: see why some wei is introduced by error
       // user #1 exits with 60% (invested too)
       await vault.exit(account, strategy, fp(0.6), { from: account })
-      await assertStrategy(fp(6.1), fp(14.64).add(23))
-      await assertUser(account, fp(3.6), fp(8.64).add(23), fp(8.64).add(13))
-      await assertUser(other, fp(2.5), fp(5), fp(6).add(9))
+      await assertStrategy(fp(6.1), fp(14.64))
+      await assertUser(account, fp(3.6), fp(8.64), fp(8.64))
+      await assertUser(other, fp(2.5), fp(5), fp(6))
 
       // strategy depreciation of 50%
-      await token.burn(strategy, fp(7.32).add(23))
+      await token.burn(strategy, fp(7.32))
       await assertStrategy(fp(6.1), fp(7.32))
-      await assertUser(account, fp(3.6), fp(8.64).add(23), fp(4.32))
+      await assertUser(account, fp(3.6), fp(8.64), fp(4.32))
       await assertUser(other, fp(2.5), fp(5), fp(3))
 
       // user #2 exits with 50%
       await vault.exit(other, strategy, fp(0.5), { from: other })
-      await assertStrategy(fp(4.85), fp(5.82).add(7))
-      await assertUser(account, fp(3.6), fp(8.64).add(23), fp(4.32).add(5))
-      await assertUser(other, fp(1.25), fp(1.5).add(7), fp(1.5).add(1))
+      await assertStrategy(fp(4.85), fp(5.82))
+      await assertUser(account, fp(3.6), fp(8.64), fp(4.32))
+      await assertUser(other, fp(1.25), fp(1.5), fp(1.5))
     })
   })
 })

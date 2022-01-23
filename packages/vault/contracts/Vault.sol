@@ -19,6 +19,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/Math.sol';
+import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 
 import './libraries/Accounts.sol';
 import './libraries/FixedPoint.sol';
@@ -36,6 +37,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     using VaultHelpers for bytes;
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
+
+    uint256 public constant EXIT_RATIO_PRECISION = 1e18;
 
     uint256 internal constant MAX_SLIPPAGE = 2e17; // 20%
     uint256 internal constant MAX_PROTOCOL_FEE = 2e17; // 20%
@@ -364,7 +367,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
             uint256 totalValue;
             (token, amount, exitingValue, totalValue) = IStrategy(strategy).onExit(
-                exitingShares.divDown(totalShares),
+                SafeMath.mul(exitingShares, EXIT_RATIO_PRECISION).divDown(totalShares),
                 emergency,
                 data
             );

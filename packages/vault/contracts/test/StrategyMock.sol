@@ -15,6 +15,7 @@
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 
 import '../interfaces/IStrategy.sol';
 
@@ -22,6 +23,8 @@ import '../libraries/FixedPoint.sol';
 
 contract StrategyMock is IStrategy {
     using FixedPoint for uint256;
+
+    uint256 public constant EXIT_RATIO_PRECISION = 1e18;
 
     address public token;
 
@@ -47,7 +50,7 @@ contract StrategyMock is IStrategy {
 
     function onExit(uint256 ratio, bool, bytes memory) external override returns (address, uint256, uint256, uint256) {
         uint256 totalValue = getTotalValue();
-        uint256 value = totalValue.mul(ratio);
+        uint256 value = SafeMath.div(totalValue.mulDown(ratio), EXIT_RATIO_PRECISION);
         IERC20(token).approve(msg.sender, value);
         return (token, value, value, totalValue - value);
     }
