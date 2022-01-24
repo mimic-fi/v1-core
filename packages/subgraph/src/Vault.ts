@@ -1,7 +1,7 @@
 import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20'
-import { loadOrCreateStrategy, getStrategyValue } from './Strategy'
+import { loadOrCreateStrategy, createLastStrategyCheckpoint } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
@@ -37,11 +37,9 @@ export function handleWithdraw(event: Withdraw): void {
 
 export function handleJoin(event: Join): void {
   let vault = loadOrCreateVault(event.address)
-  loadOrCreateAccount(event.params.account, event.address)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
-  strategy.shares = getStrategyShares(event.address, event.params.strategy)
-  strategy.save()
+  loadOrCreateAccount(event.params.account, event.address)
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
   accountStrategy.shares = getAccountShares(event.address, event.params.account)
@@ -55,11 +53,9 @@ export function handleJoin(event: Join): void {
 
 export function handleExit(event: Exit): void {
   let vault = loadOrCreateVault(event.address)
-  loadOrCreateAccount(event.params.account, event.address)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
-  strategy.shares = getStrategyShares(event.address, event.params.strategy)
-  strategy.save()
+  loadOrCreateAccount(event.params.account, event.address)
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
   accountStrategy.shares = getAccountShares(event.address, event.params.account)
@@ -98,7 +94,7 @@ export function handleWhitelistedTokenSet(event: WhitelistedTokenSet): void {
 
 export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): void {
   let vault = loadOrCreateVault(event.address)
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.whitelisted = event.params.whitelisted
   strategy.save()
 }
@@ -109,11 +105,7 @@ export function handleBlock(block: ethereum.Block): void {
     let strategies = vault.strategies
     for (let i: i32 = 0; i < strategies.length; i++) {
       let strategy = StrategyEntity.load(strategies[i])
-      if (strategy !== null) {
-        let strategyAddress = Address.fromString(strategy.id)
-        strategy.value = getStrategyValue(strategyAddress)
-        strategy.save()
-      }
+      if (strategy !== null) createLastStrategyCheckpoint(vault!, strategy!, block)
     }
   }
 }
@@ -211,18 +203,6 @@ function getMaxSlippage(address: Address): BigInt {
   }
 
   log.warning('maxSlippage() call reverted for {}', [address.toHexString()])
-  return BigInt.fromI32(0)
-}
-
-function getStrategyShares(address: Address, strategy: Address): BigInt {
-  let vaultContract = VaultContract.bind(address)
-  let getStrategySharesCall = vaultContract.try_getStrategyShares(strategy)
-
-  if (!getStrategySharesCall.reverted) {
-    return getStrategySharesCall.value
-  }
-
-  log.warning('getStrategyShares() call reverted for {} and strategy', [address.toHexString(), strategy.toHexString()])
   return BigInt.fromI32(0)
 }
 

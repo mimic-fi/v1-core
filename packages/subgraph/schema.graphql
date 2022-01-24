@@ -13,9 +13,20 @@ type Strategy @entity {
   token: ERC20!
   metadata: String!
   whitelisted: Boolean!
-  value: BigInt!
-  shares: BigInt!
+  lastCheckpoint: StrategyCheckpoint
+  checkpoints: [StrategyCheckpoint!] @derivedFrom(field: "strategy")
   accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
+}
+
+type StrategyCheckpoint @entity {
+  id: ID!
+  strategy: Strategy!
+  totalValue: BigInt!
+  totalShares: BigInt!
+  shareValue: BigInt!
+  accumulatedShareValue: BigInt!
+  block: BigInt!
+  timestamp: BigInt!
 }
 
 type Account @entity {
