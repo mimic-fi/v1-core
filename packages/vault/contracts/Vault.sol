@@ -335,7 +335,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         (uint256 value, uint256 totalValue) = IStrategy(strategy).onJoin(amount, data);
 
         uint256 totalShares = getStrategyShares[strategy];
-        shares = totalShares == 0 ? value : value.mul(totalShares).divDown(totalValue.sub(value));
+        shares = totalShares == 0 ? value : value.mulDown(totalShares).divDown(totalValue.sub(value));
         getStrategyShares[strategy] = totalShares.add(shares);
 
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
@@ -373,7 +373,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             );
 
             _safeTransferFrom(token, strategy, address(this), amount);
-            currentAccountValue = totalValue.add(exitingValue).mul(currentShares).divUp(totalShares);
+            currentAccountValue = totalValue.add(exitingValue).mulDown(currentShares).divDown(totalShares);
         }
 
         uint256 accountInvestedValue = accounting.invested[strategy];
@@ -389,8 +389,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(received);
         accounting.invested[strategy] = accountInvestedValue >= currentAccountValue
-            ? accountInvestedValue.mulDown(ratio)
-            : Math.min(accountInvestedValue, currentAccountValue.sub(exitingValue));
+            ? accountInvestedValue.mulUp(ratio)
+            : Math.min(accountInvestedValue, currentAccountValue.sub(exitingValue)); // todo: view sub
 
         emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount);
     }
@@ -408,6 +408,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
 
         uint256 valueGains = currentValue - investedValue;
+        // `tokenGains` won't be greater than `amount`
         uint256 tokenGains = valueGains > exitingValue ? amount : amount.mulDown(valueGains).divDown(exitingValue);
         protocolFeeAmount = tokenGains.mulDown(protocolFee);
         _safeTransfer(token, owner(), protocolFeeAmount);

@@ -19,7 +19,7 @@ contract SwapConnectorMock is ISwapConnector {
     }
 
     function getAmountOut(address, address, uint256 amountIn) public view override returns (uint256) {
-        return amountIn.mul(mockedRate);
+        return amountIn.mulDown(mockedRate);
     }
 
     function swap(address, address tokenOut, uint256 amountIn, uint256, uint256, bytes memory)
@@ -28,7 +28,7 @@ contract SwapConnectorMock is ISwapConnector {
         returns (uint256 remainingIn, uint256 amountOut)
     {
         remainingIn = 0;
-        amountOut = amountIn.mul(mockedRate);
+        amountOut = amountIn.mulDown(mockedRate);
         IERC20(tokenOut).transfer(msg.sender, amountOut);
     }
 
