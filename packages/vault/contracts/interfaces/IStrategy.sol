@@ -19,13 +19,13 @@ interface IStrategy {
 
     function getToken() external view returns (address);
 
-    function getTotalShares() external view returns (uint256);
-
-    function getTokenBalance() external view returns (uint256);
+    function getTotalValue() external view returns (uint256);
 
     function getMetadataURI() external view returns (string memory);
 
-    function onJoin(uint256 amount, bytes memory data) external returns (uint256 shares);
+    function onJoin(uint256 amount, bytes memory data) external returns (uint256 value, uint256 totalValue);
 
-    function onExit(uint256 shares, bool emergency, bytes memory data) external returns (address token, uint256 amount);
+    function onExit(uint256 ratio, bool emergency, bytes memory data)
+        external
+        returns (address token, uint256 amount, uint256 value, uint256 totalValue);
 }

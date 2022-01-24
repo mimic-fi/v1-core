@@ -1,5 +1,5 @@
 import { defaultAbiCoder } from '@ethersproject/abi'
-import { BigNumberish, bn } from '@mimic-fi/v1-helpers'
+import { BigNumberish, bn, fp } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber, Contract, ContractTransaction } from 'ethers'
 
@@ -75,12 +75,39 @@ export default class Vault {
     return this.instance.isTokenWhitelisted(token.address)
   }
 
+  async getStrategyShares(strategy: Account): Promise<BigNumber> {
+    return this.instance.getStrategyShares(toAddress(strategy))
+  }
+
   async getAccountBalance(account: Account, token: Account): Promise<BigNumber> {
     return this.instance.getAccountBalance(toAddress(account), toAddress(token))
   }
 
   async getAccountInvestment(account: Account, strategy: Account): Promise<{ shares: BigNumber; invested: BigNumber }> {
     return this.instance.getAccountInvestment(toAddress(account), toAddress(strategy))
+  }
+
+  async getAccountCurrentValue(account: Account, strategy: Account): Promise<BigNumber> {
+    return this.instance.getAccountCurrentValue(toAddress(account), toAddress(strategy))
+  }
+
+  async getAccountCurrentGains(account: Account, strategy: Account): Promise<BigNumber> {
+    const { invested } = await this.getAccountInvestment(account, strategy)
+    const currentValue = await this.getAccountCurrentValue(account, strategy)
+    return currentValue.gt(invested) ? currentValue.sub(invested) : bn(0)
+  }
+
+  async getAccountValueRatio(account: Account, strategy: Contract, ratio: BigNumber): Promise<BigNumber> {
+    const currentValue = await this.getAccountCurrentValue(account, strategy)
+    return currentValue.mul(ratio).div(fp(1))
+  }
+
+  async getAccountTaxableAmount(account: Account, strategy: Contract, ratio: BigNumber): Promise<BigNumber> {
+    const totalGains = await this.getAccountCurrentGains(account, strategy)
+    if (totalGains.eq(0)) return bn(0)
+
+    const exitValue = await this.getAccountValueRatio(account, strategy, ratio)
+    return exitValue.gt(totalGains) ? totalGains : exitValue
   }
 
   async getDepositAmount(
