@@ -61,6 +61,8 @@ interface IVault {
 
     function getStrategyShares(address strategy) external view returns (uint256);
 
+    function getStrategyShareValue(address strategy) external view returns (uint256);
+
     function getAccountBalance(address account, address token) external view returns (uint256);
 
     function getAccountInvestment(address account, address strategy)

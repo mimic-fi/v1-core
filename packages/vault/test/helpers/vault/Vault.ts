@@ -79,6 +79,10 @@ export default class Vault {
     return this.instance.getStrategyShares(toAddress(strategy))
   }
 
+  async getStrategyShareValue(strategy: Account): Promise<BigNumber> {
+    return this.instance.getStrategyShareValue(toAddress(strategy))
+  }
+
   async getAccountBalance(account: Account, token: Account): Promise<BigNumber> {
     return this.instance.getAccountBalance(toAddress(account), toAddress(token))
   }

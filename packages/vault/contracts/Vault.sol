@@ -94,7 +94,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         shares = accounting.shares[strategy];
     }
 
-    function getAccountCurrentValue(address addr, address strategy) public view override returns (uint256) {
+    function getAccountCurrentValue(address addr, address strategy) external view override returns (uint256) {
         Accounting storage accounting = accountings[addr];
         uint256 accountShares = accounting.shares[strategy];
         if (accountShares == 0) return 0;
@@ -102,6 +102,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         uint256 totalShares = getStrategyShares[strategy];
         uint256 totalValue = IStrategy(strategy).getTotalValue();
         return totalValue.mulDown(accountShares).divDown(totalShares);
+    }
+
+    function getStrategyShareValue(address strategy) external view override returns (uint256) {
+        uint256 totalShares = getStrategyShares[strategy];
+        uint256 totalValue = IStrategy(strategy).getTotalValue();
+        return totalValue.divDown(totalShares);
     }
 
     function query(bytes[] memory data, bool[] memory readsOutput)

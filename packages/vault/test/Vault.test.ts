@@ -3090,6 +3090,7 @@ describe('Vault', () => {
     const assertStrategy = async (shares: BigNumber, value: BigNumber) => {
       expectWithError(await strategy.getTotalValue(), value)
       expectWithError(await vault.getStrategyShares(strategy), shares)
+      expectWithError(await vault.getStrategyShareValue(strategy), value.mul(fp(1)).div(shares))
     }
 
     const assertUser = async (
