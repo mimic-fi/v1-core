@@ -38,12 +38,11 @@ interface IVault {
         uint256 remainingIn,
         uint256 amountOut
     );
-    event Join(address indexed account, address indexed strategy, uint256 amount, uint256 shares);
+    event Join(address indexed account, address indexed strategy, uint256 amount);
     event Exit(
         address indexed account,
         address indexed strategy,
         uint256 amount,
-        uint256 ratio,
         uint256 protocolFee,
         uint256 performanceFee
     );
@@ -60,12 +59,16 @@ interface IVault {
 
     function isStrategyWhitelisted(address strategy) external view returns (bool);
 
+    function getStrategyShares(address strategy) external view returns (uint256);
+
     function getAccountBalance(address account, address token) external view returns (uint256);
 
     function getAccountInvestment(address account, address strategy)
         external
         view
         returns (uint256 invested, uint256 shares);
+
+    function getAccountCurrentValue(address account, address strategy) external view returns (uint256);
 
     function query(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
