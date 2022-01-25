@@ -1,7 +1,7 @@
 import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20'
-import { loadOrCreateStrategy, getStrategyBalance } from './Strategy'
+import { loadOrCreateStrategy, createLastRate } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
@@ -37,15 +37,13 @@ export function handleWithdraw(event: Withdraw): void {
 
 export function handleJoin(event: Join): void {
   let vault = loadOrCreateVault(event.address)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
+
   loadOrCreateAccount(event.params.account, event.address)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
-  strategy.shares = strategy.shares.plus(event.params.shares)
-  strategy.save()
-
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
-  accountStrategy.shares = accountStrategy.shares.plus(event.params.shares)
-  accountStrategy.invested = accountStrategy.invested.plus(event.params.amount)
+  accountStrategy.shares = getAccountShares(event.address, event.params.account)
+  accountStrategy.invested = getAccountInvested(event.address, event.params.account)
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
@@ -55,19 +53,18 @@ export function handleJoin(event: Join): void {
 
 export function handleExit(event: Exit): void {
   let vault = loadOrCreateVault(event.address)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
+
   loadOrCreateAccount(event.params.account, event.address)
 
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
-  strategy.shares = strategy.shares.minus(event.params.shares)
-  strategy.save()
-
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
-  accountStrategy.shares = accountStrategy.shares.minus(event.params.shares)
-  accountStrategy.invested = accountStrategy.invested.minus(event.params.amountInvested)
+  accountStrategy.shares = getAccountShares(event.address, event.params.account)
+  accountStrategy.invested = getAccountInvested(event.address, event.params.account)
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
-  accountBalance.amount = accountBalance.amount.plus(event.params.amountReceived).minus(event.params.protocolFee).minus(event.params.performanceFee)
+  let amountReceived = event.params.amount.minus(event.params.protocolFee).minus(event.params.performanceFee)
+  accountBalance.amount = accountBalance.amount.plus(amountReceived)
   accountBalance.save()
 }
 
@@ -97,7 +94,7 @@ export function handleWhitelistedTokenSet(event: WhitelistedTokenSet): void {
 
 export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): void {
   let vault = loadOrCreateVault(event.address)
-  let strategy = loadOrCreateStrategy(event.params.strategy, vault)
+  let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.whitelisted = event.params.whitelisted
   strategy.save()
 }
@@ -108,11 +105,7 @@ export function handleBlock(block: ethereum.Block): void {
     let strategies = vault.strategies
     for (let i: i32 = 0; i < strategies.length; i++) {
       let strategy = StrategyEntity.load(strategies[i])
-      if (strategy !== null) {
-        let strategyAddress = Address.fromString(strategy.id)
-        strategy.deposited = getStrategyBalance(strategyAddress)
-        strategy.save()
-      }
+      if (strategy !== null) createLastRate(vault!, strategy!, block)
     }
   }
 }
@@ -210,5 +203,29 @@ function getMaxSlippage(address: Address): BigInt {
   }
 
   log.warning('maxSlippage() call reverted for {}', [address.toHexString()])
+  return BigInt.fromI32(0)
+}
+
+function getAccountShares(address: Address, account: Address): BigInt {
+  let vaultContract = VaultContract.bind(address)
+  let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(address, account)
+
+  if (!getAccountInvestmentCall.reverted) {
+    return getAccountInvestmentCall.value.value0
+  }
+
+  log.warning('getAccountInvestment() call reverted for {} and account', [address.toHexString(), account.toHexString()])
+  return BigInt.fromI32(0)
+}
+
+function getAccountInvested(address: Address, account: Address): BigInt {
+  let vaultContract = VaultContract.bind(address)
+  let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(address, account)
+
+  if (!getAccountInvestmentCall.reverted) {
+    return getAccountInvestmentCall.value.value1
+  }
+
+  log.warning('getAccountInvestment() call reverted for {} and account', [address.toHexString(), account.toHexString()])
   return BigInt.fromI32(0)
 }
