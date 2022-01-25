@@ -21,6 +21,8 @@ interface IStrategy {
 
     function getTotalValue() external view returns (uint256);
 
+    function getValueRate() external view returns (uint256);
+
     function getMetadataURI() external view returns (string memory);
 
     function onJoin(uint256 amount, bytes memory data) external returns (uint256 value, uint256 totalValue);
