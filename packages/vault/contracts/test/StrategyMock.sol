@@ -44,7 +44,7 @@ contract StrategyMock is IStrategy {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function getValueRate() external view override returns (uint256) {
+    function getValueRate() external pure override returns (uint256) {
         return FixedPoint.ONE;
     }
 
