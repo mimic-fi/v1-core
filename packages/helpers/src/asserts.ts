@@ -28,7 +28,7 @@ export async function assertEvent(tx: ContractTransaction, eventName: string, ev
 
         contains(e.args, k, v)
       } catch (error) {
-        exceptions.push(error)
+        exceptions.push(error as string)
         return false
       }
     }
@@ -74,7 +74,7 @@ export async function assertIndirectEvent(
 
         contains(e.args, k, v)
       } catch (error) {
-        exceptions.push(error)
+        exceptions.push(error as string)
         return false
       }
     }
