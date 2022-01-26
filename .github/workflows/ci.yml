@@ -84,6 +84,8 @@ jobs:
       - name: Install
         run: yarn --immutable
         if: steps.cache.outputs.cache-hit != 'true'
+      - name: Build
+        run: yarn build
       - name: Benchmark
         run: yarn workspace @mimic-fi/v1-benchmark benchmark
 

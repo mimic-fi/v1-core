@@ -14,8 +14,8 @@ const DEPOSIT_FEE = fp(0.02) // 2%
 const WITHDRAW_FEE = fp(0.01) // 2%
 const PERFORMANCE_FEE = fp(0.15) // 15%
 const MAX_SWAP_SLIPPAGE = fp(0.1) // 10%
-const STRATEGIES_ALLOWED = 0 // any
-const TOKENS_ALLOWED = 0 // any
+const STRATEGIES_ALLOWED = 2 // any
+const TOKENS_ALLOWED = 2 // any
 
 // Strategies config
 const DAI_STRATEGY_RATE = fp(1.02)
@@ -92,12 +92,12 @@ async function benchmark(): Promise<void> {
 
   // Exit 30% DAI => 12.24k DAI => protocol 0.24 => performance 35.964 => receives 12203.796
   console.log('exiting DAI strategy...')
-  await strategyDAI.mockRate(DAI_STRATEGY_RATE)
+  await DAI.mint(strategyDAI.address, (await DAI.balanceOf(strategyDAI.address)).mul(DAI_STRATEGY_RATE).div(fp(1)))
   await vault.connect(manager1).exit(agreement, strategyDAI.address, fp(0.3), false, '0x')
 
   // Exit 90% USDC => 18.54k USDC => protocol 0.54 => performance 80.919 => receives 18458.541
   console.log('exiting USDC strategy...')
-  await strategyUSDC.mockRate(USDC_STRATEGY_RATE)
+  await USDC.mint(strategyUSDC.address, (await USDC.balanceOf(strategyUSDC.address)).mul(USDC_STRATEGY_RATE).div(fp(1)))
   await vault.connect(manager1).exit(agreement, strategyUSDC.address, fp(0.9), false, '0x')
 
   // Withdraw USDC earnings 458.541 => 18k USDC
@@ -106,8 +106,11 @@ async function benchmark(): Promise<void> {
 
   // Increase strategy rates by 1%
   console.log('mocking swap rates...')
-  await strategyDAI.mockRate(DAI_STRATEGY_RATE.mul(101).div(100))
-  await strategyUSDC.mockRate(USDC_STRATEGY_RATE.mul(101).div(100))
+  await DAI.mint(strategyDAI.address, (await DAI.balanceOf(strategyDAI.address)).mul(101).div(100))
+  await USDC.mint(strategyUSDC.address, (await USDC.balanceOf(strategyUSDC.address)).mul(101).div(100))
 }
 
-benchmark().catch(console.error)
+benchmark().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

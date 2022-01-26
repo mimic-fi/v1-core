@@ -12,9 +12,9 @@
     "lint": "eslint . --ext .ts",
     "test": "echo 'Not tests for now'",
     "benchmark": "yarn benchmark:bytecode && yarn benchmark:gas && yarn benchmark:simulation",
-    "benchmark:gas": "hardhat run ../benchmark/scripts/benchmark-gas.ts",
-    "benchmark:bytecode": "hardhat run ../benchmark/scripts/benchmark-bytecode.ts",
-    "benchmark:simulation": "hardhat run ../benchmark/scripts/benchmark-simulation.ts"
+    "benchmark:gas": "hardhat run ./scripts/benchmark-gas.ts",
+    "benchmark:bytecode": "hardhat run ./scripts/benchmark-bytecode.ts",
+    "benchmark:simulation": "hardhat run ./scripts/benchmark-simulation.ts"
   },
   "dependencies": {
     "@mimic-fi/v1-vault": "0.0.6",

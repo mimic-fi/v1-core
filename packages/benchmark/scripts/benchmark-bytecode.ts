@@ -12,4 +12,7 @@ async function benchmark(): Promise<void> {
   console.log(`- AgreementFactory: ${AgreementFactory.deployedBytecode.length / 2} bytes`)
 }
 
-benchmark().catch(console.error)
+benchmark().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

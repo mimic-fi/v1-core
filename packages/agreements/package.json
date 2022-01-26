@@ -18,9 +18,6 @@
     "lint:solidity": "solhint 'contracts/**/*.sol' --config ../../node_modules/solhint-config-mimic/index.js",
     "lint:typescript": "eslint . --ext .ts",
     "test": "hardhat test",
-    "benchmark": "yarn benchmark:gas && yarn benchmark:bytecode",
-    "benchmark:gas": "hardhat run ../benchmark/scripts/benchmark-gas.ts",
-    "benchmark:bytecode": "hardhat run ../benchmark/scripts/benchmark-bytecode.ts",
     "prepublish": "yarn build"
   },
   "dependencies": {

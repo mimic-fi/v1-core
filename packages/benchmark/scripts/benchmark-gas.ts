@@ -171,4 +171,7 @@ async function benchmarkVault(vault: Contract, account: string, strategies: stri
   console.log(`- Second withdraw: \t${(await withdraw2Tx.wait()).gasUsed}`)
 }
 
-benchmark().catch(console.error)
+benchmark().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})
