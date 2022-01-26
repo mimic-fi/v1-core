@@ -24,7 +24,7 @@
     "prepublish": "yarn build"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.1.0"
+    "@openzeppelin/contracts": "4.1.0"
   },
   "devDependencies": {
     "@mimic-fi/v1-helpers": "0.0.4",
