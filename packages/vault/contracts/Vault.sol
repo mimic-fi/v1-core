@@ -358,7 +358,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         address token;
         uint256 amount;
         uint256 exitingValue;
-        uint256 currentAccountValue;
+        uint256 currentValue;
         Accounting storage accounting = accountings[account.addr];
         // scope to avoid stack too deep
         {
@@ -379,27 +379,24 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             );
 
             _safeTransferFrom(token, strategy, address(this), amount);
-            currentAccountValue = totalValue.add(exitingValue).mulDown(currentShares).divDown(totalShares);
+            currentValue = totalValue.add(exitingValue).mulDown(currentShares).divDown(totalShares);
         }
 
-        uint256 accountInvestedValue = accounting.invested[strategy];
+        uint256 investedValue = accounting.invested[strategy];
         (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(
             account,
             token,
             amount,
             exitingValue,
-            accountInvestedValue,
-            currentAccountValue
+            investedValue,
+            currentValue
         );
 
         received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(received);
-        accounting.invested[strategy] = accountInvestedValue >= currentAccountValue
-            ? accountInvestedValue.mulUp(ratio)
-            : Math.min(
-                accountInvestedValue,
-                exitingValue >= currentAccountValue ? 0 : currentAccountValue - exitingValue
-            );
+        accounting.invested[strategy] = investedValue >= currentValue
+            ? investedValue.mulUp(ratio)
+            : Math.min(investedValue, exitingValue >= currentValue ? 0 : currentValue - exitingValue);
 
         emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount);
     }
