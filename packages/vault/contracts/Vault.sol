@@ -398,7 +398,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             ? accountInvestedValue.mulUp(ratio)
             : Math.min(
                 accountInvestedValue,
-                exitingValue >= currentAccountValue ? 0 : currentAccountValue.sub(exitingValue)
+                exitingValue >= currentAccountValue ? 0 : currentAccountValue - exitingValue
             );
 
         emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount);
