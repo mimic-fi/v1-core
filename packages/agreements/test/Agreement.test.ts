@@ -1,4 +1,5 @@
 import { deploy, fp, getSigner, getSigners, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 
@@ -639,6 +640,43 @@ describe('Agreement', () => {
           ).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
+    })
+  })
+
+  describe('withdraw', () => {
+    let manager: SignerWithAddress, withdrawer: SignerWithAddress
+    let agreement: Agreement, vault: Contract, token: Contract, swapConenctor: Contract, priceOracle: Contract
+
+    beforeEach('deploy agreement', async () => {
+      // eslint-disable-next-line prettier/prettier
+      [, manager, withdrawer] = await getSigners()
+
+      token = await deploy('TokenMock')
+      priceOracle = await deploy('TokenMock')
+      swapConenctor = await deploy('TokenMock')
+
+      vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [
+        fp(0.1),
+        fp(0.1),
+        swapConenctor.address,
+        priceOracle.address,
+        [],
+        [],
+      ])
+
+      agreement = await Agreement.create({ vault, withdrawers: [withdrawer], managers: [manager] })
+    })
+
+    it('can withdraw any tokens', async () => {
+      const amount = fp(100)
+      await token.mint(agreement.address, amount)
+      expect(await token.balanceOf(agreement.address)).to.be.equal(amount)
+
+      await vault.connect(manager).deposit(agreement.address, token.address, amount)
+      expect(await token.balanceOf(vault.address)).to.be.equal(amount)
+
+      await vault.connect(manager).withdraw(agreement.address, token.address, amount, withdrawer.address)
+      expect(await token.balanceOf(withdrawer.address)).to.be.equal(amount)
     })
   })
 })

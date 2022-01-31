@@ -68,7 +68,7 @@ const AgreementDeployer = {
     const depositFee = params.depositFee ?? 0
     const withdrawFee = params.withdrawFee ?? 0
     const performanceFee = params.performanceFee ?? 0
-    const maxSwapSlippage = params.maxSwapSlippage ?? fp(0.02)
+    const maxSwapSlippage = params.maxSwapSlippage ?? fp(0.01)
 
     const managers = params.managers || [signer3, signer4, signer5]
     const withdrawers = params.withdrawers || [signer1, signer2, signer5]
