@@ -8,8 +8,9 @@ describe('AgreementFactory', () => {
   let factory: Contract
 
   beforeEach('deploy tokens', async () => {
+    const weth = await deploy('WethMock')
     const vault = await deploy('VaultMock')
-    factory = await deploy('AgreementFactory', [vault.address])
+    factory = await deploy('AgreementFactory', [weth.address, vault.address])
   })
 
   describe('create', () => {

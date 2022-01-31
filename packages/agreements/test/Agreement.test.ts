@@ -1,7 +1,8 @@
-import { deploy, fp, getSigner, getSigners, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
+import { BigNumberish, deploy, fp, getSigner, getSigners, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
+import { ethers } from 'hardhat'
 
 import Agreement from './helpers/Agreement'
 import { Account, toAddress, toAddresses } from './helpers/types'
@@ -571,7 +572,7 @@ describe('Agreement', () => {
 
     it('supports only before deposit and withdraw', async () => {
       const callbacks = await agreement.getSupportedCallbacks()
-      expect(callbacks).to.be.equal('0x0005')
+      expect(callbacks).to.be.equal('0x000d')
     })
 
     describe('before deposit', () => {
@@ -647,6 +648,50 @@ describe('Agreement', () => {
         })
       })
     })
+
+    describe('after withdraw', () => {
+      context('when the sender is the vault', () => {
+        context('when the token is WETH', () => {
+          context('when the recipient is the agreement', () => {
+            context('when the amount is greater than zero', () => {
+              it('unwraps the given weth and sends it to the default withdrawer', async () => {
+                // TODO: implement
+              })
+            })
+
+            context('when the amount is zero', () => {
+              it('ignores the request', async () => {
+                // TODO: implement
+              })
+            })
+          })
+
+          context('when the recipient is not the agreement', () => {
+            it('ignores the request', async () => {
+              // TODO: implement
+            })
+          })
+        })
+
+        context('when the token is not WETH', () => {
+          it('ignores the request', async () => {
+            // TODO: implement
+          })
+        })
+      })
+
+      context('when the sender is not the vault', () => {
+        beforeEach('deploy agreement', async () => {
+          agreement = await Agreement.create()
+        })
+
+        it('reverts', async () => {
+          await expect(
+            agreement.instance.afterWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS)
+          ).to.be.revertedWith('SENDER_NOT_VAULT')
+        })
+      })
+    })
   })
 
   describe('withdraw', () => {
@@ -683,6 +728,81 @@ describe('Agreement', () => {
 
       await vault.connect(manager).withdraw(agreement.address, token.address, amount, withdrawer.address, '0x')
       expect(await token.balanceOf(withdrawer.address)).to.be.equal(amount)
+    })
+  })
+
+  describe('ETH', () => {
+    let manager: SignerWithAddress, withdrawer: SignerWithAddress
+    let agreement: Agreement, vault: Contract, weth: Contract, swapConenctor: Contract, priceOracle: Contract
+
+    beforeEach('deploy agreement', async () => {
+      // eslint-disable-next-line prettier/prettier
+      [, manager, withdrawer] = await getSigners()
+
+      weth = await deploy('WethMock')
+      priceOracle = await deploy('TokenMock')
+      swapConenctor = await deploy('TokenMock')
+
+      vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [
+        fp(0.1),
+        fp(0.1),
+        swapConenctor.address,
+        priceOracle.address,
+        [],
+        [],
+      ])
+
+      agreement = await Agreement.create({ weth, vault, withdrawers: [withdrawer], managers: [manager] })
+    })
+
+    const assertBalance = async (account: Account, expectedEth: BigNumberish, expectedWeth: BigNumberish) => {
+      const address = typeof account == 'string' ? account : account.address
+      expect(await weth.balanceOf(address)).to.be.equal(expectedWeth)
+      expect(await ethers.provider.getBalance(address)).to.be.equal(expectedEth)
+    }
+
+    it('can handle ETH deposits', async () => {
+      await assertBalance(vault, 0, 0)
+      await assertBalance(agreement, 0, 0)
+
+      const amount = fp(1)
+      await manager.sendTransaction({ to: agreement.address, value: amount })
+      await assertBalance(vault, 0, 0)
+      await assertBalance(agreement, amount, 0)
+
+      await vault.connect(manager).deposit(agreement.address, weth.address, amount)
+      await assertBalance(vault, 0, amount)
+      await assertBalance(agreement, 0, 0)
+    })
+
+    it('can handle WETH withdraws', async () => {
+      const previousBalance = await ethers.provider.getBalance(withdrawer.address)
+
+      const amount = fp(1)
+      await manager.sendTransaction({ to: agreement.address, value: amount })
+      await vault.connect(manager).deposit(agreement.address, weth.address, amount)
+
+      await vault.connect(manager).withdraw(agreement.address, weth.address, amount, withdrawer.address)
+      await assertBalance(vault, 0, 0)
+      await assertBalance(agreement, 0, 0)
+
+      expect(await weth.balanceOf(withdrawer.address)).to.be.equal(amount)
+      expect(await ethers.provider.getBalance(withdrawer.address)).to.be.equal(previousBalance)
+    })
+
+    it('can handle ETH withdraws', async () => {
+      const previousBalance = await ethers.provider.getBalance(withdrawer.address)
+
+      const amount = fp(1)
+      await manager.sendTransaction({ to: agreement.address, value: amount })
+      await vault.connect(manager).deposit(agreement.address, weth.address, amount)
+
+      await vault.connect(manager).withdraw(agreement.address, weth.address, amount, agreement.address)
+      await assertBalance(vault, 0, 0)
+      await assertBalance(agreement, 0, 0)
+
+      expect(await weth.balanceOf(withdrawer.address)).to.be.equal(0)
+      expect(await ethers.provider.getBalance(withdrawer.address)).to.be.equal(previousBalance.add(amount))
     })
   })
 })

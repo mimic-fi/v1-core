@@ -26,6 +26,7 @@ import '@mimic-fi/v1-vault/contracts/interfaces/IVault.sol';
 import '@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol';
 
 import './IAgreement.sol';
+import './IWETH.sol';
 
 contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using Address for address;
@@ -43,6 +44,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     uint256 internal constant MAX_WITHDRAW_FEE = 1e18; // 100%
     uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
 
+    IWETH public immutable weth;
     address public override vault;
     address public override feeCollector;
     uint256 public override depositFee;
@@ -50,6 +52,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     uint256 public override performanceFee;
     uint256 public override maxSwapSlippage;
 
+    address internal ethWithdrawer;
     mapping (address => bool) public override isManager;
     mapping (address => bool) public override isWithdrawer;
 
@@ -62,6 +65,10 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     modifier onlyVault() {
         require(msg.sender == vault, 'SENDER_NOT_VAULT');
         _;
+    }
+
+    constructor(IWETH _weth) {
+        weth = _weth;
     }
 
     function initialize(
@@ -146,18 +153,25 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
             return !params.emergency || isWithdrawer[who];
         } else if (what.isWithdraw()) {
             VaultHelpers.WithdrawParams memory params = how.decodeWithdraw();
-            return isWithdrawer[params.recipient];
+            return isWithdrawer[params.recipient] || (IWETH(params.token) == weth && params.recipient == address(this));
         } else {
             return what.isDeposit();
         }
     }
 
     function getSupportedCallbacks() external pure override returns (bytes2) {
-        // Supported callbacks are 'before deposit' and 'before withdraw': 0000000101 (0x0005).
-        return bytes2(0x0005);
+        // Supported callbacks are 'before deposit' and 'before withdraw': 0000001101 (0x000D).
+        return bytes2(0x000D);
+    }
+
+    receive() external payable {
+        emit ReceivedEth(msg.sender, msg.value);
     }
 
     function beforeDeposit(address, address token, uint256 amount, bytes memory) external override onlyVault {
+        if (token == address(weth) && address(this).balance > 0) {
+            weth.deposit{ value: address(this).balance }();
+        }
         _safeApprove(token, amount);
     }
 
@@ -169,8 +183,11 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         _safeApprove(token, Math.min(amount, getTokenBalance(token)));
     }
 
-    function afterWithdraw(address, address, uint256, address, bytes memory) external override onlyVault {
-        // solhint-disable-previous-line no-empty-blocks
+    function afterWithdraw(address, address token, uint256 amount, address recipient, bytes memory data) external override onlyVault {
+        if (token == address(weth) && amount > 0 && recipient == address(this)) {
+            weth.withdraw(amount);
+            payable(ethWithdrawer).transfer(amount);
+        }
     }
 
     function beforeSwap(address, address, address, uint256, uint256, bytes memory) external override onlyVault {
@@ -232,6 +249,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
 
     function _setWithdrawers(address[] memory withdrawers) private {
         require(withdrawers.length > 0, 'MISSING_WITHDRAWERS');
+        ethWithdrawer = withdrawers[0];
         for (uint256 i = 0; i < withdrawers.length; i++) {
             require(withdrawers[i] != address(0), 'WITHDRAWER_ZERO_ADDRESS');
             isWithdrawer[withdrawers[i]] = true;

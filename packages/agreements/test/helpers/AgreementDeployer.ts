@@ -13,6 +13,7 @@ const AgreementDeployer = {
   async deploy(params: RawAgreementDeployment = {}): Promise<Agreement> {
     const parsedParams = await this.parseParams(params)
     const {
+      weth,
       vault,
       feeCollector,
       depositFee,
@@ -27,7 +28,7 @@ const AgreementDeployer = {
       allowedStrategies,
     } = parsedParams
 
-    const agreement = await deploy('Agreement', [], params.from)
+    const agreement = await deploy('Agreement', [weth.address], params.from)
     await agreement.initialize(
       vault.address,
       toAddress(feeCollector),
@@ -63,6 +64,7 @@ const AgreementDeployer = {
   async parseParams(params: RawAgreementDeployment): Promise<AgreementDeployment> {
     const [, signer1, signer2, signer3, signer4, signer5, signer6] = await getSigners()
 
+    const weth = params.weth || (await deploy('WethMock'))
     const vault = params.vault || (await deploy('VaultMock'))
     const feeCollector = params.feeCollector ?? signer6
     const depositFee = params.depositFee ?? 0
@@ -79,6 +81,7 @@ const AgreementDeployer = {
     const strategies = params.strategies ?? []
     const allowedStrategies = params.allowedStrategies ?? 'any'
     return {
+      weth,
       vault,
       feeCollector,
       depositFee,
