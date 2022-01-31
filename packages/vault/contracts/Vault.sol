@@ -38,7 +38,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
-    uint256 public constant EXIT_RATIO_PRECISION = 1e18;
+    uint256 public constant override EXIT_RATIO_PRECISION = 1e18;
 
     uint256 internal constant MAX_SLIPPAGE = 2e17; // 20%
     uint256 internal constant MAX_PROTOCOL_FEE = 2e17; // 20%

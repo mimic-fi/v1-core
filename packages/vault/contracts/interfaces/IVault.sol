@@ -47,6 +47,9 @@ interface IVault {
         uint256 performanceFee
     );
 
+    // solhint-disable-next-line func-name-mixedcase
+    function EXIT_RATIO_PRECISION() external view returns (uint256);
+
     function maxSlippage() external view returns (uint256);
 
     function protocolFee() external view returns (uint256);
