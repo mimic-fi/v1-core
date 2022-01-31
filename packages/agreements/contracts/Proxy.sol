@@ -21,7 +21,15 @@ contract Proxy {
         implementation = _implementation;
     }
 
-    fallback() external payable virtual {
+    fallback() external payable {
+        _fallback();
+    }
+
+    receive() external payable {
+        _fallback();
+    }
+
+    function _fallback() internal {
         // solhint-disable-previous-line no-complex-fallback
         // solhint-disable-next-line no-inline-assembly
         address impl = implementation;
