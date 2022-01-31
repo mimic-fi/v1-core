@@ -33,7 +33,7 @@ export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, blo
   let strategyAddress = Address.fromString(strategy.id)
   let totalValue = getStrategyValue(strategyAddress)
   let totalShares = getStrategyShares(Address.fromString(vault.address), strategyAddress)
-  let shareValue = totalValue.times(ONE).div(totalShares)
+  let shareValue = totalShares.isZero() ? BigInt.fromI32(0) : totalValue.times(ONE).div(totalShares)
 
   if (strategy.lastRate === null) {
     storeLastRate(strategy, totalValue, totalShares, shareValue, BigInt.fromI32(0), block);
