@@ -30,7 +30,7 @@ describe('Vault', () => {
 
   before('setup signers', async () => {
     // eslint-disable-next-line prettier/prettier
-    ;[admin, account, other, feeCollector] = await getSigners()
+    [admin, account, other, feeCollector] = await getSigners()
   })
 
   beforeEach('deploy vault, tokens, and portfolio', async () => {
