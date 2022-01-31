@@ -1767,7 +1767,7 @@ describe('Vault', () => {
                 const exitValue = await vault.getAccountValueRatio(account, strategy, ratio)
                 const previousInvestment = await vault.getAccountInvestment(account, strategy)
                 const expectedInvested = previousInvestment.invested.gte(currentValue)
-                  ? previousInvestment.invested.mul(ratio).div(fp(1))
+                  ? previousInvestment.invested.mul(fp(1).sub(ratio)).div(fp(1))
                   : currentValue.sub(exitValue)
 
                 await vault.exit(account, strategy, ratio, { from })
@@ -2030,7 +2030,7 @@ describe('Vault', () => {
                 const exitValue = await vault.getAccountValueRatio(portfolio, strategy, ratio)
                 const previousInvestment = await vault.getAccountInvestment(portfolio, strategy)
                 const expectedInvested = previousInvestment.invested.gte(currentValue)
-                  ? previousInvestment.invested.mul(ratio).div(fp(1))
+                  ? previousInvestment.invested.mul(fp(1).sub(ratio)).div(fp(1))
                   : currentValue.sub(exitValue)
 
                 await vault.exit(portfolio, strategy, ratio, { from })
