@@ -32,7 +32,7 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
 export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, block: ethereum.Block): void {
   let strategyAddress = Address.fromString(strategy.id)
   let totalValue = getStrategyValue(strategyAddress)
-  let totalShares = getStrategyShares(Address.fromString(vault.id), strategyAddress)
+  let totalShares = getStrategyShares(Address.fromString(vault.address), strategyAddress)
   let shareValue = totalValue.times(ONE).div(totalShares)
 
   if (strategy.lastRate === null) {
