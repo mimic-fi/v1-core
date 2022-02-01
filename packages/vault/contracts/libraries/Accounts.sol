@@ -107,31 +107,43 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).canPerform(who, where, what, how) : false;
     }
 
-    function beforeDeposit(Data memory self, address sender, address token, uint256 amount) internal {
+    function beforeDeposit(Data memory self, address sender, address token, uint256 amount, bytes memory data)
+        internal
+    {
         if (supportsBeforeDeposit(self.callbacks)) {
-            IPortfolio(self.addr).beforeDeposit(sender, token, amount);
+            IPortfolio(self.addr).beforeDeposit(sender, token, amount, data);
         }
     }
 
-    function afterDeposit(Data memory self, address sender, address token, uint256 amount) internal {
+    function afterDeposit(Data memory self, address sender, address token, uint256 amount, bytes memory data) internal {
         if (supportsAfterDeposit(self.callbacks)) {
-            IPortfolio(self.addr).afterDeposit(sender, token, amount);
+            IPortfolio(self.addr).afterDeposit(sender, token, amount, data);
         }
     }
 
-    function beforeWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient)
-        internal
-    {
+    function beforeWithdraw(
+        Data memory self,
+        address sender,
+        address token,
+        uint256 amount,
+        address recipient,
+        bytes memory data
+    ) internal {
         if (supportsBeforeWithdraw(self.callbacks)) {
-            IPortfolio(self.addr).beforeWithdraw(sender, token, amount, recipient);
+            IPortfolio(self.addr).beforeWithdraw(sender, token, amount, recipient, data);
         }
     }
 
-    function afterWithdraw(Data memory self, address sender, address token, uint256 amount, address recipient)
-        internal
-    {
+    function afterWithdraw(
+        Data memory self,
+        address sender,
+        address token,
+        uint256 amount,
+        address recipient,
+        bytes memory data
+    ) internal {
         if (supportsAfterWithdraw(self.callbacks)) {
-            IPortfolio(self.addr).afterWithdraw(sender, token, amount, recipient);
+            IPortfolio(self.addr).afterWithdraw(sender, token, amount, recipient, data);
         }
     }
 
