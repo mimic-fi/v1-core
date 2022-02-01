@@ -52,7 +52,6 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     uint256 public override performanceFee;
     uint256 public override maxSwapSlippage;
 
-    address internal ethWithdrawer;
     mapping (address => bool) public override isManager;
     mapping (address => bool) public override isWithdrawer;
 
@@ -153,14 +152,18 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
             return !params.emergency || isWithdrawer[who];
         } else if (what.isWithdraw()) {
             VaultHelpers.WithdrawParams memory params = how.decodeWithdraw();
-            return isWithdrawer[params.recipient] || (IWETH(params.token) == weth && params.recipient == address(this));
+            return
+                isWithdrawer[params.recipient] ||
+                (IWETH(params.token) == weth &&
+                    params.recipient == address(this) &&
+                    isWithdrawer[_decodeAddress(params.data)]);
         } else {
             return what.isDeposit();
         }
     }
 
     function getSupportedCallbacks() external pure override returns (bytes2) {
-        // Supported callbacks are 'before deposit' and 'before withdraw': 0000001101 (0x000D).
+        // Supported callbacks are 'before deposit', 'before withdraw', and 'after withdraw': 0000001101 (0x000D).
         return bytes2(0x000D);
     }
 
@@ -183,10 +186,14 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         _safeApprove(token, Math.min(amount, getTokenBalance(token)));
     }
 
-    function afterWithdraw(address, address token, uint256 amount, address recipient, bytes memory data) external override onlyVault {
+    function afterWithdraw(address, address token, uint256 amount, address recipient, bytes memory data)
+        external
+        override
+        onlyVault
+    {
         if (token == address(weth) && amount > 0 && recipient == address(this)) {
             weth.withdraw(amount);
-            payable(ethWithdrawer).transfer(amount);
+            payable(_decodeAddress(data)).transfer(amount);
         }
     }
 
@@ -249,7 +256,6 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
 
     function _setWithdrawers(address[] memory withdrawers) private {
         require(withdrawers.length > 0, 'MISSING_WITHDRAWERS');
-        ethWithdrawer = withdrawers[0];
         for (uint256 i = 0; i < withdrawers.length; i++) {
             require(withdrawers[i] != address(0), 'WITHDRAWER_ZERO_ADDRESS');
             isWithdrawer[withdrawers[i]] = true;
@@ -286,5 +292,11 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         require(vault == address(0), 'ALREADY_INIT');
         require(_vault.isContract(), 'VAULT_NOT_CONTRACT');
         vault = _vault;
+    }
+
+    function _decodeAddress(bytes memory data) private pure returns (address result) {
+        if (data.length >= 20) {
+            (result) = abi.decode(data, (address));
+        }
     }
 }

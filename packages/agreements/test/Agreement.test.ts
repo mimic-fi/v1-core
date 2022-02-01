@@ -1,3 +1,4 @@
+import { defaultAbiCoder } from '@ethersproject/abi'
 import { BigNumberish, deploy, fp, getSigner, getSigners, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
@@ -390,15 +391,17 @@ describe('Agreement', () => {
 
   describe('can perform', () => {
     let who: Account, where: string
-    let agreement: Agreement, vault: Contract, customStrategy: Contract, customToken: Contract
+    let agreement: Agreement, weth: Contract, vault: Contract, customStrategy: Contract, customToken: Contract
 
     const maxSwapSlippage = fp(0.2)
 
     beforeEach('deploy agreement', async () => {
+      weth = await deploy('WethMock')
       vault = await deploy('VaultMock')
       customToken = await deploy('TokenMock')
       customStrategy = await deploy('StrategyMock')
       agreement = await Agreement.create({
+        weth,
         vault,
         allowedStrategies: 'onlyCustom',
         strategies: [customStrategy],
@@ -467,6 +470,28 @@ describe('Agreement', () => {
 
           const collector = toAddress(agreement.feeCollector)
           expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), collector)).to.be.false
+        })
+
+        it('accepts withdrawals to the agreement itself if sending weth with an encoded withdrawer', async () => {
+          const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
+
+          const encodedWithdrawer0 = defaultAbiCoder.encode(['address'], [withdrawer0])
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address, encodedWithdrawer0)).to
+            .be.false
+          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedWithdrawer0)).to
+            .be.true
+
+          const encodedWithdrawer1 = defaultAbiCoder.encode(['address'], [withdrawer1])
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address, encodedWithdrawer1)).to
+            .be.false
+          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedWithdrawer1)).to
+            .be.true
+
+          const encodedManager0 = defaultAbiCoder.encode(['address'], [toAddress(agreement.managers[0])])
+          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address)).to.be.false
+          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address)).to.be.false
+          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedManager0)).to.be
+            .false
         })
 
         it('accepts operating with allowed tokens', async () => {
@@ -687,7 +712,7 @@ describe('Agreement', () => {
 
         it('reverts', async () => {
           await expect(
-            agreement.instance.afterWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS)
+            agreement.instance.afterWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS, '0x')
           ).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
@@ -696,7 +721,7 @@ describe('Agreement', () => {
 
   describe('withdraw', () => {
     let manager: SignerWithAddress, withdrawer: SignerWithAddress
-    let agreement: Agreement, vault: Contract, token: Contract, swapConenctor: Contract, priceOracle: Contract
+    let agreement: Agreement, vault: Contract, token: Contract, swapConnector: Contract, priceOracle: Contract
 
     beforeEach('deploy agreement', async () => {
       // eslint-disable-next-line prettier/prettier
@@ -704,12 +729,12 @@ describe('Agreement', () => {
 
       token = await deploy('TokenMock')
       priceOracle = await deploy('TokenMock')
-      swapConenctor = await deploy('TokenMock')
+      swapConnector = await deploy('TokenMock')
 
       vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [
         fp(0.1),
         fp(0.1),
-        swapConenctor.address,
+        swapConnector.address,
         priceOracle.address,
         [],
         [],
@@ -733,7 +758,7 @@ describe('Agreement', () => {
 
   describe('ETH', () => {
     let manager: SignerWithAddress, withdrawer: SignerWithAddress
-    let agreement: Agreement, vault: Contract, weth: Contract, swapConenctor: Contract, priceOracle: Contract
+    let agreement: Agreement, vault: Contract, weth: Contract, swapConnector: Contract, priceOracle: Contract
 
     beforeEach('deploy agreement', async () => {
       // eslint-disable-next-line prettier/prettier
@@ -741,12 +766,12 @@ describe('Agreement', () => {
 
       weth = await deploy('WethMock')
       priceOracle = await deploy('TokenMock')
-      swapConenctor = await deploy('TokenMock')
+      swapConnector = await deploy('TokenMock')
 
       vault = await deploy('@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault', [
         fp(0.1),
         fp(0.1),
-        swapConenctor.address,
+        swapConnector.address,
         priceOracle.address,
         [],
         [],
@@ -770,7 +795,7 @@ describe('Agreement', () => {
       await assertBalance(vault, 0, 0)
       await assertBalance(agreement, amount, 0)
 
-      await vault.connect(manager).deposit(agreement.address, weth.address, amount)
+      await vault.connect(manager).deposit(agreement.address, weth.address, amount, '0x')
       await assertBalance(vault, 0, amount)
       await assertBalance(agreement, 0, 0)
     })
@@ -780,9 +805,9 @@ describe('Agreement', () => {
 
       const amount = fp(1)
       await manager.sendTransaction({ to: agreement.address, value: amount })
-      await vault.connect(manager).deposit(agreement.address, weth.address, amount)
+      await vault.connect(manager).deposit(agreement.address, weth.address, amount, '0x')
 
-      await vault.connect(manager).withdraw(agreement.address, weth.address, amount, withdrawer.address)
+      await vault.connect(manager).withdraw(agreement.address, weth.address, amount, withdrawer.address, '0x')
       await assertBalance(vault, 0, 0)
       await assertBalance(agreement, 0, 0)
 
@@ -795,9 +820,13 @@ describe('Agreement', () => {
 
       const amount = fp(1)
       await manager.sendTransaction({ to: agreement.address, value: amount })
-      await vault.connect(manager).deposit(agreement.address, weth.address, amount)
+      await vault.connect(manager).deposit(agreement.address, weth.address, amount, '0x')
 
-      await vault.connect(manager).withdraw(agreement.address, weth.address, amount, agreement.address)
+      const encodedWithdrawer = defaultAbiCoder.encode(['address'], [withdrawer.address])
+      await vault
+        .connect(manager)
+        .withdraw(agreement.address, weth.address, amount, agreement.address, encodedWithdrawer)
+
       await assertBalance(vault, 0, 0)
       await assertBalance(agreement, 0, 0)
 
