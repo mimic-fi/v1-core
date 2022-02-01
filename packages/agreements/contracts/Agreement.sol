@@ -90,15 +90,15 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function getDepositFee() external view override returns (uint256, address) {
+    function getDepositFee(address) external view override returns (uint256, address) {
         return (depositFee, feeCollector);
     }
 
-    function getWithdrawFee() external view override returns (uint256, address) {
+    function getWithdrawFee(address) external view override returns (uint256, address) {
         return (withdrawFee, feeCollector);
     }
 
-    function getPerformanceFee() external view override returns (uint256, address) {
+    function getPerformanceFee(address) external view override returns (uint256, address) {
         return (performanceFee, feeCollector);
     }
 

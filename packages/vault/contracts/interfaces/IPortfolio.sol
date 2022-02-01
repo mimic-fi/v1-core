@@ -35,11 +35,11 @@ interface IPortfolio {
 
     function getTokenBalance(address token) external view returns (uint256);
 
-    function getDepositFee() external view returns (uint256 fee, address collector);
+    function getDepositFee(address token) external view returns (uint256 fee, address collector);
 
-    function getWithdrawFee() external view returns (uint256 fee, address collector);
+    function getWithdrawFee(address token) external view returns (uint256 fee, address collector);
 
-    function getPerformanceFee() external view returns (uint256 fee, address collector);
+    function getPerformanceFee(address strategy) external view returns (uint256 fee, address collector);
 
     function canPerform(address who, address where, bytes32 what, bytes memory how) external view returns (bool);
 

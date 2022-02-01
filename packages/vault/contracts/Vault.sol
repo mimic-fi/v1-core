@@ -246,7 +246,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     {
         require(amount > 0, 'DEPOSIT_AMOUNT_ZERO');
 
-        (uint256 depositFee, address feeCollector) = account.getDepositFee();
+        (uint256 depositFee, address feeCollector) = account.getDepositFee(token);
         _safeTransferFrom(token, account.addr, address(this), amount);
 
         uint256 depositFeeAmount = amount.mulDown(depositFee);
@@ -272,7 +272,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         uint256 fromAccount = Math.min(portfolioBalance, amount);
         _safeTransferFrom(token, account.addr, recipient, fromAccount);
 
-        (uint256 withdrawFee, address feeCollector) = account.getWithdrawFee();
+        (uint256 withdrawFee, address feeCollector) = account.getWithdrawFee(token);
         uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
         uint256 withdrawFeeAmount = fromVault.mulDown(withdrawFee);
         _safeTransfer(token, feeCollector, withdrawFeeAmount);
@@ -385,6 +385,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         uint256 investedValue = accounting.invested[strategy];
         (uint256 protocolFeeAmount, uint256 performanceFeeAmount) = _payExitFees(
             account,
+            strategy,
             token,
             amount,
             exitingValue,
@@ -403,6 +404,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
     function _payExitFees(
         Accounts.Data memory account,
+        address strategy,
         address token,
         uint256 amount,
         uint256 exitingValue,
@@ -420,7 +422,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         _safeTransfer(token, owner(), protocolFeeAmount);
 
         uint256 tokenGainsAfterProtocolFees = tokenGains.sub(protocolFeeAmount);
-        (uint256 performanceFee, address feeCollector) = account.getPerformanceFee();
+        (uint256 performanceFee, address feeCollector) = account.getPerformanceFee(strategy);
         performanceFeeAmount = tokenGainsAfterProtocolFees.mulDown(performanceFee);
         _safeTransfer(token, feeCollector, performanceFeeAmount);
     }

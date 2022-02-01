@@ -40,41 +40,6 @@ library Accounts {
         return data;
     }
 
-    function getDepositAmount(address self, uint256 amount) internal view returns (uint256) {
-        (uint256 depositFee, ) = getDepositFee(Accounts.parse(self));
-        uint256 depositFeeAmount = amount.mulDown(depositFee);
-        return amount.sub(depositFeeAmount);
-    }
-
-    function getWithdrawAmount(address self, address token, uint256 amount, uint256 vaultBalance)
-        internal
-        view
-        returns (uint256)
-    {
-        Accounts.Data memory account = Accounts.parse(self);
-        uint256 portfolioBalance = getTokenBalance(account, token);
-        require(vaultBalance.add(portfolioBalance) >= amount, 'ACCOUNTING_INSUFFICIENT_BALANCE');
-        uint256 fromAccount = Math.min(portfolioBalance, amount);
-        (uint256 withdrawFee, ) = getWithdrawFee(account);
-        uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
-        uint256 withdrawFeeAmount = fromVault.mulDown(withdrawFee);
-        return amount.sub(withdrawFeeAmount);
-    }
-
-    function getExitAmount(address self, uint256 deposited, uint256 amount, uint256 protocolFee)
-        internal
-        view
-        returns (uint256)
-    {
-        if (deposited >= amount) return amount;
-        uint256 gains = amount - deposited;
-        uint256 protocolFeeAmount = gains.mulUp(protocolFee);
-        uint256 gainsAfterProtocolFees = gains.sub(protocolFeeAmount);
-        (uint256 performanceFee, ) = getPerformanceFee(Accounts.parse(self));
-        uint256 performanceFeeAmount = gainsAfterProtocolFees.mulDown(performanceFee);
-        return amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
-    }
-
     function isSender(Data memory self) internal view returns (bool) {
         return self.addr == msg.sender;
     }
@@ -83,16 +48,20 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).getTokenBalance(token) : 0;
     }
 
-    function getDepositFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getDepositFee() : (0, address(0));
+    function getDepositFee(Data memory self, address token) internal view returns (uint256 fee, address collector) {
+        return self.isPortfolio ? IPortfolio(self.addr).getDepositFee(token) : (0, address(0));
     }
 
-    function getWithdrawFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getWithdrawFee() : (0, address(0));
+    function getWithdrawFee(Data memory self, address token) internal view returns (uint256 fee, address collector) {
+        return self.isPortfolio ? IPortfolio(self.addr).getWithdrawFee(token) : (0, address(0));
     }
 
-    function getPerformanceFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getPerformanceFee() : (0, address(0));
+    function getPerformanceFee(Data memory self, address strategy)
+        internal
+        view
+        returns (uint256 fee, address collector)
+    {
+        return self.isPortfolio ? IPortfolio(self.addr).getPerformanceFee(strategy) : (0, address(0));
     }
 
     function getSupportedCallbacks(Data memory self) internal view returns (bytes2) {

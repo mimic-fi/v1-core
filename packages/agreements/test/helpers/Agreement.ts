@@ -82,18 +82,18 @@ export default class Agreement {
     return this.instance.feeCollector()
   }
 
-  async getDepositFee(): Promise<{ fee: BigNumber; collector: string }> {
-    const [fee, collector] = await this.instance.getDepositFee()
+  async getDepositFee(token = ZERO_ADDRESS): Promise<{ fee: BigNumber; collector: string }> {
+    const [fee, collector] = await this.instance.getDepositFee(token)
     return { fee, collector }
   }
 
-  async getWithdrawFee(): Promise<{ fee: BigNumber; collector: string }> {
-    const [fee, collector] = await this.instance.getWithdrawFee()
+  async getWithdrawFee(token = ZERO_ADDRESS): Promise<{ fee: BigNumber; collector: string }> {
+    const [fee, collector] = await this.instance.getWithdrawFee(token)
     return { fee, collector }
   }
 
-  async getPerformanceFee(): Promise<{ fee: BigNumber; collector: string }> {
-    const [fee, collector] = await this.instance.getPerformanceFee()
+  async getPerformanceFee(strategy = ZERO_ADDRESS): Promise<{ fee: BigNumber; collector: string }> {
+    const [fee, collector] = await this.instance.getPerformanceFee(strategy)
     return { fee, collector }
   }
 

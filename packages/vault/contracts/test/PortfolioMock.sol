@@ -72,15 +72,15 @@ contract PortfolioMock is IPortfolio {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function getDepositFee() external view override returns (uint256 fee, address collector) {
+    function getDepositFee(address) external view override returns (uint256 fee, address collector) {
         return (depositFee, feeCollector);
     }
 
-    function getWithdrawFee() external view override returns (uint256 fee, address collector) {
+    function getWithdrawFee(address) external view override returns (uint256 fee, address collector) {
         return (withdrawFee, feeCollector);
     }
 
-    function getPerformanceFee() external view override returns (uint256 fee, address collector) {
+    function getPerformanceFee(address) external view override returns (uint256 fee, address collector) {
         return (performanceFee, feeCollector);
     }
 
