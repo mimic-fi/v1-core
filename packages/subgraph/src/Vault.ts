@@ -42,8 +42,8 @@ export function handleJoin(event: Join): void {
   loadOrCreateAccount(event.params.account, event.address)
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
-  accountStrategy.shares = getAccountShares(event.address, event.params.account)
-  accountStrategy.invested = getAccountInvested(event.address, event.params.account)
+  accountStrategy.shares = getAccountShares(event.address, event.params.account, event.params.strategy)
+  accountStrategy.invested = getAccountInvested(event.address, event.params.account, event.params.strategy)
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
@@ -58,8 +58,8 @@ export function handleExit(event: Exit): void {
   loadOrCreateAccount(event.params.account, event.address)
 
   let accountStrategy = loadOrCreateAccountStrategy(event.params.account, event.params.strategy)
-  accountStrategy.shares = getAccountShares(event.address, event.params.account)
-  accountStrategy.invested = getAccountInvested(event.address, event.params.account)
+  accountStrategy.shares = getAccountShares(event.address, event.params.account, event.params.strategy)
+  accountStrategy.invested = getAccountInvested(event.address, event.params.account, event.params.strategy)
   accountStrategy.save()
 
   let accountBalance = loadOrCreateAccountBalance(event.params.account, Address.fromString(strategy.token))
@@ -206,26 +206,26 @@ function getMaxSlippage(address: Address): BigInt {
   return BigInt.fromI32(0)
 }
 
-function getAccountShares(address: Address, account: Address): BigInt {
+function getAccountShares(address: Address, account: Address, strategy: Address): BigInt {
   let vaultContract = VaultContract.bind(address)
-  let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(address, account)
+  let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(account, strategy)
 
   if (!getAccountInvestmentCall.reverted) {
     return getAccountInvestmentCall.value.value0
   }
 
-  log.warning('getAccountInvestment() call reverted for {} and account', [address.toHexString(), account.toHexString()])
+  log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [address.toHexString(), account.toHexString(), strategy.toHexString()])
   return BigInt.fromI32(0)
 }
 
-function getAccountInvested(address: Address, account: Address): BigInt {
+function getAccountInvested(address: Address, account: Address, strategy: Address): BigInt {
   let vaultContract = VaultContract.bind(address)
-  let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(address, account)
+  let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(account, strategy)
 
   if (!getAccountInvestmentCall.reverted) {
     return getAccountInvestmentCall.value.value1
   }
 
-  log.warning('getAccountInvestment() call reverted for {} and account', [address.toHexString(), account.toHexString()])
+  log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [address.toHexString(), account.toHexString(), strategy.toHexString()])
   return BigInt.fromI32(0)
 }
