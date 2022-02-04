@@ -143,7 +143,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
             return isStrategyAllowed(params.strategy);
         } else if (what.isExit()) {
             VaultHelpers.ExitParams memory params = how.decodeExit();
-            return isStrategyAllowed(params.strategy) && (!params.emergency || isWithdrawer[who]);
+            return !params.emergency || isWithdrawer[who];
         } else if (what.isWithdraw()) {
             VaultHelpers.WithdrawParams memory params = how.decodeWithdraw();
             return isWithdrawer[params.recipient];
