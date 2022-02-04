@@ -587,12 +587,13 @@ describe('Agreement', () => {
   })
 
   describe('callbacks', () => {
-    let agreement: Agreement, vault: Contract, token: Contract
+    let agreement: Agreement, vault: Contract, token: Contract, weth: Contract
 
     beforeEach('deploy agreement', async () => {
+      weth = await deploy('WethMock')
       token = await deploy('TokenMock')
       vault = await deploy('VaultMock')
-      agreement = await Agreement.create({ vault })
+      agreement = await Agreement.create({ weth, vault })
     })
 
     it('supports only before deposit and withdraw', async () => {
@@ -675,32 +676,133 @@ describe('Agreement', () => {
     })
 
     describe('after withdraw', () => {
+      let recipient: string, withdrawer: SignerWithAddress
+
+      beforeEach('define signer', async () => {
+        withdrawer = await getSigner(2)
+      })
+
       context('when the sender is the vault', () => {
         context('when the token is WETH', () => {
+          const balance = fp(10)
+
+          beforeEach('deposit weth into the agreement', async () => {
+            await weth.deposit({ value: balance })
+            await weth.transfer(agreement.address, balance)
+          })
+
           context('when the recipient is the agreement', () => {
-            context('when the amount is greater than zero', () => {
-              it('unwraps the given weth and sends it to the default withdrawer', async () => {
-                // TODO: implement
+            beforeEach('set agreement as recipient', () => {
+              recipient = agreement.address
+            })
+
+            context('when there is a withdrawer encoded', () => {
+              let data: string
+
+              beforeEach('encode withdrawer', async () => {
+                data = defaultAbiCoder.encode(['address'], [withdrawer.address])
+              })
+
+              context('when the amount is greater than zero', () => {
+                const amount = balance
+
+                context('when there is enough balance in the agreement', () => {
+                  beforeEach('deposit weth into the agreement', async () => {
+                    await weth.deposit({ value: amount })
+                    await weth.transfer(agreement.address, amount)
+                  })
+
+                  it('unwraps the given weth and sends it to the default withdrawer', async () => {
+                    const previousEthBalance = await ethers.provider.getBalance(withdrawer.address)
+                    const previousWethBalance = await weth.balanceOf(agreement.address)
+
+                    await vault.mockAfterWithdraw(
+                      agreement.address,
+                      ZERO_ADDRESS,
+                      weth.address,
+                      amount,
+                      recipient,
+                      data
+                    )
+
+                    const currentEthBalance = await ethers.provider.getBalance(withdrawer.address)
+                    expect(currentEthBalance).to.be.equal(previousEthBalance.add(amount))
+
+                    const currentWethBalance = await weth.balanceOf(agreement.address)
+                    expect(currentWethBalance).to.be.equal(previousWethBalance.sub(amount))
+                  })
+                })
+
+                context('when there is not enough balance in the agreement', () => {
+                  const amount = balance.add(1)
+
+                  it('reverts', async () => {
+                    await expect(
+                      vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, weth.address, amount, recipient, data)
+                    ).to.be.revertedWith('NOT_ENOUGH_BALANCE')
+                  })
+                })
+              })
+
+              context('when the amount is zero', () => {
+                const amount = 0
+
+                it('ignores the request', async () => {
+                  const previousEthBalance = await ethers.provider.getBalance(withdrawer.address)
+                  const previousWethBalance = await weth.balanceOf(agreement.address)
+
+                  await vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, weth.address, amount, recipient, data)
+
+                  expect(await ethers.provider.getBalance(withdrawer.address)).to.be.equal(previousEthBalance)
+                  expect(await weth.balanceOf(agreement.address)).to.be.equal(previousWethBalance)
+                })
               })
             })
 
-            context('when the amount is zero', () => {
-              it('ignores the request', async () => {
-                // TODO: implement
+            context('when there is no withdrawer encoded', () => {
+              const data = '0x'
+
+              it('unwraps the given weth and sends it to the zero address', async () => {
+                const previousEthBalance = await ethers.provider.getBalance(ZERO_ADDRESS)
+                const previousWethBalance = await weth.balanceOf(agreement.address)
+
+                await vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, weth.address, balance, recipient, data)
+
+                const currentEthBalance = await ethers.provider.getBalance(ZERO_ADDRESS)
+                expect(currentEthBalance).to.be.equal(previousEthBalance.add(balance))
+
+                const currentWethBalance = await weth.balanceOf(agreement.address)
+                expect(currentWethBalance).to.be.equal(previousWethBalance.sub(balance))
               })
             })
           })
 
           context('when the recipient is not the agreement', () => {
+            beforeEach('set agreement as recipient', () => {
+              recipient = withdrawer.address
+            })
+
             it('ignores the request', async () => {
-              // TODO: implement
+              const previousEthBalance = await ethers.provider.getBalance(withdrawer.address)
+              const previousWethBalance = await weth.balanceOf(agreement.address)
+
+              await vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, weth.address, fp(10), recipient, '0x')
+
+              expect(await ethers.provider.getBalance(withdrawer.address)).to.be.equal(previousEthBalance)
+              expect(await weth.balanceOf(agreement.address)).to.be.equal(previousWethBalance)
             })
           })
         })
 
         context('when the token is not WETH', () => {
           it('ignores the request', async () => {
-            // TODO: implement
+            const previousEthBalance = await ethers.provider.getBalance(withdrawer.address)
+            const previousWethBalance = await token.balanceOf(agreement.address)
+
+            await vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, token.address, fp(10), recipient, '0x')
+
+            expect(await ethers.provider.getBalance(withdrawer.address)).to.be.equal(previousEthBalance)
+            expect(await token.balanceOf(agreement.address)).to.be.equal(previousWethBalance)
           })
         })
       })

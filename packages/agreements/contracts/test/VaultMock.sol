@@ -38,4 +38,15 @@ contract VaultMock {
     ) external {
         IPortfolio(portfolio).beforeWithdraw(sender, token, amount, recipient, data);
     }
+
+    function mockAfterWithdraw(
+        address portfolio,
+        address sender,
+        address token,
+        uint256 amount,
+        address recipient,
+        bytes memory data
+    ) external {
+        IPortfolio(portfolio).afterWithdraw(sender, token, amount, recipient, data);
+    }
 }
