@@ -168,7 +168,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     }
 
     receive() external payable {
-        emit ReceivedEth(msg.sender, msg.value);
+        // solhint-disable-previous-line no-empty-blocks
     }
 
     function beforeDeposit(address, address token, uint256 amount, bytes memory) external override onlyVault {

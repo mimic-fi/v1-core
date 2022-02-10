@@ -17,7 +17,6 @@ pragma solidity ^0.8.0;
 import '@mimic-fi/v1-vault/contracts/interfaces/IPortfolio.sol';
 
 interface IAgreement is IPortfolio {
-    event ReceivedEth(address indexed from, uint256 amount);
     event ManagersSet(address[] managers);
     event WithdrawersSet(address[] withdrawers);
     event AllowedTokensSet(uint256 allowedTokens, address[] customTokens);
