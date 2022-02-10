@@ -24,9 +24,9 @@ contract AgreementFactory {
 
     event AgreementCreated(address indexed agreement, string name);
 
-    constructor(address _vault) {
+    constructor(IWETH _weth, address _vault) {
         vault = _vault;
-        implementation = address(new Agreement());
+        implementation = address(new Agreement(_weth));
     }
 
     function create(
@@ -43,7 +43,7 @@ contract AgreementFactory {
         address[] memory _customStrategies,
         Agreement.Allowed _allowedStrategies
     ) external {
-        address agreement = address(new Proxy(implementation));
+        address payable agreement = payable(new Proxy(implementation));
         Agreement(agreement).initialize(
             vault,
             _feeCollector,

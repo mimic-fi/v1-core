@@ -1,4 +1,5 @@
 export default {
+  weth: '@mimic-fi/v1-agreements/artifacts/contracts/test/WethMock.sol/WethMock',
   vault: '@mimic-fi/v1-vault/artifacts/contracts/Vault.sol/Vault',
   swapConnector: '@mimic-fi/v1-vault/artifacts/contracts/test/SwapConnectorMock.sol/SwapConnectorMock',
   priceOracle: '@mimic-fi/v1-vault/artifacts/contracts/test/PriceOracleMock.sol/PriceOracleMock',

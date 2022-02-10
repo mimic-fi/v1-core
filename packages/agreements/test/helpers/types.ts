@@ -13,6 +13,7 @@ export type TxParams = {
 export type Allowed = 'onlyCustom' | 'customAndWhitelisted' | 'any'
 
 export type RawAgreementDeployment = {
+  weth?: Contract
   vault?: Contract
   depositFee?: BigNumberish
   withdrawFee?: BigNumberish
@@ -29,6 +30,7 @@ export type RawAgreementDeployment = {
 }
 
 export type AgreementDeployment = {
+  weth: Contract
   vault: Contract
   depositFee: BigNumberish
   withdrawFee: BigNumberish

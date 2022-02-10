@@ -43,7 +43,8 @@ async function benchmark(): Promise<void> {
 }
 
 async function benchmarkAgreement(vault: Contract, tokens: string[], strategies: string[]): Promise<Contract> {
-  const factory = await deploy(ARTIFACTS.agreementFactory, [vault.address])
+  const weth = await deploy(ARTIFACTS.weth)
+  const factory = await deploy(ARTIFACTS.agreementFactory, [weth.address, vault.address])
 
   const name = 'Test Agreement'
   const depositFee = fp(0.005)

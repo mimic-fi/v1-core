@@ -32,8 +32,9 @@ async function benchmark(): Promise<void> {
   const vaultArgs = [MAX_SLIPPAGE, PROTOCOL_FEE, priceOracle.address, swapConnector.address, [], []]
 
   // Deploy architecture
+  const weth = await deploy(ARTIFACTS.weth)
   const vault = await deploy(ARTIFACTS.vault, vaultArgs, admin)
-  const factory = await deploy(ARTIFACTS.agreementFactory, [vault.address])
+  const factory = await deploy(ARTIFACTS.agreementFactory, [weth.address, vault.address])
   console.log('swap connector:', swapConnector.address)
   console.log('price oracle:', priceOracle.address)
   console.log('vault:', vault.address)
