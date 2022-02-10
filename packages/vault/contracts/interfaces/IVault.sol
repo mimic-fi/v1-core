@@ -21,6 +21,7 @@ interface IVault {
     event SwapConnectorSet(address indexed swapConnector);
     event WhitelistedTokenSet(address indexed token, bool whitelisted);
     event WhitelistedStrategySet(address indexed strategy, bool whitelisted);
+    event Migrate(address indexed account, address indexed to, bytes data);
     event Deposit(address indexed account, address indexed token, uint256 amount, uint256 depositFee, bytes data);
     event Withdraw(
         address indexed account,
@@ -81,6 +82,8 @@ interface IVault {
     function query(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
 
     function batch(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory results);
+
+    function migrate(address account, address to, bytes memory data) external;
 
     function deposit(address account, address token, uint256 amount, bytes memory data)
         external

@@ -27,6 +27,8 @@ contract PortfolioMock is IPortfolio {
     event AfterJoin(address sender, address strategy, uint256 amount, bytes data);
     event BeforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes data);
     event AfterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes data);
+    event BeforeMigrate(address sender, address to, bytes data);
+    event AfterMigrate(address sender, address to, bytes data);
 
     bool public mockedCanPerform;
     bytes2 public mockedSupportedCallbacks;
@@ -164,5 +166,13 @@ contract PortfolioMock is IPortfolio {
         override
     {
         emit AfterExit(sender, strategy, ratio, emergency, data);
+    }
+
+    function beforeMigrate(address sender, address to, bytes memory data) external override {
+        emit BeforeMigrate(sender, to, data);
+    }
+
+    function afterMigrate(address sender, address to, bytes memory data) external override {
+        emit AfterMigrate(sender, to, data);
     }
 }

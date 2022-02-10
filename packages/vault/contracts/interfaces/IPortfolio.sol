@@ -27,6 +27,8 @@ interface IPortfolio {
      * - Least significant bit #7: after join
      * - Least significant bit #8: before exit
      * - Least significant bit #9: after exit
+     * - Least significant bit #10: before migrate
+     * - Least significant bit #11: after migrate
      * - Remaining most significant 6 bits are ignored
      *
      * For example, if a Portfolio supports 'before join' and 'after exit' it should respond '1001000000' (0x240).
@@ -78,4 +80,8 @@ interface IPortfolio {
     function beforeExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external;
 
     function afterExit(address sender, address strategy, uint256 ratio, bool emergency, bytes memory data) external;
+
+    function beforeMigrate(address sender, address to, bytes memory data) external;
+
+    function afterMigrate(address sender, address to, bytes memory data) external;
 }

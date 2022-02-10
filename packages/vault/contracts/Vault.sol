@@ -58,7 +58,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     mapping (address => bool) public override isStrategyWhitelisted;
     mapping (address => uint256) public override getStrategyShares;
 
-    mapping (address => Accounting) internal accountings;
+    uint256 public lastAccountId;
+    mapping (address => uint256) public accountsId;
+    mapping (uint256 => Accounting) internal accountings;
 
     constructor(
         uint256 _maxSlippage,
@@ -79,7 +81,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     }
 
     function getAccountBalance(address addr, address token) external view override returns (uint256) {
-        Accounting storage accounting = accountings[addr];
+        Accounting storage accounting = accountings[accountsId[addr]];
         return accounting.balance[token];
     }
 
@@ -89,13 +91,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         override
         returns (uint256 invested, uint256 shares)
     {
-        Accounting storage accounting = accountings[addr];
+        Accounting storage accounting = accountings[accountsId[addr]];
         invested = accounting.invested[strategy];
         shares = accounting.shares[strategy];
     }
 
     function getAccountCurrentValue(address addr, address strategy) external view override returns (uint256) {
-        Accounting storage accounting = accountings[addr];
+        Accounting storage accounting = accountings[accountsId[addr]];
         uint256 accountShares = accounting.shares[strategy];
         if (accountShares == 0) return 0;
 
@@ -178,6 +180,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
     }
 
+    function migrate(address addr, address to, bytes memory data) external override nonReentrant {
+        Accounts.Data memory account = _authorize(addr, abi.encode(to, data));
+        account.beforeMigrate(msg.sender, to, data);
+        _migrate(account, to, data);
+        account.afterMigrate(msg.sender, to, data);
+    }
+
     function deposit(address addr, address token, uint256 amount, bytes memory data)
         external
         override
@@ -240,6 +249,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterExit(msg.sender, strategy, ratio, emergency, data);
     }
 
+    function _migrate(Accounts.Data memory account, address to, bytes memory data) internal {
+        require(accountsId[to] == 0, 'TARGET_ALREADY_INITIALIZED');
+        accountsId[to] = account.id;
+        accountsId[account.addr] = 0;
+        emit Migrate(account.addr, to, data);
+    }
+
     function _deposit(Accounts.Data memory account, address token, uint256 amount, bytes memory data)
         internal
         returns (uint256 deposited)
@@ -253,7 +269,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         _safeTransfer(token, feeCollector, depositFeeAmount);
 
         deposited = amount.sub(depositFeeAmount);
-        Accounting storage accounting = accountings[account.addr];
+        Accounting storage accounting = accountings[account.id];
         accounting.balance[token] = accounting.balance[token].add(deposited);
         emit Deposit(account.addr, token, amount, depositFeeAmount, data);
     }
@@ -267,7 +283,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     ) internal returns (uint256 withdrawn) {
         require(amount > 0, 'WITHDRAW_AMOUNT_ZERO');
 
-        Accounting storage accounting = accountings[account.addr];
+        Accounting storage accounting = accountings[account.id];
         uint256 vaultBalance = accounting.balance[token];
         uint256 portfolioBalance = account.getTokenBalance(token);
         require(vaultBalance.add(portfolioBalance) >= amount, 'ACCOUNTING_INSUFFICIENT_BALANCE');
@@ -301,7 +317,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         require(tokenIn != tokenOut, 'SWAP_SAME_TOKEN');
         require(slippage <= maxSlippage, 'SWAP_MAX_SLIPPAGE');
 
-        Accounting storage accounting = accountings[account.addr];
+        Accounting storage accounting = accountings[account.id];
         uint256 currentBalance = accounting.balance[tokenIn];
         require(currentBalance >= amountIn, 'ACCOUNTING_INSUFFICIENT_BALANCE');
 
@@ -340,7 +356,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         require(amount > 0, 'JOIN_AMOUNT_ZERO');
 
         address token = IStrategy(strategy).getToken();
-        Accounting storage accounting = accountings[account.addr];
+        Accounting storage accounting = accountings[account.id];
         uint256 currentBalance = accounting.balance[token];
         require(currentBalance >= amount, 'ACCOUNTING_INSUFFICIENT_BALANCE');
         accounting.balance[token] = currentBalance.sub(amount);
@@ -367,7 +383,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         uint256 amount;
         uint256 exitingValue;
         uint256 currentValue;
-        Accounting storage accounting = accountings[account.addr];
+        Accounting storage accounting = accountings[account.id];
         // scope to avoid stack too deep
         {
             uint256 currentShares = accounting.shares[strategy];
@@ -447,10 +463,17 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
     }
 
-    function _authorize(address addr, bytes memory params) internal view returns (Accounts.Data memory account) {
+    function _authorize(address addr, bytes memory params) internal returns (Accounts.Data memory account) {
+        // Initialize account, assign an ID if it's the first time operating
+        uint256 accountId = accountsId[addr];
+        if (accountId == 0) {
+            accountId = ++lastAccountId;
+            accountsId[addr] = accountId;
+        }
+
         // Check the given account is the msg.sender, otherwise it will ask the account whether the sender can operate
         // on its behalf. Note that this will never apply for accounts trying to operate on behalf of foreign EOAs.
-        account = Accounts.parse(addr);
+        account = Accounts.parse(addr, accountId);
         bool allowed = account.isSender() || account.canPerform(msg.sender, address(this), msg.sig.toBytes32(), params);
         require(allowed, 'ACTION_NOT_ALLOWED');
     }

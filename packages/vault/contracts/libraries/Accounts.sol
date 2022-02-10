@@ -27,13 +27,15 @@ library Accounts {
     using BytesHelpers for bytes2;
 
     struct Data {
+        uint256 id;
         address addr;
         bool isPortfolio;
         bytes2 callbacks;
     }
 
-    function parse(address self) internal view returns (Data memory) {
+    function parse(address self, uint256 id) internal view returns (Data memory) {
         Data memory data;
+        data.id = id;
         data.addr = self;
         data.isPortfolio = Address.isContract(self);
         data.callbacks = getSupportedCallbacks(data);
@@ -184,6 +186,18 @@ library Accounts {
         }
     }
 
+    function beforeMigrate(Data memory self, address sender, address to, bytes memory data) internal {
+        if (supportsBeforeMigrate(self.callbacks)) {
+            IPortfolio(self.addr).beforeMigrate(sender, to, data);
+        }
+    }
+
+    function afterMigrate(Data memory self, address sender, address to, bytes memory data) internal {
+        if (supportsAfterMigrate(self.callbacks)) {
+            IPortfolio(self.addr).afterMigrate(sender, to, data);
+        }
+    }
+
     function supportsBeforeDeposit(bytes2 self) internal pure returns (bool) {
         return self.isBitSet(0);
     }
@@ -222,5 +236,13 @@ library Accounts {
 
     function supportsAfterExit(bytes2 self) internal pure returns (bool) {
         return self.isBitSet(9);
+    }
+
+    function supportsBeforeMigrate(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(10);
+    }
+
+    function supportsAfterMigrate(bytes2 self) internal pure returns (bool) {
+        return self.isBitSet(11);
     }
 }

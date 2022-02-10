@@ -165,6 +165,11 @@ export default class Agreement {
     return this.canPerform(who, where, await this.getVaultActionId('exit'), how)
   }
 
+  async canMigrate(who: Account, where: Account, to?: Account, data = '0x'): Promise<boolean> {
+    const how = to ? this.encodeMigrate(to, data) : '0x'
+    return this.canPerform(who, where, await this.getVaultActionId('migrate'), how)
+  }
+
   async canPerform(who: Account, where: Account, what = ZERO_BYTES32, how = '0x'): Promise<boolean> {
     return this.instance.canPerform(toAddress(who), toAddress(where), what, how)
   }
@@ -208,5 +213,9 @@ export default class Agreement {
       ['address', 'uint256', 'bool', 'bytes'],
       [toAddress(strategy), ratio, emergency, data]
     )
+  }
+
+  encodeMigrate(to: Account, data: string): string {
+    return defaultAbiCoder.encode(['address', 'bytes'], [toAddress(to), data])
   }
 }
