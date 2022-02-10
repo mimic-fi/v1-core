@@ -221,6 +221,14 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    function beforeMigrate(address, address, bytes memory) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
+    function afterMigrate(address, address, bytes memory) external override onlyVault {
+        // solhint-disable-previous-line no-empty-blocks
+    }
+
     function _safeApprove(address token, uint256 amount) internal {
         if (amount > 0) {
             IERC20(token).safeApprove(vault, amount);

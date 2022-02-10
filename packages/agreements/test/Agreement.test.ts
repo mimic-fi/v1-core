@@ -557,6 +557,12 @@ describe('Agreement', () => {
           expect(await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, true)).to.be.true
         })
 
+        it('does not accept migrations', async () => {
+          expect(await agreement.canMigrate(who, where)).to.be.false
+          expect(await agreement.canMigrate(who, where, who)).to.be.false
+          expect(await agreement.canMigrate(who, where, who, '0x')).to.be.false
+        })
+
         it('does not accept any other action', async () => {
           expect(await agreement.canPerform(who, where)).to.be.false
         })

@@ -2452,6 +2452,294 @@ describe('Vault', () => {
     })
   })
 
+  describe('migrate', () => {
+    let to: SignerWithAddress, strategy: Contract
+
+    beforeEach('deploy strategy', async () => {
+      strategy = await deploy('StrategyMock', [token.address])
+    })
+
+    context('when the account is an EOA', () => {
+      beforeEach('deposit and join', async () => {
+        await token.mint(account, fp(10))
+        await token.approve(vault, fp(10), { from: account })
+        await vault.deposit(account, token, fp(10), { from: account })
+        await vault.join(account, strategy, fp(5), { from: account })
+      })
+
+      context('when the sender is the EOA', () => {
+        let from: SignerWithAddress
+
+        beforeEach('set sender', async () => {
+          from = account
+        })
+
+        context('when the target was not initialized', () => {
+          beforeEach('set target', async () => {
+            to = other
+          })
+
+          it('migrates the account', async () => {
+            const originalId = await vault.getAccountId(account)
+
+            await vault.migrate(account, to, { from })
+
+            expect(await vault.getAccountId(account)).to.be.equal(0)
+            expect(await vault.getAccountId(to)).to.be.equal(originalId)
+          })
+
+          it('emits an event', async () => {
+            const tx = await vault.migrate(account, to, '0xabcd', { from })
+
+            await assertEvent(tx, 'Migrate', { account, to, data: '0xabcd' })
+          })
+
+          it('resets the original account', async () => {
+            await vault.migrate(account, to, { from })
+
+            expect(await vault.getAccountBalance(account, token)).to.be.equal(0)
+
+            const investment = await vault.getAccountInvestment(account, strategy)
+            expect(investment.shares).to.be.equal(0)
+            expect(investment.invested).to.be.equal(0)
+          })
+
+          it('allows re-using the original account', async () => {
+            const originalId = await vault.getAccountId(account)
+
+            await vault.migrate(account, to, { from })
+
+            await token.mint(account, fp(10))
+            await token.approve(vault, fp(10), { from })
+            await vault.deposit(account, token, fp(10), { from })
+
+            expect(await vault.getAccountBalance(account, token)).to.be.equal(fp(10))
+            expect(await vault.getAccountId(account)).not.to.be.equal(originalId)
+          })
+
+          it('transfers all the assets to the new account', async () => {
+            const previousBalance = await vault.getAccountBalance(account, token)
+            const previousInvestment = await vault.getAccountInvestment(account, strategy)
+
+            await vault.migrate(account, to, { from })
+
+            expect(await vault.getAccountBalance(to, token)).to.be.equal(previousBalance)
+
+            const investment = await vault.getAccountInvestment(to, strategy)
+            expect(investment.shares).to.be.equal(previousInvestment.shares)
+            expect(investment.invested).to.be.equal(previousInvestment.invested)
+          })
+        })
+
+        context('when the target was initialized', () => {
+          beforeEach('set target and deposit tokens', async () => {
+            to = other
+            await token.mint(to, fp(1))
+            await token.approve(vault, fp(1), { from: to })
+            await vault.deposit(to, token, fp(1), { from: to })
+          })
+
+          it('reverts', async () => {
+            await expect(vault.migrate(account, to, { from })).to.be.revertedWith('TARGET_ALREADY_INITIALIZED')
+          })
+        })
+      })
+
+      context('when the sender is not the EOA', () => {
+        let from: SignerWithAddress
+
+        beforeEach('set sender', async () => {
+          from = other
+        })
+
+        it('reverts', async () => {
+          await expect(vault.migrate(account, other, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+        })
+      })
+    })
+
+    context('when the account is a portfolio', () => {
+      let from: SignerWithAddress
+
+      beforeEach('set sender', async () => {
+        from = other
+      })
+
+      context('when the sender is allowed', () => {
+        beforeEach('mock can perform', async () => {
+          await portfolio.mockCanPerform(true)
+        })
+
+        beforeEach('deposit and join', async () => {
+          await token.mint(portfolio, fp(10))
+          await portfolio.mockApproveTokens(token.address, fp(10))
+          await vault.deposit(portfolio, token, fp(10), { from })
+          await vault.join(portfolio, strategy, fp(5), { from })
+        })
+
+        context('when the target was not initialized', () => {
+          beforeEach('set target', async () => {
+            to = other
+          })
+
+          it('migrates the account', async () => {
+            const originalId = await vault.getAccountId(portfolio)
+
+            await vault.migrate(portfolio, to, { from })
+
+            expect(await vault.getAccountId(portfolio)).to.be.equal(0)
+            expect(await vault.getAccountId(to)).to.be.equal(originalId)
+          })
+
+          it('emits an event', async () => {
+            const tx = await vault.migrate(portfolio, to, '0xabcd', { from })
+
+            await assertEvent(tx, 'Migrate', { account: portfolio, to, data: '0xabcd' })
+          })
+
+          it('resets the original account', async () => {
+            await vault.migrate(portfolio, to, { from })
+
+            expect(await vault.getAccountBalance(portfolio, token)).to.be.equal(0)
+
+            const investment = await vault.getAccountInvestment(portfolio, strategy)
+            expect(investment.shares).to.be.equal(0)
+            expect(investment.invested).to.be.equal(0)
+          })
+
+          it('allows re-using the original account', async () => {
+            const originalId = await vault.getAccountId(portfolio)
+
+            await vault.migrate(portfolio, to, { from })
+
+            await token.mint(portfolio, fp(10))
+            await portfolio.mockApproveTokens(token.address, fp(10))
+            await vault.deposit(portfolio, token, fp(10), { from })
+
+            const depositedAmount = fp(10).mul(fp(1).sub(depositFee)).div(fp(1))
+            expect(await vault.getAccountBalance(portfolio, token)).to.be.equal(depositedAmount)
+            expect(await vault.getAccountId(portfolio)).not.to.be.equal(originalId)
+          })
+
+          it('transfers all the assets to the new account', async () => {
+            const previousBalance = await vault.getAccountBalance(portfolio, token)
+            const previousInvestment = await vault.getAccountInvestment(portfolio, strategy)
+
+            await vault.migrate(portfolio, to, { from })
+
+            expect(await vault.getAccountBalance(to, token)).to.be.equal(previousBalance)
+
+            const investment = await vault.getAccountInvestment(to, strategy)
+            expect(investment.shares).to.be.equal(previousInvestment.shares)
+            expect(investment.invested).to.be.equal(previousInvestment.invested)
+          })
+
+          describe('authorization', async () => {
+            it('encodes the authorization as expected', async () => {
+              const how = vault.encodeMigrateParams(to, '0xaa')
+              await portfolio.mockCanPerformData({
+                who: from.address,
+                where: vault.address,
+                what: vault.getSelector('migrate'),
+                how,
+              })
+
+              await expect(vault.migrate(portfolio, to, '0xaa', { from })).not.to.be.reverted
+            })
+
+            it('fails with an invalid authorization', async () => {
+              await portfolio.mockCanPerformData({
+                who: from.address,
+                where: vault.address,
+                what: vault.getSelector('migrate'),
+                how: '0x',
+              })
+
+              await expect(vault.migrate(portfolio, to, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+            })
+          })
+
+          describe('callbacks', async () => {
+            context('when non is allowed', () => {
+              beforeEach('mock supported callbacks', async () => {
+                await portfolio.mockSupportedCallbacks('0x0000')
+              })
+
+              it('does not call the portfolio', async () => {
+                const tx = await vault.migrate(portfolio, to, { from })
+
+                await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeMigrate')
+                await assertNoIndirectEvent(tx, portfolio.interface, 'AfterMigrate')
+              })
+            })
+
+            context('when before is allowed', () => {
+              beforeEach('mock supported callbacks', async () => {
+                await portfolio.mockSupportedCallbacks('0x0400')
+              })
+
+              it('only calls before to the portfolio', async () => {
+                const tx = await vault.migrate(portfolio, to, '0xaa', { from })
+
+                await assertNoIndirectEvent(tx, portfolio.interface, 'AfterMigrate')
+                await assertIndirectEvent(tx, portfolio.interface, 'BeforeMigrate', { sender: from, to, data: '0xaa' })
+              })
+            })
+
+            context('when after is allowed', () => {
+              beforeEach('mock supported callbacks', async () => {
+                await portfolio.mockSupportedCallbacks('0x0800')
+              })
+
+              it('only calls after to the portfolio', async () => {
+                const tx = await vault.migrate(portfolio, to, '0xab', { from })
+
+                await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeMigrate')
+                await assertIndirectEvent(tx, portfolio.interface, 'AfterMigrate', { sender: from, to, data: '0xab' })
+              })
+            })
+
+            context('when both are allowed', () => {
+              beforeEach('mock supported callbacks', async () => {
+                await portfolio.mockSupportedCallbacks('0x0C00')
+              })
+
+              it('calls before and after to the portfolio', async () => {
+                const tx = await vault.migrate(portfolio, to, '0x11', { from })
+
+                await assertIndirectEvent(tx, portfolio.interface, 'BeforeMigrate', { sender: from, to, data: '0x11' })
+                await assertIndirectEvent(tx, portfolio.interface, 'AfterMigrate', { sender: from, to, data: '0x11' })
+              })
+            })
+          })
+        })
+
+        context('when the target was initialized', () => {
+          beforeEach('set target and deposit tokens', async () => {
+            to = other
+            await token.mint(to, fp(1))
+            await token.approve(vault, fp(1), { from: to })
+            await vault.deposit(to, token, fp(1), { from: to })
+          })
+
+          it('reverts', async () => {
+            await expect(vault.migrate(portfolio, to, { from })).to.be.revertedWith('TARGET_ALREADY_INITIALIZED')
+          })
+        })
+      })
+
+      context('when the sender is not allowed', () => {
+        beforeEach('mock can perform', async () => {
+          await portfolio.mockCanPerform(false)
+        })
+
+        it('reverts', async () => {
+          await expect(vault.migrate(portfolio, other, '0x', { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+        })
+      })
+    })
+  })
+
   describe('batch', () => {
     let strategy: Contract, from: SignerWithAddress
 

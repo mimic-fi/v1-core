@@ -83,6 +83,10 @@ export default class Vault {
     return this.instance.getStrategyShareValue(toAddress(strategy))
   }
 
+  async getAccountId(account: Account): Promise<BigNumber> {
+    return this.instance.accountsId(toAddress(account))
+  }
+
   async getAccountBalance(account: Account, token: Account): Promise<BigNumber> {
     return this.instance.getAccountBalance(toAddress(account), toAddress(token))
   }
@@ -112,6 +116,18 @@ export default class Vault {
 
     const exitValue = await this.getAccountValueRatio(account, strategy, ratio)
     return exitValue.gt(totalGains) ? totalGains : exitValue
+  }
+
+  async migrate(
+    account: Account,
+    to: Account,
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
+  ): Promise<ContractTransaction> {
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
+    const vault = from ? this.instance.connect(from) : this.instance
+    return vault.migrate(toAddress(account), toAddress(to), data)
   }
 
   async getDepositAmount(
@@ -318,6 +334,10 @@ export default class Vault {
     if (!whitelisted) whitelisted = Array(strategies.length).fill(true)
     const vault = this.instance.connect(from || this.admin)
     return vault.setWhitelistedStrategies(toAddresses(strategies), whitelisted)
+  }
+
+  encodeMigrateParams(to: Account, data: string): string {
+    return defaultAbiCoder.encode(['address', 'bytes'], [toAddress(to), data])
   }
 
   encodeDepositParams(token: Account, amount: BigNumberish, data: string): string {
