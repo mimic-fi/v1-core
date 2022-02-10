@@ -48,16 +48,20 @@ library Accounts {
         return self.isPortfolio ? IPortfolio(self.addr).getTokenBalance(token) : 0;
     }
 
-    function getDepositFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getDepositFee() : (0, address(0));
+    function getDepositFee(Data memory self, address token) internal view returns (uint256 fee, address collector) {
+        return self.isPortfolio ? IPortfolio(self.addr).getDepositFee(token) : (0, address(0));
     }
 
-    function getWithdrawFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getWithdrawFee() : (0, address(0));
+    function getWithdrawFee(Data memory self, address token) internal view returns (uint256 fee, address collector) {
+        return self.isPortfolio ? IPortfolio(self.addr).getWithdrawFee(token) : (0, address(0));
     }
 
-    function getPerformanceFee(Data memory self) internal view returns (uint256 fee, address collector) {
-        return self.isPortfolio ? IPortfolio(self.addr).getPerformanceFee() : (0, address(0));
+    function getPerformanceFee(Data memory self, address strategy)
+        internal
+        view
+        returns (uint256 fee, address collector)
+    {
+        return self.isPortfolio ? IPortfolio(self.addr).getPerformanceFee(strategy) : (0, address(0));
     }
 
     function getSupportedCallbacks(Data memory self) internal view returns (bytes2) {
