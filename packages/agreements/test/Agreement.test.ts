@@ -580,7 +580,7 @@ describe('Agreement', () => {
           const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
           expect(previousTokenAllowance).to.be.equal(0)
 
-          await vault.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, token.address, 10)
+          await vault.mockBeforeDeposit(agreement.address, ZERO_ADDRESS, token.address, 10, '0x')
 
           const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
           expect(currentTokenAllowance).to.be.equal(10)
@@ -593,7 +593,7 @@ describe('Agreement', () => {
         })
 
         it('reverts', async () => {
-          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.revertedWith(
+          await expect(agreement.instance.beforeDeposit(ZERO_ADDRESS, ZERO_ADDRESS, 0, '0x')).to.be.revertedWith(
             'SENDER_NOT_VAULT'
           )
         })
@@ -613,7 +613,7 @@ describe('Agreement', () => {
             const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
             expect(previousTokenAllowance).to.be.equal(0)
 
-            await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, amount, ZERO_ADDRESS)
+            await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, amount, ZERO_ADDRESS, '0x')
 
             const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
             expect(currentTokenAllowance).to.be.equal(5)
@@ -627,7 +627,7 @@ describe('Agreement', () => {
             const previousTokenAllowance = await token.allowance(agreement.address, vault.address)
             expect(previousTokenAllowance).to.be.equal(0)
 
-            await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, amount, ZERO_ADDRESS)
+            await vault.mockBeforeWithdraw(agreement.address, ZERO_ADDRESS, token.address, amount, ZERO_ADDRESS, '0x')
 
             const currentTokenAllowance = await token.allowance(agreement.address, vault.address)
             expect(currentTokenAllowance).to.be.equal(amount)
@@ -642,7 +642,7 @@ describe('Agreement', () => {
 
         it('reverts', async () => {
           await expect(
-            agreement.instance.beforeWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS)
+            agreement.instance.beforeWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 0, ZERO_ADDRESS, '0x')
           ).to.be.revertedWith('SENDER_NOT_VAULT')
         })
       })
@@ -678,10 +678,10 @@ describe('Agreement', () => {
       await token.mint(agreement.address, amount)
       expect(await token.balanceOf(agreement.address)).to.be.equal(amount)
 
-      await vault.connect(manager).deposit(agreement.address, token.address, amount)
+      await vault.connect(manager).deposit(agreement.address, token.address, amount, '0x')
       expect(await token.balanceOf(vault.address)).to.be.equal(amount)
 
-      await vault.connect(manager).withdraw(agreement.address, token.address, amount, withdrawer.address)
+      await vault.connect(manager).withdraw(agreement.address, token.address, amount, withdrawer.address, '0x')
       expect(await token.balanceOf(withdrawer.address)).to.be.equal(amount)
     })
   })

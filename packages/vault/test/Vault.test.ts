@@ -90,13 +90,15 @@ describe('Vault', () => {
             })
 
             it('emits an event', async () => {
-              const tx = await vault.deposit(account, token, amount, { from })
+              const data = '0xab'
+              const tx = await vault.deposit(account, token, amount, data, { from })
 
               await assertEvent(tx, 'Deposit', {
                 account,
                 token,
                 amount,
                 depositFee: fp(0),
+                data,
               })
             })
 
@@ -197,13 +199,15 @@ describe('Vault', () => {
             })
 
             it('emits an event', async () => {
-              const tx = await vault.deposit(portfolio, token, amount, { from })
+              const data = '0xab'
+              const tx = await vault.deposit(portfolio, token, amount, data, { from })
 
               await assertEvent(tx, 'Deposit', {
                 account: portfolio,
                 token,
                 amount,
                 depositFee: expectedFee,
+                data,
               })
             })
 
@@ -214,7 +218,7 @@ describe('Vault', () => {
 
             describe('authorization', async () => {
               it('encodes the authorization as expected', async () => {
-                const how = vault.encodeDepositParams(token, amount)
+                const how = vault.encodeDepositParams(token, amount, '0xaa')
                 await portfolio.mockCanPerformData({
                   who: from.address,
                   where: vault.address,
@@ -222,7 +226,7 @@ describe('Vault', () => {
                   how,
                 })
 
-                await expect(vault.deposit(portfolio, token, amount, { from })).not.to.be.reverted
+                await expect(vault.deposit(portfolio, token, amount, '0xaa', { from })).not.to.be.reverted
               })
 
               it('fails with an invalid authorization', async () => {
@@ -264,6 +268,7 @@ describe('Vault', () => {
                     sender: from,
                     token,
                     amount,
+                    data: '0x',
                   })
                 })
               })
@@ -281,6 +286,7 @@ describe('Vault', () => {
                     sender: from,
                     token,
                     amount,
+                    data: '0x',
                   })
                 })
               })
@@ -297,12 +303,14 @@ describe('Vault', () => {
                     sender: from,
                     token,
                     amount,
+                    data: '0x',
                   })
 
                   await assertIndirectEvent(tx, portfolio.interface, 'AfterDeposit', {
                     sender: from,
                     token,
                     amount,
+                    data: '0x',
                   })
                 })
               })
@@ -375,13 +383,15 @@ describe('Vault', () => {
           })
 
           it('emits an event', async () => {
-            const tx = await vault.withdraw(account, token, amount, other, { from })
+            const data = '0xab'
+            const tx = await vault.withdraw(account, token, amount, other, data, { from })
 
             await assertEvent(tx, 'Withdraw', {
               account,
               token,
               amount,
               recipient: other,
+              data,
             })
           })
 
@@ -467,7 +477,8 @@ describe('Vault', () => {
             })
 
             it('emits an event', async () => {
-              const tx = await vault.withdraw(portfolio, token, amount, other, { from })
+              const data = '0xab'
+              const tx = await vault.withdraw(portfolio, token, amount, other, data, { from })
 
               await assertEvent(tx, 'Withdraw', {
                 account: portfolio,
@@ -475,12 +486,13 @@ describe('Vault', () => {
                 amount,
                 fromVault: fp(0),
                 recipient: other,
+                data,
               })
             })
 
             describe('authorization', async () => {
               it('encodes the authorization as expected', async () => {
-                const how = vault.encodeWithdrawParams(token, amount, other)
+                const how = vault.encodeWithdrawParams(token, amount, other, '0xaa')
                 await portfolio.mockCanPerformData({
                   who: from.address,
                   where: vault.address,
@@ -488,7 +500,7 @@ describe('Vault', () => {
                   how,
                 })
 
-                await expect(vault.withdraw(portfolio, token, amount, other, { from })).not.to.be.reverted
+                await expect(vault.withdraw(portfolio, token, amount, other, '0xaa', { from })).not.to.be.reverted
               })
 
               it('fails with an invalid authorization', async () => {
@@ -536,6 +548,7 @@ describe('Vault', () => {
                     token,
                     amount,
                     recipient: other,
+                    data: '0x',
                   })
                 })
               })
@@ -554,6 +567,7 @@ describe('Vault', () => {
                     token,
                     amount,
                     recipient: other,
+                    data: '0x',
                   })
                 })
               })
@@ -571,6 +585,7 @@ describe('Vault', () => {
                     token,
                     amount,
                     recipient: other,
+                    data: '0x',
                   })
 
                   await assertIndirectEvent(tx, portfolio.interface, 'AfterWithdraw', {
@@ -578,6 +593,7 @@ describe('Vault', () => {
                     token,
                     amount,
                     recipient: other,
+                    data: '0x',
                   })
                 })
               })
@@ -648,7 +664,8 @@ describe('Vault', () => {
               })
 
               it('emits an event', async () => {
-                const tx = await vault.withdraw(portfolio, token, amount, other, { from })
+                const data = '0xab'
+                const tx = await vault.withdraw(portfolio, token, amount, other, data, { from })
 
                 await assertEvent(tx, 'Withdraw', {
                   account: portfolio,
@@ -657,6 +674,7 @@ describe('Vault', () => {
                   fromVault: amount.div(2),
                   withdrawFee: expectedWithdrawFee,
                   recipient: other,
+                  data,
                 })
               })
             })
@@ -740,7 +758,8 @@ describe('Vault', () => {
             })
 
             it('emits an event', async () => {
-              const tx = await vault.withdraw(portfolio, token, amount, other, { from })
+              const data = '0xab'
+              const tx = await vault.withdraw(portfolio, token, amount, other, data, { from })
 
               await assertEvent(tx, 'Withdraw', {
                 account: portfolio,
@@ -749,6 +768,7 @@ describe('Vault', () => {
                 fromVault: amount,
                 withdrawFee: expectedWithdrawFee,
                 recipient: other,
+                data,
               })
             })
 
@@ -916,8 +936,9 @@ describe('Vault', () => {
               expect(currentTokenOutBalance).to.be.equal(previousTokenOutBalance.add(expectedAmountOut))
             })
 
-            it('emits an events', async () => {
-              const tx = await vault.swap(account, tokenIn, tokenOut, amount, slippage, { from })
+            it('emits an event', async () => {
+              const data = '0xab'
+              const tx = await vault.swap(account, tokenIn, tokenOut, amount, slippage, data, { from })
 
               await assertEvent(tx, 'Swap', {
                 account,
@@ -926,6 +947,7 @@ describe('Vault', () => {
                 amountIn: amount,
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
+                data,
               })
             })
 
@@ -1109,8 +1131,9 @@ describe('Vault', () => {
               expect(currentTokenOutBalance).to.be.equal(previousTokenOutBalance.add(expectedAmountOut))
             })
 
-            it('emits an events', async () => {
-              const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, { from })
+            it('emits an event', async () => {
+              const data = '0xab'
+              const tx = await vault.swap(portfolio, tokenIn, tokenOut, amount, slippage, data, { from })
 
               await assertEvent(tx, 'Swap', {
                 account: portfolio,
@@ -1119,6 +1142,7 @@ describe('Vault', () => {
                 amountIn: amount,
                 remainingIn: 0,
                 amountOut: expectedAmountOut,
+                data,
               })
             })
 
@@ -1423,12 +1447,14 @@ describe('Vault', () => {
             })
 
             it('emits an event', async () => {
-              const tx = await vault.join(account, strategy, amount, { from })
+              const data = '0xab'
+              const tx = await vault.join(account, strategy, amount, data, { from })
 
               await assertEvent(tx, 'Join', {
                 account,
                 strategy,
                 amount,
+                data,
               })
             })
 
@@ -1582,12 +1608,14 @@ describe('Vault', () => {
             })
 
             it('emits an event', async () => {
-              const tx = await vault.join(portfolio, strategy, amount, { from })
+              const data = '0xab'
+              const tx = await vault.join(portfolio, strategy, amount, data, { from })
 
               await assertEvent(tx, 'Join', {
                 account: portfolio,
                 strategy,
                 amount,
+                data,
               })
             })
 
@@ -2109,7 +2137,8 @@ describe('Vault', () => {
               })
 
               it('emits an event', async () => {
-                const tx = await vault.exit(portfolio, strategy, ratio, { from })
+                const data = '0xab'
+                const tx = await vault.exit(portfolio, strategy, ratio, data, { from })
 
                 await assertEvent(tx, 'Exit', {
                   account: portfolio,
@@ -2117,6 +2146,7 @@ describe('Vault', () => {
                   amount: expectedExitValue,
                   protocolFee: expectedProtocolFee,
                   performanceFee: expectedPerformanceFee,
+                  data,
                 })
               })
 

@@ -157,19 +157,19 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         return bytes2(0x0005);
     }
 
-    function beforeDeposit(address, address token, uint256 amount) external override onlyVault {
+    function beforeDeposit(address, address token, uint256 amount, bytes memory) external override onlyVault {
         _safeApprove(token, amount);
     }
 
-    function afterDeposit(address, address, uint256) external override onlyVault {
+    function afterDeposit(address, address, uint256, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    function beforeWithdraw(address, address token, uint256 amount, address) external override onlyVault {
+    function beforeWithdraw(address, address token, uint256 amount, address, bytes memory) external override onlyVault {
         _safeApprove(token, Math.min(amount, getTokenBalance(token)));
     }
 
-    function afterWithdraw(address, address, uint256, address) external override onlyVault {
+    function afterWithdraw(address, address, uint256, address, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 

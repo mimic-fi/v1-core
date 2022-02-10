@@ -118,20 +118,26 @@ export default class Vault {
     account: Account,
     token: Account,
     amount: BigNumberish,
+    dataOrParams: string | TxParams = '0x',
     params: TxParams = {}
   ): Promise<BigNumber> {
-    const call = await this.encodeDepositCall(account, token, amount)
-    return this.singleQuery(call, params)
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
+    const call = await this.encodeDepositCall(account, token, amount, data)
+    return this.singleQuery(call, { from })
   }
 
   async deposit(
     account: Account,
     token: Account,
     amount: BigNumberish,
-    { from }: TxParams = {}
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
   ): Promise<ContractTransaction> {
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const vault = from ? this.instance.connect(from) : this.instance
-    return vault.deposit(toAddress(account), toAddress(token), amount)
+    return vault.deposit(toAddress(account), toAddress(token), amount, data)
   }
 
   async getWithdrawAmount(
@@ -139,10 +145,13 @@ export default class Vault {
     token: Account,
     amount: BigNumberish,
     recipient: Account,
+    dataOrParams: string | TxParams = '0x',
     params: TxParams = {}
   ): Promise<BigNumber> {
-    const call = await this.encodeWithdrawCall(account, token, amount, recipient)
-    return this.singleQuery(call, params)
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
+    const call = await this.encodeWithdrawCall(account, token, amount, recipient, data)
+    return this.singleQuery(call, { from })
   }
 
   async withdraw(
@@ -150,10 +159,13 @@ export default class Vault {
     token: Account,
     amount: BigNumberish,
     recipient: Account,
-    { from }: TxParams = {}
+    dataOrParams: string | TxParams = '0x',
+    params: TxParams = {}
   ): Promise<ContractTransaction> {
+    const data = typeof dataOrParams === 'string' ? dataOrParams : '0x'
+    const from = typeof dataOrParams === 'string' ? params?.from : dataOrParams?.from
     const vault = from ? this.instance.connect(from) : this.instance
-    return vault.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient))
+    return vault.withdraw(toAddress(account), toAddress(token), amount, toAddress(recipient), data)
   }
 
   async getSwapAmount(
@@ -308,12 +320,15 @@ export default class Vault {
     return vault.setWhitelistedStrategies(toAddresses(strategies), whitelisted)
   }
 
-  encodeDepositParams(token: Account, amount: BigNumberish): string {
-    return defaultAbiCoder.encode(['address', 'uint256'], [toAddress(token), amount])
+  encodeDepositParams(token: Account, amount: BigNumberish, data: string): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(token), amount, data])
   }
 
-  encodeWithdrawParams(token: Account, amount: BigNumberish, recipient: Account): string {
-    return defaultAbiCoder.encode(['address', 'uint256', 'address'], [toAddress(token), amount, toAddress(recipient)])
+  encodeWithdrawParams(token: Account, amount: BigNumberish, recipient: Account, data: string): string {
+    return defaultAbiCoder.encode(
+      ['address', 'uint256', 'address', 'bytes'],
+      [toAddress(token), amount, toAddress(recipient), data]
+    )
   }
 
   encodeSwapParams(
@@ -340,8 +355,13 @@ export default class Vault {
     )
   }
 
-  async encodeDepositCall(account: Account, token: Account, amount: BigNumberish): Promise<string> {
-    const tx = await this.instance.populateTransaction.deposit(toAddress(account), toAddress(token), amount.toString())
+  async encodeDepositCall(account: Account, token: Account, amount: BigNumberish, data = '0x'): Promise<string> {
+    const tx = await this.instance.populateTransaction.deposit(
+      toAddress(account),
+      toAddress(token),
+      amount.toString(),
+      data
+    )
     return tx?.data || '0x'
   }
 
@@ -349,13 +369,15 @@ export default class Vault {
     account: Account,
     token: Account,
     amount: BigNumberish,
-    recipient: Account
+    recipient: Account,
+    data = '0x'
   ): Promise<string> {
     const tx = await this.instance.populateTransaction.withdraw(
       toAddress(account),
       toAddress(token),
       amount,
-      toAddress(recipient)
+      toAddress(recipient),
+      data
     )
     return tx?.data || '0x'
   }

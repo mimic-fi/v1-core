@@ -22,13 +22,20 @@ contract VaultMock {
         }
     }
 
-    function mockBeforeDeposit(address portfolio, address sender, address token, uint256 amount) external {
-        IPortfolio(portfolio).beforeDeposit(sender, token, amount);
-    }
-
-    function mockBeforeWithdraw(address portfolio, address sender, address token, uint256 amount, address recipient)
+    function mockBeforeDeposit(address portfolio, address sender, address token, uint256 amount, bytes memory data)
         external
     {
-        IPortfolio(portfolio).beforeWithdraw(sender, token, amount, recipient);
+        IPortfolio(portfolio).beforeDeposit(sender, token, amount, data);
+    }
+
+    function mockBeforeWithdraw(
+        address portfolio,
+        address sender,
+        address token,
+        uint256 amount,
+        address recipient,
+        bytes memory data
+    ) external {
+        IPortfolio(portfolio).beforeWithdraw(sender, token, amount, recipient, data);
     }
 }

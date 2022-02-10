@@ -144,8 +144,8 @@ async function benchmarkVault(vault: Contract, account: string, strategies: stri
   const [strategy] = strategies
   const [token, anotherToken] = tokens
 
-  const deposit1Tx = await vault.deposit(account, token, fp(100))
-  const deposit2Tx = await vault.deposit(account, token, fp(500))
+  const deposit1Tx = await vault.deposit(account, token, fp(100), '0x')
+  const deposit2Tx = await vault.deposit(account, token, fp(500), '0x')
   console.log(`- First deposit: \t${(await deposit1Tx.wait()).gasUsed}`)
   console.log(`- Second deposit: \t${(await deposit2Tx.wait()).gasUsed}`)
 
@@ -165,8 +165,8 @@ async function benchmarkVault(vault: Contract, account: string, strategies: stri
   console.log(`- Full exit: \t\t${(await exit2Tx.wait()).gasUsed}`)
 
   const withdrawer = await getSigner(2)
-  const withdraw1Tx = await vault.withdraw(account, token, fp(100), withdrawer.address)
-  const withdraw2Tx = await vault.withdraw(account, token, fp(100), withdrawer.address)
+  const withdraw1Tx = await vault.withdraw(account, token, fp(100), withdrawer.address, '0x')
+  const withdraw2Tx = await vault.withdraw(account, token, fp(100), withdrawer.address, '0x')
   console.log(`- First withdraw: \t${(await withdraw1Tx.wait()).gasUsed}`)
   console.log(`- Second withdraw: \t${(await withdraw2Tx.wait()).gasUsed}`)
 }
