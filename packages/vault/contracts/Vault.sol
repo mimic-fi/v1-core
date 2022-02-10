@@ -178,28 +178,28 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
     }
 
-    function deposit(address addr, address token, uint256 amount)
+    function deposit(address addr, address token, uint256 amount, bytes memory data)
         external
         override
         nonReentrant
         returns (uint256 deposited)
     {
-        Accounts.Data memory account = _authorize(addr, abi.encode(token, amount));
-        account.beforeDeposit(msg.sender, token, amount);
-        deposited = _deposit(account, token, amount);
-        account.afterDeposit(msg.sender, token, amount);
+        Accounts.Data memory account = _authorize(addr, abi.encode(token, amount, data));
+        account.beforeDeposit(msg.sender, token, amount, data);
+        deposited = _deposit(account, token, amount, data);
+        account.afterDeposit(msg.sender, token, amount, data);
     }
 
-    function withdraw(address addr, address token, uint256 amount, address recipient)
+    function withdraw(address addr, address token, uint256 amount, address recipient, bytes memory data)
         external
         override
         nonReentrant
         returns (uint256 withdrawn)
     {
-        Accounts.Data memory account = _authorize(addr, abi.encode(token, amount, recipient));
-        account.beforeWithdraw(msg.sender, token, amount, recipient);
-        withdrawn = _withdraw(account, token, amount, recipient);
-        account.afterWithdraw(msg.sender, token, amount, recipient);
+        Accounts.Data memory account = _authorize(addr, abi.encode(token, amount, recipient, data));
+        account.beforeWithdraw(msg.sender, token, amount, recipient, data);
+        withdrawn = _withdraw(account, token, amount, recipient, data);
+        account.afterWithdraw(msg.sender, token, amount, recipient, data);
     }
 
     function swap(
@@ -240,7 +240,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterExit(msg.sender, strategy, ratio, emergency, data);
     }
 
-    function _deposit(Accounts.Data memory account, address token, uint256 amount)
+    function _deposit(Accounts.Data memory account, address token, uint256 amount, bytes memory data)
         internal
         returns (uint256 deposited)
     {
@@ -255,13 +255,16 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         deposited = amount.sub(depositFeeAmount);
         Accounting storage accounting = accountings[account.addr];
         accounting.balance[token] = accounting.balance[token].add(deposited);
-        emit Deposit(account.addr, token, amount, depositFeeAmount);
+        emit Deposit(account.addr, token, amount, depositFeeAmount, data);
     }
 
-    function _withdraw(Accounts.Data memory account, address token, uint256 amount, address recipient)
-        internal
-        returns (uint256 withdrawn)
-    {
+    function _withdraw(
+        Accounts.Data memory account,
+        address token,
+        uint256 amount,
+        address recipient,
+        bytes memory data
+    ) internal returns (uint256 withdrawn) {
         require(amount > 0, 'WITHDRAW_AMOUNT_ZERO');
 
         Accounting storage accounting = accountings[account.addr];
@@ -272,14 +275,19 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         uint256 fromAccount = Math.min(portfolioBalance, amount);
         _safeTransferFrom(token, account.addr, recipient, fromAccount);
 
-        (uint256 withdrawFee, address feeCollector) = account.getWithdrawFee(token);
-        uint256 fromVault = fromAccount < amount ? amount - fromAccount : 0;
-        uint256 withdrawFeeAmount = fromVault.mulDown(withdrawFee);
-        _safeTransfer(token, feeCollector, withdrawFeeAmount);
-        _safeTransfer(token, recipient, fromVault.sub(withdrawFeeAmount));
+        uint256 fromVault;
+        uint256 withdrawFeeAmount;
+        // scopes to avoid stack too deep
+        {
+            (uint256 withdrawFee, address feeCollector) = account.getWithdrawFee(token);
+            fromVault = fromAccount < amount ? amount - fromAccount : 0;
+            withdrawFeeAmount = fromVault.mulDown(withdrawFee);
+            _safeTransfer(token, feeCollector, withdrawFeeAmount);
+            _safeTransfer(token, recipient, fromVault.sub(withdrawFeeAmount));
+        }
         accounting.balance[token] = vaultBalance.sub(fromVault);
         withdrawn = amount.sub(withdrawFeeAmount);
-        emit Withdraw(account.addr, token, amount, fromVault, withdrawFeeAmount, recipient);
+        emit Withdraw(account.addr, token, amount, fromVault, withdrawFeeAmount, recipient, data);
     }
 
     function _swap(
@@ -322,7 +330,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         accounting.balance[tokenIn] = currentBalance.sub(amountIn).add(remainingIn);
         accounting.balance[tokenOut] = accounting.balance[tokenOut].add(amountOut);
-        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut);
+        emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
     }
 
     function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data)
@@ -346,7 +354,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
         accounting.invested[strategy] = accounting.invested[strategy].add(value);
-        emit Join(account.addr, strategy, amount);
+        emit Join(account.addr, strategy, amount, data);
     }
 
     function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bool emergency, bytes memory data)
@@ -399,7 +407,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             ? investedValue.mulUp(FixedPoint.ONE.sub(ratio))
             : Math.min(investedValue, exitingValue >= currentValue ? 0 : currentValue - exitingValue);
 
-        emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount);
+        emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount, data);
     }
 
     function _payExitFees(

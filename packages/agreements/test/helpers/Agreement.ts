@@ -105,8 +105,14 @@ export default class Agreement {
     return this.instance.getSupportedCallbacks()
   }
 
-  async canDeposit(who: Account, where: Account, token?: string, amount: BigNumberish = 0): Promise<boolean> {
-    const how = token ? this.encodeDeposit(token, amount) : '0x'
+  async canDeposit(
+    who: Account,
+    where: Account,
+    token?: string,
+    amount: BigNumberish = 0,
+    data = '0x'
+  ): Promise<boolean> {
+    const how = token ? this.encodeDeposit(token, amount, data) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('deposit'), how)
   }
 
@@ -115,9 +121,10 @@ export default class Agreement {
     where: Account,
     token?: string,
     amount: BigNumberish = 0,
-    recipient = ZERO_ADDRESS
+    recipient = ZERO_ADDRESS,
+    data = '0x'
   ): Promise<boolean> {
-    const how = token ? this.encodeWithdraw(token, amount, recipient) : '0x'
+    const how = token ? this.encodeWithdraw(token, amount, recipient, data) : '0x'
     return this.canPerform(who, where, await this.getVaultActionId('withdraw'), how)
   }
 
@@ -168,12 +175,15 @@ export default class Agreement {
     return `0x${sighash.replace('0x', '').padEnd(64, '0')}`
   }
 
-  encodeDeposit(token: Account, amount: BigNumberish): string {
-    return defaultAbiCoder.encode(['address', 'uint256'], [toAddress(token), amount])
+  encodeDeposit(token: Account, amount: BigNumberish, data: string): string {
+    return defaultAbiCoder.encode(['address', 'uint256', 'bytes'], [toAddress(token), amount, data])
   }
 
-  encodeWithdraw(token: Account, amount: BigNumberish, recipient: Account): string {
-    return defaultAbiCoder.encode(['address', 'uint256', 'address'], [toAddress(token), amount, toAddress(recipient)])
+  encodeWithdraw(token: Account, amount: BigNumberish, recipient: Account, data: string): string {
+    return defaultAbiCoder.encode(
+      ['address', 'uint256', 'address', 'bytes'],
+      [toAddress(token), amount, toAddress(recipient), data]
+    )
   }
 
   encodeSwap(

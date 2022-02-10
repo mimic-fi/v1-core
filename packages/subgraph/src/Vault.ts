@@ -211,7 +211,7 @@ function getAccountShares(address: Address, account: Address, strategy: Address)
   let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(account, strategy)
 
   if (!getAccountInvestmentCall.reverted) {
-    return getAccountInvestmentCall.value.value0
+    return getAccountInvestmentCall.value.value1
   }
 
   log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [address.toHexString(), account.toHexString(), strategy.toHexString()])
@@ -223,7 +223,7 @@ function getAccountInvested(address: Address, account: Address, strategy: Addres
   let getAccountInvestmentCall = vaultContract.try_getAccountInvestment(account, strategy)
 
   if (!getAccountInvestmentCall.reverted) {
-    return getAccountInvestmentCall.value.value1
+    return getAccountInvestmentCall.value.value0
   }
 
   log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [address.toHexString(), account.toHexString(), strategy.toHexString()])

@@ -17,10 +17,10 @@ contract PortfolioMock is IPortfolio {
         bytes how;
     }
 
-    event BeforeDeposit(address sender, address token, uint256 amount);
-    event AfterDeposit(address sender, address token, uint256 amount);
-    event BeforeWithdraw(address sender, address token, uint256 amount, address recipient);
-    event AfterWithdraw(address sender, address token, uint256 amount, address recipient);
+    event BeforeDeposit(address sender, address token, uint256 amount, bytes data);
+    event AfterDeposit(address sender, address token, uint256 amount, bytes data);
+    event BeforeWithdraw(address sender, address token, uint256 amount, address recipient, bytes data);
+    event AfterWithdraw(address sender, address token, uint256 amount, address recipient, bytes data);
     event BeforeSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes data);
     event AfterSwap(address sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 slippage, bytes data);
     event BeforeJoin(address sender, address strategy, uint256 amount, bytes data);
@@ -100,20 +100,26 @@ contract PortfolioMock is IPortfolio {
         return mockedSupportedCallbacks;
     }
 
-    function beforeDeposit(address sender, address token, uint256 amount) external override {
-        emit BeforeDeposit(sender, token, amount);
+    function beforeDeposit(address sender, address token, uint256 amount, bytes memory data) external override {
+        emit BeforeDeposit(sender, token, amount, data);
     }
 
-    function afterDeposit(address sender, address token, uint256 amount) external override {
-        emit AfterDeposit(sender, token, amount);
+    function afterDeposit(address sender, address token, uint256 amount, bytes memory data) external override {
+        emit AfterDeposit(sender, token, amount, data);
     }
 
-    function beforeWithdraw(address sender, address token, uint256 amount, address recipient) external override {
-        emit BeforeWithdraw(sender, token, amount, recipient);
+    function beforeWithdraw(address sender, address token, uint256 amount, address recipient, bytes memory data)
+        external
+        override
+    {
+        emit BeforeWithdraw(sender, token, amount, recipient, data);
     }
 
-    function afterWithdraw(address sender, address token, uint256 amount, address recipient) external override {
-        emit AfterWithdraw(sender, token, amount, recipient);
+    function afterWithdraw(address sender, address token, uint256 amount, address recipient, bytes memory data)
+        external
+        override
+    {
+        emit AfterWithdraw(sender, token, amount, recipient, data);
     }
 
     function beforeSwap(

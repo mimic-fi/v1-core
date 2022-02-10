@@ -25,12 +25,14 @@ library VaultHelpers {
     struct DepositParams {
         address token;
         uint256 amount;
+        bytes data;
     }
 
     struct WithdrawParams {
         address token;
         uint256 amount;
         address recipient;
+        bytes data;
     }
 
     struct SwapParams {
@@ -55,13 +57,16 @@ library VaultHelpers {
     }
 
     function decodeDeposit(bytes memory self) internal pure returns (DepositParams memory) {
-        (address token, uint256 amount) = abi.decode(self, (address, uint256));
-        return DepositParams({ token: token, amount: amount });
+        (address token, uint256 amount, bytes memory data) = abi.decode(self, (address, uint256, bytes));
+        return DepositParams({ token: token, amount: amount, data: data });
     }
 
     function decodeWithdraw(bytes memory self) internal pure returns (WithdrawParams memory) {
-        (address token, uint256 amount, address recipient) = abi.decode(self, (address, uint256, address));
-        return WithdrawParams({ token: token, amount: amount, recipient: recipient });
+        (address token, uint256 amount, address recipient, bytes memory data) = abi.decode(
+            self,
+            (address, uint256, address, bytes)
+        );
+        return WithdrawParams({ token: token, amount: amount, recipient: recipient, data: data });
     }
 
     function decodeSwap(bytes memory self) internal pure returns (SwapParams memory) {
