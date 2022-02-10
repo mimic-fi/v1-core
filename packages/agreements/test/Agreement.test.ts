@@ -494,7 +494,7 @@ describe('Agreement', () => {
             .to.be.false
         })
 
-        it('accepts operating with allowed strategies', async () => {
+        it('accepts joining only allowed strategies', async () => {
           const unknownStrategy = await deploy('StrategyMock')
           const whitelistedStrategy = await deploy('StrategyMock')
           await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
@@ -502,10 +502,16 @@ describe('Agreement', () => {
           expect(await agreement.canJoin(who, where, customStrategy.address)).to.be.true
           expect(await agreement.canJoin(who, where, unknownStrategy.address)).to.be.false
           expect(await agreement.canJoin(who, where, whitelistedStrategy.address)).to.be.false
+        })
+
+        it('accepts exiting any strategies', async () => {
+          const unknownStrategy = await deploy('StrategyMock')
+          const whitelistedStrategy = await deploy('StrategyMock')
+          await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
 
           expect(await agreement.canExit(who, where, customStrategy.address)).to.be.true
-          expect(await agreement.canExit(who, where, unknownStrategy.address)).to.be.false
-          expect(await agreement.canExit(who, where, whitelistedStrategy.address)).to.be.false
+          expect(await agreement.canExit(who, where, unknownStrategy.address)).to.be.true
+          expect(await agreement.canExit(who, where, whitelistedStrategy.address)).to.be.true
         })
 
         it('accepts exiting strategies on emergency only if also a withdrawer', async () => {
@@ -521,8 +527,8 @@ describe('Agreement', () => {
           expect(await agreement.canExit(onlyManager, where, whitelistedStrategy.address, 0, true)).to.be.false
 
           expect(await agreement.canExit(alsoWithdrawer, where, customStrategy.address, 0, true)).to.be.true
-          expect(await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, true)).to.be.false
-          expect(await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, true)).to.be.false
+          expect(await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, true)).to.be.true
+          expect(await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, true)).to.be.true
         })
 
         it('does not accept any other action', async () => {
