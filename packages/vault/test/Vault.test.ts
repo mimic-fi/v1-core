@@ -1598,6 +1598,109 @@ describe('Vault', () => {
 
           context('when the strategy was not previously joined', async () => {
             itJoinsAsExpected()
+
+            describe('authorization', async () => {
+              it('encodes the authorization as expected', async () => {
+                const how = vault.encodeJoinParams(strategy, amount, '0xaa')
+                await portfolio.mockCanPerformData({
+                  who: from.address,
+                  where: vault.address,
+                  what: vault.getSelector('join'),
+                  how,
+                })
+
+                await expect(vault.join(portfolio, strategy, amount, '0xaa', { from })).not.to.be.reverted
+              })
+
+              it('fails with an invalid authorization', async () => {
+                await portfolio.mockCanPerformData({
+                  who: from.address,
+                  where: vault.address,
+                  what: vault.getSelector('join'),
+                  how: '0x',
+                })
+
+                await expect(vault.join(portfolio, strategy, amount, { from })).to.be.revertedWith('ACTION_NOT_ALLOWED')
+                await expect(vault.getJoinAmount(portfolio, strategy, amount, { from })).to.be.revertedWith(
+                  'ACTION_NOT_ALLOWED'
+                )
+              })
+            })
+
+            describe('callbacks', async () => {
+              context('when non is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x0000')
+                })
+
+                it('does not call the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
+                })
+              })
+
+              context('when before is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x0040')
+                })
+
+                it('only calls before to the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'AfterJoin')
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
+                    sender: from,
+                    strategy,
+                    amount,
+                    data: '0x',
+                  })
+                })
+              })
+
+              context('when after is allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x0080')
+                })
+
+                it('only calls after to the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, { from })
+
+                  await assertNoIndirectEvent(tx, portfolio.interface, 'BeforeJoin')
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
+                    sender: from,
+                    strategy,
+                    amount,
+                    data: '0x',
+                  })
+                })
+              })
+
+              context('when both are allowed', () => {
+                beforeEach('mock supported callbacks', async () => {
+                  await portfolio.mockSupportedCallbacks('0x00C0')
+                })
+
+                it('calls before and after to the portfolio', async () => {
+                  const tx = await vault.join(portfolio, strategy, amount, '0xaa', { from })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'BeforeJoin', {
+                    sender: from,
+                    strategy,
+                    amount,
+                    data: '0xaa',
+                  })
+
+                  await assertIndirectEvent(tx, portfolio.interface, 'AfterJoin', {
+                    sender: from,
+                    strategy,
+                    amount,
+                    data: '0xaa',
+                  })
+                })
+              })
+            })
           })
 
           context('when the strategy was previously joined', async () => {
