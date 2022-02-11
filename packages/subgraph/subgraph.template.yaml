@@ -28,16 +28,18 @@ dataSources:
         - name: ERC20
           file: ./abi/IERC20.json
       eventHandlers:
-        - event: Deposit(indexed address,indexed address,uint256,uint256)
+        - event: Deposit(indexed address,indexed address,uint256,uint256,bytes)
           handler: handleDeposit
-        - event: Withdraw(indexed address,indexed address,uint256,uint256,uint256,address)
+        - event: Withdraw(indexed address,indexed address,uint256,uint256,uint256,address,bytes)
           handler: handleWithdraw
-        - event: Join(indexed address,indexed address,uint256)
+        - event: Join(indexed address,indexed address,uint256,bytes)
           handler: handleJoin
-        - event: Exit(indexed address,indexed address,uint256,uint256,uint256)
+        - event: Exit(indexed address,indexed address,uint256,uint256,uint256,bytes)
           handler: handleExit
-        - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,uint256)
+        - event: Swap(indexed address,indexed address,indexed address,uint256,uint256,uint256,bytes)
           handler: handleSwap
+        - event: Migrate(indexed address,indexed address,bytes)
+          handler: handleMigrate
         - event: MaxSlippageSet(uint256)
           handler: handleMaxSlippageSet
         - event: ProtocolFeeSet(uint256)

@@ -29,6 +29,12 @@
           "internalType": "uint256",
           "name": "depositFee",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "Deposit",
@@ -66,6 +72,12 @@
           "internalType": "uint256",
           "name": "performanceFee",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "Exit",
@@ -91,6 +103,12 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "Join",
@@ -107,6 +125,31 @@
         }
       ],
       "name": "MaxSlippageSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "Migrate",
       "type": "event"
     },
     {
@@ -173,6 +216,12 @@
           "internalType": "uint256",
           "name": "amountOut",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "Swap",
@@ -267,10 +316,29 @@
           "internalType": "address",
           "name": "recipient",
           "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "Withdraw",
       "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "EXIT_RATIO_PRECISION",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "inputs": [
@@ -312,6 +380,11 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "deposit",
@@ -565,6 +638,29 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "migrate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "priceOracle",
       "outputs": [
@@ -767,6 +863,11 @@
           "internalType": "address",
           "name": "recipient",
           "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
         }
       ],
       "name": "withdraw",
