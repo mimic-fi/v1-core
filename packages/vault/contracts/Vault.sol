@@ -103,7 +103,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         uint256 totalShares = getStrategyShares[strategy];
         uint256 totalValue = IStrategy(strategy).getTotalValue();
-        return totalValue.mulDown(accountShares).divDown(totalShares);
+
+        // We are using SafeMath here instead of FixedPoint so we don't lose precision in the numerator
+        return SafeMath.div(SafeMath.mul(totalValue, accountShares), totalShares);
     }
 
     function getStrategyShareValue(address strategy) external view override returns (uint256) {
@@ -365,7 +367,8 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         (uint256 value, uint256 totalValue) = IStrategy(strategy).onJoin(amount, data);
 
         uint256 totalShares = getStrategyShares[strategy];
-        shares = totalShares == 0 ? value : value.mulDown(totalShares).divDown(totalValue.sub(value));
+        // We are using SafeMath here instead of FixedPoint so we don't lose precision in the numerator
+        shares = totalShares == 0 ? value : SafeMath.div(SafeMath.mul(value, totalShares), totalValue.sub(value));
         getStrategyShares[strategy] = totalShares.add(shares);
 
         accounting.shares[strategy] = accounting.shares[strategy].add(shares);
@@ -403,7 +406,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
             );
 
             _safeTransferFrom(token, strategy, address(this), amount);
-            currentValue = totalValue.add(exitingValue).mulDown(currentShares).divDown(totalShares);
+
+            // We are using SafeMath here instead of FixedPoint so we don't lose precision in the numerator
+            currentValue = SafeMath.div(SafeMath.mul(totalValue.add(exitingValue), currentShares), totalShares);
         }
 
         uint256 investedValue = accounting.invested[strategy];
@@ -420,7 +425,7 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         received = amount.sub(protocolFeeAmount).sub(performanceFeeAmount);
         accounting.balance[token] = accounting.balance[token].add(received);
         accounting.invested[strategy] = investedValue >= currentValue
-            ? investedValue.mulUp(FixedPoint.ONE.sub(ratio))
+            ? investedValue.mulUp(FixedPoint.ONE - ratio)
             : Math.min(investedValue, exitingValue >= currentValue ? 0 : currentValue - exitingValue);
 
         emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount, data);
@@ -441,7 +446,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
 
         uint256 valueGains = currentValue - investedValue;
         // `tokenGains` won't be greater than `amount`
-        uint256 tokenGains = valueGains > exitingValue ? amount : amount.mulDown(valueGains).divDown(exitingValue);
+        // We are using SafeMath here instead of FixedPoint so we don't lose precision in the numerator
+        uint256 tokenGains = valueGains > exitingValue
+            ? amount
+            : SafeMath.div(SafeMath.mul(amount, valueGains), exitingValue);
+
         protocolFeeAmount = tokenGains.mulDown(protocolFee);
         _safeTransfer(token, owner(), protocolFeeAmount);
 
