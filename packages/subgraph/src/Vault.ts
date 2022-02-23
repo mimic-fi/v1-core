@@ -129,12 +129,14 @@ export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): voi
 }
 
 export function handleBlock(block: ethereum.Block): void {
-  let vault = VaultEntity.load(VAULT_ID)
-  if (vault !== null && vault.strategies !== null) {
-    let strategies = vault.strategies
-    for (let i: i32 = 0; i < strategies.length; i++) {
-      let strategy = StrategyEntity.load(strategies[i])
-      if (strategy !== null) createLastRate(vault!, strategy!, block)
+  if (block.number.mod(BigInt.fromI32(10)).equals(BigInt.fromI32(0))) {
+    let vault = VaultEntity.load(VAULT_ID)
+    if (vault !== null && vault.strategies !== null) {
+      let strategies = vault.strategies
+      for (let i: i32 = 0; i < strategies.length; i++) {
+        let strategy = StrategyEntity.load(strategies[i])
+        if (strategy !== null) createLastRate(vault!, strategy!, block)
+      }
     }
   }
 }
