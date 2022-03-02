@@ -1,11 +1,27 @@
 import { Address, BigInt, ethereum, log } from '@graphprotocol/graph-ts'
 
+import { VAULT_ID } from './Vault'
 import { loadOrCreateERC20 } from './ERC20'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Strategy as StrategyContract } from '../types/Vault/Strategy'
 import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } from '../types/schema'
 
 let ONE = BigInt.fromString('1000000000000000000')
+
+let BUFFER_SIZE = BigInt.fromI32(4096) // ~1 month
+let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(60 * 10) // 10 minutes
+let MIN_SAMPLE_DURATION = BigInt.fromI32(30) // 30 seconds
+
+export function handleTick(event: ethereum.Event): void {
+  let vault = VaultEntity.load(VAULT_ID)
+  if (vault !== null && vault.strategies !== null) {
+    let strategies = vault.strategies
+    for (let i: i32 = 0; i < strategies.length; i++) {
+      let strategy = StrategyEntity.load(strategies[i])
+      if (strategy !== null) createLastRate(vault!, strategy!, event.block)
+    }
+  }
+}
 
 export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event): StrategyEntity {
   let id = strategyAddress.toHexString()
@@ -17,8 +33,29 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
     strategy.token = getStrategyToken(strategyAddress).toHexString()
     strategy.metadata = getStrategyMetadata(strategyAddress)
     strategy.whitelisted = false
+    strategy.rates = []
     strategy.save()
-    createLastRate(vault, strategy!, event.block)
+
+    let rates = strategy.rates
+    for (let i: i32 = 0; i < BUFFER_SIZE.toI32(); i++) {
+      let index = BigInt.fromI32(i)
+      let rate = new RateEntity(rateId(strategy!, index))
+      rate.index = index
+      rate.valueRate = BigInt.fromI32(0)
+      rate.totalValue = BigInt.fromI32(0)
+      rate.totalShares = BigInt.fromI32(0)
+      rate.shareValue = BigInt.fromI32(0)
+      rate.accumulatedShareValue = BigInt.fromI32(0)
+      rate.updatedAt = event.block.timestamp
+      rate.createdAt = event.block.timestamp
+      rate.block = event.block.number
+      rate.strategy = strategy.id
+      rate.save()
+      rates.push(i.toString())
+    }
+
+    strategy.rates = rates
+    strategy.save()
   }
 
   let strategies = vault.strategies
@@ -30,37 +67,35 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
 }
 
 export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, block: ethereum.Block): void {
+  let lastRate = RateEntity.load(strategy.lastRate || rateId(strategy, BigInt.fromI32(0)))
+  if (block.number.equals(lastRate.block)) return
+
+  let elapsed = block.timestamp.minus(lastRate.updatedAt)
+  if (elapsed.lt(MIN_SAMPLE_DURATION)) return
+
+  let requiresNewSample = block.timestamp.minus(lastRate.createdAt).ge(MAX_BUFFER_ENTRY_DURATION)
+  let currentIndex = requiresNewSample ? lastRate.index.plus(BigInt.fromI32(1)).mod(BUFFER_SIZE) : lastRate.index
+  let currentRate = RateEntity.load(rateId(strategy, currentIndex))
+  if (requiresNewSample) log.warning('New sample at {}', [currentIndex.toString()])
+
   let strategyAddress = Address.fromString(strategy.id)
   let totalValue = getStrategyValue(strategyAddress)
   let totalShares = getStrategyShares(Address.fromString(vault.address), strategyAddress)
   let shareValue = totalShares.isZero() ? BigInt.fromI32(0) : totalValue.times(ONE).div(totalShares)
+  let accumulatedShareValue = lastRate.accumulatedShareValue.plus(lastRate.shareValue.times(elapsed))
 
-  if (strategy.lastRate === null) {
-    storeLastRate(strategy, totalValue, totalShares, shareValue, BigInt.fromI32(0), block);
-  } else {
-    let lastRate = RateEntity.load(strategy.lastRate)!
-    if (lastRate.shareValue.notEqual(shareValue)) {
-      let elapsed = block.number.minus(lastRate.block)
-      let accumulated = lastRate.accumulatedShareValue.plus(lastRate.shareValue.times(elapsed))
-      storeLastRate(strategy, totalValue, totalShares, shareValue, accumulated, block);
-    }
-  }
-}
+  currentRate.valueRate = getStrategyValueRate(Address.fromString(strategy.id))
+  currentRate.totalValue = totalValue
+  currentRate.totalShares = totalShares
+  currentRate.shareValue = shareValue
+  currentRate.accumulatedShareValue = accumulatedShareValue
+  currentRate.strategy = strategy.id
+  currentRate.block = block.number
+  currentRate.updatedAt = block.timestamp
+  if (requiresNewSample) currentRate.createdAt = block.timestamp
+  currentRate.save()
 
-function storeLastRate(strategy: StrategyEntity, totalValue: BigInt, totalShares: BigInt, shareValue: BigInt, accumulated: BigInt, block: ethereum.Block): void {
-  let rateId = strategy.id + '-' + block.timestamp.toString()
-  let rate = new RateEntity(rateId)
-  rate.valueRate = getStrategyValueRate(Address.fromString(strategy.id))
-  rate.totalValue = totalValue
-  rate.totalShares = totalShares
-  rate.shareValue = shareValue
-  rate.accumulatedShareValue = accumulated
-  rate.strategy = strategy.id
-  rate.timestamp = block.timestamp
-  rate.block = block.number
-  rate.save()
-
-  strategy.lastRate = rateId
+  strategy.lastRate = currentRate.id
   strategy.save()
 }
 
@@ -123,4 +158,8 @@ export function getStrategyToken(address: Address): Address {
 
   log.warning('getToken() call reverted for {}', [address.toHexString()])
   return Address.fromString('0x0000000000000000000000000000000000000000')
+}
+
+function rateId(strategy: StrategyEntity, index: BigInt): string {
+  return strategy.id + '#' + index.toString()
 }

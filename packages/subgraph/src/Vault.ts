@@ -1,7 +1,7 @@
-import { BigInt, Address, ethereum, log } from '@graphprotocol/graph-ts'
+import { BigInt, Address, log } from '@graphprotocol/graph-ts'
 
 import { loadOrCreateERC20 } from './ERC20'
-import { loadOrCreateStrategy, createLastRate } from './Strategy'
+import { loadOrCreateStrategy } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
@@ -9,7 +9,6 @@ import { Deposit, Withdraw, Join, Exit, Swap, Migrate, ProtocolFeeSet, Whitelist
 import {
   Vault as VaultEntity,
   Account as AccountEntity,
-  Strategy as StrategyEntity,
   AccountBalance as AccountBalanceEntity,
   AccountStrategy as AccountStrategyEntity,
   Portfolio as PortfolioEntity,
@@ -17,7 +16,7 @@ import {
 
 export const VAULT_ID = 'VAULT_ID'
 
-const ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
+let ZERO_ADDRESS = Address.fromString('0x0000000000000000000000000000000000000000')
 
 export function handleDeposit(event: Deposit): void {
   loadOrCreateVault(event.address)
@@ -126,19 +125,6 @@ export function handleWhitelistedStrategySet(event: WhitelistedStrategySet): voi
   let strategy = loadOrCreateStrategy(event.params.strategy, vault, event)
   strategy.whitelisted = event.params.whitelisted
   strategy.save()
-}
-
-export function handleBlock(block: ethereum.Block): void {
-  if (block.number.mod(BigInt.fromI32(10)).equals(BigInt.fromI32(0))) {
-    let vault = VaultEntity.load(VAULT_ID)
-    if (vault !== null && vault.strategies !== null) {
-      let strategies = vault.strategies
-      for (let i: i32 = 0; i < strategies.length; i++) {
-        let strategy = StrategyEntity.load(strategies[i])
-        if (strategy !== null) createLastRate(vault!, strategy!, block)
-      }
-    }
-  }
 }
 
 function loadOrCreateVault(vaultAddress: Address): VaultEntity {

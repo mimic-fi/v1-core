@@ -4,21 +4,24 @@
 set -o errexit
 
 # Vault addresses
-vault_localhost=0x3661310ef010d8751b726d7aF5EbA458b96D956E
 vault_kovan=0x0fc4AA87dFfCD24697F4fb23dEDf95759761a764
-vault_mainnet=0x0fc4AA87dFfCD24697F4fb23dEDf95759761a764
 vault_matic=0xACffEA9dfcf64fC6a294a1669977162E66859DD1
+vault_mainnet=0x0fc4AA87dFfCD24697F4fb23dEDf95759761a764
 
 # Agreement factory addresses
-agreement_factory_localhost=0x3661310ef010d8751b726d7aF5EbA458b96D956E
 agreement_factory_kovan=0x3661310ef010d8751b726d7aF5EbA458b96D956E
-agreement_factory_mainnet=0x3661310ef010d8751b726d7aF5EbA458b96D956E
 agreement_factory_matic=0x18E1018beff7BFF04C5637cd29294583816b003f
+agreement_factory_mainnet=0x3661310ef010d8751b726d7aF5EbA458b96D956E
+
+# Clock addresses (BAL token)
+clock_kovan=0xba100000625a3754423978a60c9317c58a424e3d
+clock_matic=0x9a71012b13ca4d3d0cdc72a177df3ef03b0e76a3
+clock_mainnet=0xba100000625a3754423978a60c9317c58a424e3d
 
 # Deployment block numbers
 start_block_kovan=28813917
-start_block_mainnet=13760565
 start_block_matic=25265683
+start_block_mainnet=13760565
 
 # Validate network
 networks=(localhost kovan rinkeby mainnet matic)
@@ -55,6 +58,18 @@ if [[ -z $VAULT ]]; then
   exit 1
 fi
 
+# Try loading Clock address if missing
+if [[ -z $CLOCK ]]; then
+  CLOCK_VAR=clock_$NETWORK
+  CLOCK=${!CLOCK_VAR}
+fi
+
+# Validate Clock address
+if [[ -z $CLOCK ]]; then
+  echo 'Please make sure a Clock address is provided'
+  exit 1
+fi
+
 # Try loading Agreement Factory address if missing
 if [[ -z $AGREEMENT_FACTORY ]]; then
   AGREEMENT_FACTORY_VAR=agreement_factory_$NETWORK
@@ -78,6 +93,7 @@ echo "Preparing new subgraph manifest for Vault address ${VAULT} and network ${N
 cp subgraph.template.yaml subgraph.yaml
 sed -i -e "s/{{network}}/${ENV}/g" subgraph.yaml
 sed -i -e "s/{{vault}}/${VAULT}/g" subgraph.yaml
+sed -i -e "s/{{clock}}/${CLOCK}/g" subgraph.yaml
 sed -i -e "s/{{agreementFactory}}/${AGREEMENT_FACTORY}/g" subgraph.yaml
 sed -i -e "s/{{startBlock}}/${START_BLOCK}/g" subgraph.yaml
 rm -f subgraph.yaml-e

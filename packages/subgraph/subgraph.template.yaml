@@ -48,9 +48,33 @@ dataSources:
           handler: handleWhitelistedTokenSet
         - event: WhitelistedStrategySet(indexed address,bool)
           handler: handleWhitelistedStrategySet
-      blockHandlers:
-        - handler: handleBlock
       file: ./src/Vault.ts
+  - kind: ethereum/contract
+    name: Clock
+    network: {{network}}
+    source:
+      address: '{{clock}}'
+      abi: ERC20
+      startBlock: {{startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: Vault
+          file: ./abi/IVault.json
+        - name: Strategy
+          file: ./abi/IStrategy.json
+        - name: ERC20
+          file: ./abi/IERC20.json
+      eventHandlers:
+        - event: Approval(indexed address,indexed address,uint256)
+          handler: handleTick
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTick
+      file: ./src/Strategy.ts
   - kind: ethereum/contract
     name: AgreementFactory
     network: {{network}}
