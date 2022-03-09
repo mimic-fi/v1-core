@@ -8,8 +8,8 @@ import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } 
 
 let ONE = BigInt.fromString('1000000000000000000')
 
-let BUFFER_SIZE = BigInt.fromI32(4096) // ~1 month
-let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(60 * 10) // 10 minutes
+let BUFFER_SIZE = BigInt.fromI32(1000) // ~41 days
+let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(60 * 60) // 1 hour
 let MIN_SAMPLE_DURATION = BigInt.fromI32(30) // 30 seconds
 
 export function handleTick(event: ethereum.Event): void {
