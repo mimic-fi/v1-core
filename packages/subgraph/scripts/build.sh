@@ -10,7 +10,7 @@ vault_mainnet=0x0fc4AA87dFfCD24697F4fb23dEDf95759761a764
 
 # Agreement factory addresses
 agreement_factory_kovan=0x3661310ef010d8751b726d7aF5EbA458b96D956E
-agreement_factory_matic=0x18E1018beff7BFF04C5637cd29294583816b003f
+agreement_factory_matic=0xa1962a54eA169317202D3522D0B78a8bAFb94DFa
 agreement_factory_mainnet=0x3661310ef010d8751b726d7aF5EbA458b96D956E
 
 # Clock addresses (BAL token)
