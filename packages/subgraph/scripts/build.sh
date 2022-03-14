@@ -5,13 +5,13 @@ set -o errexit
 
 # Vault addresses
 vault_kovan=0x0fc4AA87dFfCD24697F4fb23dEDf95759761a764
-vault_matic=0xACffEA9dfcf64fC6a294a1669977162E66859DD1
-vault_mainnet=0x0fc4AA87dFfCD24697F4fb23dEDf95759761a764
+vault_matic=0x3FB380e25930FF9DEf5493eF6B62Aa3D88394642
+vault_mainnet=0x3FB380e25930FF9DEf5493eF6B62Aa3D88394642
 
 # Agreement factory addresses
 agreement_factory_kovan=0x3661310ef010d8751b726d7aF5EbA458b96D956E
-agreement_factory_matic=0xa1962a54eA169317202D3522D0B78a8bAFb94DFa
-agreement_factory_mainnet=0x3661310ef010d8751b726d7aF5EbA458b96D956E
+agreement_factory_matic=0xe0E1faB5b3F46366fC92a0a0ed3fdDA5EeF094a8
+agreement_factory_mainnet=0xD0b393744c71f6627F2B94da223c1b785b9D130c
 
 # Clock addresses (BAL token)
 clock_kovan=0xba100000625a3754423978a60c9317c58a424e3d
@@ -20,8 +20,8 @@ clock_mainnet=0xba100000625a3754423978a60c9317c58a424e3d
 
 # Deployment block numbers
 start_block_kovan=28813917
-start_block_matic=25265683
-start_block_mainnet=13760565
+start_block_matic=25933113
+start_block_mainnet=14384724
 
 # Validate network
 networks=(localhost kovan rinkeby mainnet matic)
