@@ -5,8 +5,8 @@ import { expect } from 'chai'
 import { Contract } from 'ethers'
 import { ethers } from 'hardhat'
 
-import Agreement from './helpers/Agreement'
-import { Account, toAddress, toAddresses } from './helpers/types'
+import Agreement from '../helpers/Agreement'
+import { Account, toAddress, toAddresses } from '../helpers/types'
 
 describe('Agreement', () => {
   describe('withdrawers', () => {

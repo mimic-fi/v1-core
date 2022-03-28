@@ -138,7 +138,7 @@ async function benchmarkAgreement(vault: Contract, tokens: string[], strategies:
   console.log(`- 1 managers, 1 withdrawers, 0 tokens, 0 strategy: ${(await agreement5Tx.wait()).gasUsed}`)
 
   const { args } = await assertEvent(agreement1Tx, 'AgreementCreated', { name })
-  return instanceAt('@mimic-fi/v1-agreements/artifacts/contracts/Agreement.sol/Agreement', args.agreement)
+  return instanceAt(ARTIFACTS.agreement, args.agreement)
 }
 
 async function benchmarkVault(vault: Contract, account: string, strategies: string[], tokens: string[]): Promise<void> {

@@ -25,8 +25,8 @@ import '@mimic-fi/v1-vault/contracts/interfaces/IStrategy.sol';
 import '@mimic-fi/v1-vault/contracts/interfaces/IVault.sol';
 import '@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol';
 
+import '../IWETH.sol';
 import './IAgreement.sol';
-import './IWETH.sol';
 
 contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using Address for address;

@@ -2,7 +2,7 @@ import { assertEvent, deploy, fp, getSigners, instanceAt } from '@mimic-fi/v1-he
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 
-import { toAddresses } from './helpers/types'
+import { toAddresses } from '../helpers/types'
 
 describe('AgreementFactory', () => {
   let factory: Contract

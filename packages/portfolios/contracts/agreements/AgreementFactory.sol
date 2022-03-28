@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.0;
 
-import './Proxy.sol';
+import '../Proxy.sol';
 import './Agreement.sol';
 
 contract AgreementFactory {
