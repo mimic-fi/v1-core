@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 
 import '@mimic-fi/v1-vault/contracts/interfaces/IPortfolio.sol';
 

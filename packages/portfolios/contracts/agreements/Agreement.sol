@@ -27,12 +27,14 @@ import '@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol';
 
 import '../IWETH.sol';
 import './IAgreement.sol';
+import './AgreementData.sol';
 
 contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using Address for address;
     using SafeERC20 for IERC20;
     using VaultHelpers for bytes;
     using VaultHelpers for bytes32;
+    using AgreementData for bytes;
 
     enum Allowed {
         OnlyCustom,
@@ -143,22 +145,31 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         // Eval different actions and parameters
         if (what.isSwap()) {
             VaultHelpers.SwapParams memory params = how.decodeSwap();
-            return isTokenAllowed(params.tokenOut) && params.slippage <= maxSwapSlippage;
+            return isTokenAllowed(params.tokenOut) && params.slippage <= maxSwapSlippage && params.data.isEmpty();
         } else if (what.isJoin()) {
             VaultHelpers.JoinParams memory params = how.decodeJoin();
-            return isStrategyAllowed(params.strategy);
+            return
+                isStrategyAllowed(params.strategy) &&
+                params.data.isSlippage() &&
+                params.data.decodeSlippage() <= maxSwapSlippage;
         } else if (what.isExit()) {
             VaultHelpers.ExitParams memory params = how.decodeExit();
-            return !params.emergency || isWithdrawer[who];
+            if (!params.data.isSlippage()) return false;
+            if (params.emergency) return isWithdrawer[who];
+            return params.data.decodeSlippage() <= maxSwapSlippage;
         } else if (what.isWithdraw()) {
             VaultHelpers.WithdrawParams memory params = how.decodeWithdraw();
+            if (isWithdrawer[params.recipient] && params.data.isEmpty()) return true;
             return
-                isWithdrawer[params.recipient] ||
-                (IWETH(params.token) == weth &&
-                    params.recipient == address(this) &&
-                    isWithdrawer[_decodeAddress(params.data)]);
+                IWETH(params.token) == weth &&
+                params.recipient == address(this) &&
+                params.data.isWithdrawer() &&
+                isWithdrawer[params.data.decodeWithdrawer()];
+        } else if (what.isDeposit()) {
+            VaultHelpers.DepositParams memory params = how.decodeDeposit();
+            return params.data.isEmpty();
         } else {
-            return what.isDeposit();
+            return false;
         }
     }
 
@@ -193,7 +204,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     {
         if (token == address(weth) && amount > 0 && recipient == address(this)) {
             weth.withdraw(amount);
-            payable(_decodeAddress(data)).transfer(amount);
+            payable(data.decodeWithdrawer()).transfer(amount);
         }
     }
 
@@ -300,11 +311,5 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         require(vault == address(0), 'ALREADY_INIT');
         require(_vault.isContract(), 'VAULT_NOT_CONTRACT');
         vault = _vault;
-    }
-
-    function _decodeAddress(bytes memory data) private pure returns (address result) {
-        if (data.length >= 20) {
-            (result) = abi.decode(data, (address));
-        }
     }
 }

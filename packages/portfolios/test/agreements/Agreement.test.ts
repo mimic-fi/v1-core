@@ -1,4 +1,3 @@
-import { defaultAbiCoder } from '@ethersproject/abi'
 import { BigNumberish, deploy, fp, getSigner, getSigners, ZERO_ADDRESS } from '@mimic-fi/v1-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
@@ -454,117 +453,203 @@ describe('Agreement', () => {
       context('when the target is the vault', () => {
         beforeEach('set target', () => (where = vault.address))
 
-        it('accepts any deposit', async () => {
-          expect(await agreement.canDeposit(who, where)).to.be.true
-          expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1))).to.be.true
+        context('deposit', () => {
+          it('accepts any deposit', async () => {
+            expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1))).to.be.true
+          })
+
+          it('does not accept a deposit with data', async () => {
+            expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1), '0xab')).to.be.false
+          })
         })
 
-        it('accepts withdrawals to allowed recipients', async () => {
-          const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer0)).to.be.true
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer1)).to.be.true
+        context('withdraw', () => {
+          it('accepts withdrawals to allowed recipients', async () => {
+            const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer0)).to.be.true
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer1)).to.be.true
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), withdrawer1, '0xab')).to.be.false
 
-          const [manager0, manager1] = toAddresses(agreement.managers)
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager0)).to.be.false
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager1)).to.be.false
+            const [manager0, manager1] = toAddresses(agreement.managers)
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager0)).to.be.false
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager1)).to.be.false
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), manager1, '0xab')).to.be.false
 
-          const collector = toAddress(agreement.feeCollector)
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), collector)).to.be.false
+            const collector = toAddress(agreement.feeCollector)
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), collector)).to.be.false
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), collector, '0xab')).to.be.false
+          })
+
+          it('accepts withdrawals to the agreement itself if sending weth with an encoded withdrawer', async () => {
+            const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
+
+            const encodedWithdrawer0 = agreement.encodeWithdrawer(withdrawer0)
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address, encodedWithdrawer0))
+              .to.be.false
+            expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedWithdrawer0))
+              .to.be.true
+
+            const encodedWithdrawer1 = agreement.encodeWithdrawer(withdrawer1)
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address, encodedWithdrawer1))
+              .to.be.false
+            expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedWithdrawer1))
+              .to.be.true
+
+            const encodedManager0 = agreement.encodeWithdrawer(agreement.managers[0])
+            expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address)).to.be.false
+            expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address)).to.be.false
+            expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedManager0)).to
+              .be.false
+          })
         })
 
-        it('accepts withdrawals to the agreement itself if sending weth with an encoded withdrawer', async () => {
-          const [withdrawer0, withdrawer1] = toAddresses(agreement.withdrawers)
+        context('swap', () => {
+          it('accepts operating with allowed tokens', async () => {
+            const unknownToken = await deploy('TokenMock')
+            const whitelistedToken = await deploy('TokenMock')
+            await vault.mockWhitelistedTokens([whitelistedToken.address])
 
-          const encodedWithdrawer0 = defaultAbiCoder.encode(['address'], [withdrawer0])
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address, encodedWithdrawer0)).to
-            .be.false
-          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedWithdrawer0)).to
-            .be.true
-
-          const encodedWithdrawer1 = defaultAbiCoder.encode(['address'], [withdrawer1])
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address, encodedWithdrawer1)).to
-            .be.false
-          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedWithdrawer1)).to
-            .be.true
-
-          const encodedManager0 = defaultAbiCoder.encode(['address'], [toAddress(agreement.managers[0])])
-          expect(await agreement.canWithdraw(who, where, ZERO_ADDRESS, fp(1), agreement.address)).to.be.false
-          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address)).to.be.false
-          expect(await agreement.canWithdraw(who, where, weth.address, fp(1), agreement.address, encodedManager0)).to.be
-            .false
+            // valid token out, valid slippage
+            expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage)).to
+              .be.true
+            // valid token out, valid slippage, invalid data
+            expect(
+              await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage, '0xab')
+            ).to.be.false
+            // valid token out, invalid slippage
+            expect(
+              await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1))
+            ).to.be.false
+            // invalid token out, valid slippage
+            expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage))
+              .to.be.false
+            // invalid token out, invalid slippage
+            expect(
+              await agreement.canSwap(
+                who,
+                where,
+                unknownToken,
+                whitelistedToken.address,
+                fp(10),
+                maxSwapSlippage.add(1)
+              )
+            ).to.be.false
+            // invalid token out, valid slippage
+            expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage)).to
+              .be.false
+            // invalid token out, invalid slippage
+            expect(
+              await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1))
+            ).to.be.false
+          })
         })
 
-        it('accepts operating with allowed tokens', async () => {
-          const unknownToken = await deploy('TokenMock')
-          const whitelistedToken = await deploy('TokenMock')
-          await vault.mockWhitelistedTokens([whitelistedToken.address])
+        context('join', () => {
+          it('accepts joining only allowed strategies', async () => {
+            const unknownStrategy = await deploy('StrategyMock')
+            const whitelistedStrategy = await deploy('StrategyMock')
+            await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
 
-          // valid token out, valid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage)).to.be
-            .true
-          // valid token out, invalid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, customToken.address, fp(10), maxSwapSlippage.add(1)))
-            .to.be.false
-          // invalid token out, valid slippage
-          expect(await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage))
-            .to.be.false
-          // invalid token out, invalid slippage
-          expect(
-            await agreement.canSwap(who, where, unknownToken, whitelistedToken.address, fp(10), maxSwapSlippage.add(1))
-          ).to.be.false
-          // invalid token out, valid slippage
-          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage)).to.be
-            .false
-          // invalid token out, invalid slippage
-          expect(await agreement.canSwap(who, where, customToken.address, unknownToken, fp(10), maxSwapSlippage.add(1)))
-            .to.be.false
+            expect(await agreement.canJoin(who, where, customStrategy.address)).to.be.false
+            expect(await agreement.canJoin(who, where, unknownStrategy.address)).to.be.false
+            expect(await agreement.canJoin(who, where, whitelistedStrategy.address)).to.be.false
+
+            const validSlippage = agreement.encodeSlippage(maxSwapSlippage)
+            expect(await agreement.canJoin(who, where, customStrategy.address, 0, validSlippage)).to.be.true
+            expect(await agreement.canJoin(who, where, unknownStrategy.address, 0, validSlippage)).to.be.false
+            expect(await agreement.canJoin(who, where, whitelistedStrategy.address, 0, validSlippage)).to.be.false
+
+            const invalidSlippage = agreement.encodeSlippage(maxSwapSlippage.add(1))
+            expect(await agreement.canJoin(who, where, customStrategy.address, 0, invalidSlippage)).to.be.false
+            expect(await agreement.canJoin(who, where, unknownStrategy.address, 0, invalidSlippage)).to.be.false
+            expect(await agreement.canJoin(who, where, whitelistedStrategy.address, 0, invalidSlippage)).to.be.false
+          })
         })
 
-        it('accepts joining only allowed strategies', async () => {
-          const unknownStrategy = await deploy('StrategyMock')
-          const whitelistedStrategy = await deploy('StrategyMock')
-          await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
+        context('exit', () => {
+          it('accepts exiting any strategies', async () => {
+            const emergency = false
+            const unknownStrategy = await deploy('StrategyMock')
+            const whitelistedStrategy = await deploy('StrategyMock')
+            await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
 
-          expect(await agreement.canJoin(who, where, customStrategy.address)).to.be.true
-          expect(await agreement.canJoin(who, where, unknownStrategy.address)).to.be.false
-          expect(await agreement.canJoin(who, where, whitelistedStrategy.address)).to.be.false
+            expect(await agreement.canExit(who, where, customStrategy.address)).to.be.false
+            expect(await agreement.canExit(who, where, unknownStrategy.address)).to.be.false
+            expect(await agreement.canExit(who, where, whitelistedStrategy.address)).to.be.false
+
+            const validSlippage = agreement.encodeSlippage(maxSwapSlippage)
+            expect(await agreement.canExit(who, where, customStrategy.address, 0, emergency, validSlippage)).to.be.true
+            expect(await agreement.canExit(who, where, unknownStrategy.address, 0, emergency, validSlippage)).to.be.true
+            expect(await agreement.canExit(who, where, whitelistedStrategy.address, 0, emergency, validSlippage)).to.be
+              .true
+
+            const invalidSlippage = agreement.encodeSlippage(maxSwapSlippage.add(1))
+            expect(await agreement.canExit(who, where, customStrategy.address, 0, emergency, invalidSlippage)).to.be
+              .false
+            expect(await agreement.canExit(who, where, unknownStrategy.address, 0, emergency, invalidSlippage)).to.be
+              .false
+            expect(await agreement.canExit(who, where, whitelistedStrategy.address, 0, emergency, invalidSlippage)).to
+              .be.false
+          })
+
+          it('accepts exiting strategies on emergency only if also a withdrawer', async () => {
+            const emergency = true
+            const onlyManager = agreement.managers[1] // third manager is also a withdrawer
+            const alsoWithdrawer = agreement.managers[2] // third manager is also a withdrawer
+
+            const unknownStrategy = await deploy('StrategyMock')
+            const whitelistedStrategy = await deploy('StrategyMock')
+            await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
+
+            expect(await agreement.canExit(onlyManager, where, customStrategy.address, 0, emergency)).to.be.false
+            expect(await agreement.canExit(onlyManager, where, unknownStrategy.address, 0, emergency)).to.be.false
+            expect(await agreement.canExit(onlyManager, where, whitelistedStrategy.address, 0, emergency)).to.be.false
+
+            const validSlippage = agreement.encodeSlippage(maxSwapSlippage)
+            expect(await agreement.canExit(onlyManager, where, customStrategy.address, 0, emergency, validSlippage)).to
+              .be.false
+            expect(await agreement.canExit(onlyManager, where, unknownStrategy.address, 0, emergency, validSlippage)).to
+              .be.false
+            expect(
+              await agreement.canExit(onlyManager, where, whitelistedStrategy.address, 0, emergency, validSlippage)
+            ).to.be.false
+
+            expect(await agreement.canExit(alsoWithdrawer, where, customStrategy.address, 0, emergency)).to.be.false
+            expect(await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, emergency)).to.be.false
+            expect(await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, emergency)).to.be
+              .false
+
+            expect(await agreement.canExit(alsoWithdrawer, where, customStrategy.address, 0, emergency, validSlippage))
+              .to.be.true
+            expect(await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, emergency, validSlippage))
+              .to.be.true
+            expect(
+              await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, emergency, validSlippage)
+            ).to.be.true
+
+            const invalidSlippage = agreement.encodeSlippage(maxSwapSlippage.add(1))
+            expect(
+              await agreement.canExit(alsoWithdrawer, where, customStrategy.address, 0, emergency, invalidSlippage)
+            ).to.be.true
+            expect(
+              await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, emergency, invalidSlippage)
+            ).to.be.true
+            expect(
+              await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, emergency, invalidSlippage)
+            ).to.be.true
+          })
         })
 
-        it('accepts exiting any strategies', async () => {
-          const unknownStrategy = await deploy('StrategyMock')
-          const whitelistedStrategy = await deploy('StrategyMock')
-          await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
+        context('migrate', () => {
+          it('does not accept migrations', async () => {
+            expect(await agreement.canMigrate(who, where)).to.be.false
+            expect(await agreement.canMigrate(who, where, who)).to.be.false
+            expect(await agreement.canMigrate(who, where, who, '0x')).to.be.false
+          })
 
-          expect(await agreement.canExit(who, where, customStrategy.address)).to.be.true
-          expect(await agreement.canExit(who, where, unknownStrategy.address)).to.be.true
-          expect(await agreement.canExit(who, where, whitelistedStrategy.address)).to.be.true
-        })
-
-        it('accepts exiting strategies on emergency only if also a withdrawer', async () => {
-          const onlyManager = agreement.managers[1] // third manager is also a withdrawer
-          const alsoWithdrawer = agreement.managers[2] // third manager is also a withdrawer
-
-          const unknownStrategy = await deploy('StrategyMock')
-          const whitelistedStrategy = await deploy('StrategyMock')
-          await vault.mockWhitelistedStrategies([whitelistedStrategy.address])
-
-          expect(await agreement.canExit(onlyManager, where, customStrategy.address, 0, true)).to.be.false
-          expect(await agreement.canExit(onlyManager, where, unknownStrategy.address, 0, true)).to.be.false
-          expect(await agreement.canExit(onlyManager, where, whitelistedStrategy.address, 0, true)).to.be.false
-
-          expect(await agreement.canExit(alsoWithdrawer, where, customStrategy.address, 0, true)).to.be.true
-          expect(await agreement.canExit(alsoWithdrawer, where, unknownStrategy.address, 0, true)).to.be.true
-          expect(await agreement.canExit(alsoWithdrawer, where, whitelistedStrategy.address, 0, true)).to.be.true
-        })
-
-        it('does not accept migrations', async () => {
-          expect(await agreement.canMigrate(who, where)).to.be.false
-          expect(await agreement.canMigrate(who, where, who)).to.be.false
-          expect(await agreement.canMigrate(who, where, who, '0x')).to.be.false
-        })
-
-        it('does not accept any other action', async () => {
-          expect(await agreement.canPerform(who, where)).to.be.false
+          it('does not accept any other action', async () => {
+            expect(await agreement.canPerform(who, where)).to.be.false
+          })
         })
       })
 
@@ -706,7 +791,7 @@ describe('Agreement', () => {
               let data: string
 
               beforeEach('encode withdrawer', async () => {
-                data = defaultAbiCoder.encode(['address'], [withdrawer.address])
+                data = agreement.encodeWithdrawer(withdrawer)
               })
 
               context('when the amount is greater than zero', () => {
@@ -768,17 +853,10 @@ describe('Agreement', () => {
             context('when there is no withdrawer encoded', () => {
               const data = '0x'
 
-              it('unwraps the given weth and sends it to the zero address', async () => {
-                const previousEthBalance = await ethers.provider.getBalance(ZERO_ADDRESS)
-                const previousWethBalance = await weth.balanceOf(agreement.address)
-
-                await vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, weth.address, balance, recipient, data)
-
-                const currentEthBalance = await ethers.provider.getBalance(ZERO_ADDRESS)
-                expect(currentEthBalance).to.be.equal(previousEthBalance.add(balance))
-
-                const currentWethBalance = await weth.balanceOf(agreement.address)
-                expect(currentWethBalance).to.be.equal(previousWethBalance.sub(balance))
+              it('reverts', async () => {
+                await expect(
+                  vault.mockAfterWithdraw(agreement.address, ZERO_ADDRESS, weth.address, balance, recipient, data)
+                ).to.be.reverted
               })
             })
           })
@@ -930,10 +1008,9 @@ describe('Agreement', () => {
       await manager.sendTransaction({ to: agreement.address, value: amount })
       await vault.connect(manager).deposit(agreement.address, weth.address, amount, '0x')
 
-      const encodedWithdrawer = defaultAbiCoder.encode(['address'], [withdrawer.address])
       await vault
         .connect(manager)
-        .withdraw(agreement.address, weth.address, amount, agreement.address, encodedWithdrawer)
+        .withdraw(agreement.address, weth.address, amount, agreement.address, agreement.encodeWithdrawer(withdrawer))
 
       await assertBalance(vault, 0, 0)
       await assertBalance(agreement, 0, 0)

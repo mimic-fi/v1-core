@@ -5,6 +5,12 @@ import { BigNumber, Contract, utils } from 'ethers'
 import AgreementDeployer from './AgreementDeployer'
 import { Account, Allowed, RawAgreementDeployment, toAddress, toAddresses } from './types'
 
+export const AGREEMENT_DATA_TYPE = {
+  None: 0,
+  Withdrawer: 1,
+  Slippage: 2,
+}
+
 export default class Agreement {
   instance: Contract
   vault: Contract
@@ -217,5 +223,13 @@ export default class Agreement {
 
   encodeMigrate(to: Account, data: string): string {
     return defaultAbiCoder.encode(['address', 'bytes'], [toAddress(to), data])
+  }
+
+  encodeWithdrawer(withdrawer: Account): string {
+    return defaultAbiCoder.encode(['uint8', 'address'], [AGREEMENT_DATA_TYPE.Withdrawer, toAddress(withdrawer)])
+  }
+
+  encodeSlippage(slippage: BigNumber): string {
+    return defaultAbiCoder.encode(['uint8', 'uint256'], [AGREEMENT_DATA_TYPE.Slippage, slippage.toString()])
   }
 }
