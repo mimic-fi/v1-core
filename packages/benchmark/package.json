@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@mimic-fi/v1-vault": "0.0.11",
-    "@mimic-fi/v1-portfolios": "0.0.6",
+    "@mimic-fi/v1-portfolios": "0.0.7",
     "@openzeppelin/contracts": "4.1.0"
   },
   "devDependencies": {
