@@ -1,4 +1,5 @@
 import { assertEvent, deploy, fp, getSigner, getSigners, instanceAt, MAX_UINT256 } from '@mimic-fi/v1-helpers'
+import { encodeSlippage } from '@mimic-fi/v1-portfolios/dist/helpers/encoding'
 import { Contract } from 'ethers'
 
 import ARTIFACTS from './artifacts'
@@ -32,14 +33,15 @@ async function benchmark(): Promise<void> {
   console.log('\n\n### Vault (agreement) ###')
   await token1.mint(agreement.address, fp(1000000))
   await token2.mint(agreement.address, fp(1000000))
-  await benchmarkVault(vault, agreement.address, strategies, tokens)
+  const encodedSlippage = encodeSlippage(fp(0.01))
+  await benchmarkVault(vault, agreement.address, strategies, tokens, encodedSlippage)
 
   console.log('\n\n### Vault (EOA) ###')
   const eoa = await getSigner()
   await token1.mint(eoa.address, fp(1000000))
   await token2.mint(eoa.address, fp(1000000))
   await token1.approve(vault.address, MAX_UINT256)
-  await benchmarkVault(vault, eoa.address, strategies, tokens)
+  await benchmarkVault(vault, eoa.address, strategies, tokens, '0x')
 }
 
 async function benchmarkAgreement(vault: Contract, tokens: string[], strategies: string[]): Promise<Contract> {
@@ -141,7 +143,13 @@ async function benchmarkAgreement(vault: Contract, tokens: string[], strategies:
   return instanceAt(ARTIFACTS.agreement, args.agreement)
 }
 
-async function benchmarkVault(vault: Contract, account: string, strategies: string[], tokens: string[]): Promise<void> {
+async function benchmarkVault(
+  vault: Contract,
+  account: string,
+  strategies: string[],
+  tokens: string[],
+  joinExitData: string
+): Promise<void> {
   const [strategy] = strategies
   const [token, anotherToken] = tokens
 
@@ -155,13 +163,13 @@ async function benchmarkVault(vault: Contract, account: string, strategies: stri
   console.log(`- First swap: \t\t${(await swap1Tx.wait()).gasUsed}`)
   console.log(`- Second swap: \t\t${(await swap2Tx.wait()).gasUsed}`)
 
-  const join1Tx = await vault.join(account, strategy, fp(200), '0x')
-  const join2Tx = await vault.join(account, strategy, fp(200), '0x')
+  const join1Tx = await vault.join(account, strategy, fp(200), joinExitData)
+  const join2Tx = await vault.join(account, strategy, fp(200), joinExitData)
   console.log(`- First join: \t\t${(await join1Tx.wait()).gasUsed}`)
   console.log(`- Second join: \t\t${(await join2Tx.wait()).gasUsed}`)
 
-  const exit1Tx = await vault.exit(account, strategy, fp(0.5), false, '0x')
-  const exit2Tx = await vault.exit(account, strategy, fp(1), false, '0x')
+  const exit1Tx = await vault.exit(account, strategy, fp(0.5), false, joinExitData)
+  const exit2Tx = await vault.exit(account, strategy, fp(1), false, joinExitData)
   console.log(`- Half exit: \t\t${(await exit1Tx.wait()).gasUsed}`)
   console.log(`- Full exit: \t\t${(await exit2Tx.wait()).gasUsed}`)
 

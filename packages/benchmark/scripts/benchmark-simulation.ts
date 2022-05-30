@@ -1,4 +1,5 @@
 import { assertEvent, deploy, fp, getSigners } from '@mimic-fi/v1-helpers'
+import { encodeSlippage } from '@mimic-fi/v1-portfolios/dist/helpers/encoding'
 import { toAddresses } from '@mimic-fi/v1-vault/test/helpers/types'
 
 import ARTIFACTS from './artifacts'
@@ -85,21 +86,21 @@ async function benchmark(): Promise<void> {
 
   // Join USDC strategy 20k => 20.6k USDC (3% strategy rate)
   console.log('joining USDC strategy...')
-  await vault.connect(manager2).join(agreement, strategyUSDC.address, fp(20e3), '0x')
+  await vault.connect(manager2).join(agreement, strategyUSDC.address, fp(20e3), encodeSlippage(fp(0.01)))
 
   // Join DAI strategy 40k => 40.8k DAI (2% strategy rate)
   console.log('joining DAI strategy...')
-  await vault.connect(manager2).join(agreement, strategyDAI.address, fp(40e3), '0x')
+  await vault.connect(manager2).join(agreement, strategyDAI.address, fp(40e3), encodeSlippage(fp(0.01)))
 
   // Exit 30% DAI => 12.24k DAI => protocol 0.24 => performance 35.964 => receives 12203.796
   console.log('exiting DAI strategy...')
   await DAI.mint(strategyDAI.address, (await DAI.balanceOf(strategyDAI.address)).mul(DAI_STRATEGY_RATE).div(fp(1)))
-  await vault.connect(manager1).exit(agreement, strategyDAI.address, fp(0.3), false, '0x')
+  await vault.connect(manager1).exit(agreement, strategyDAI.address, fp(0.3), false, encodeSlippage(fp(0.01)))
 
   // Exit 90% USDC => 18.54k USDC => protocol 0.54 => performance 80.919 => receives 18458.541
   console.log('exiting USDC strategy...')
   await USDC.mint(strategyUSDC.address, (await USDC.balanceOf(strategyUSDC.address)).mul(USDC_STRATEGY_RATE).div(fp(1)))
-  await vault.connect(manager1).exit(agreement, strategyUSDC.address, fp(0.9), false, '0x')
+  await vault.connect(manager1).exit(agreement, strategyUSDC.address, fp(0.9), false, encodeSlippage(fp(0.01)))
 
   // Withdraw USDC earnings 458.541 => 18k USDC
   console.log('withdrawing USDC strategy...')
