@@ -89,7 +89,7 @@ jobs:
       - name: Build
         run: yarn build
       - name: Benchmark
-        run: yarn workspace @mimic-fi/v1-benchmark benchmark
+        run: yarn benchmark
 
 env:
   CI: true

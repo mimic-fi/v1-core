@@ -9,7 +9,8 @@
   "scripts": {
     "build": "yarn workspaces run build",
     "lint": "yarn workspaces run lint",
-    "test": "yarn workspaces run test"
+    "test": "yarn workspaces run test",
+    "benchmark": "yarn workspace @mimic-fi/v1-benchmark benchmark"
   },
   "dependencies": {},
   "devDependencies": {},
