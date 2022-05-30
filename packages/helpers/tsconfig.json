@@ -9,6 +9,7 @@
     "strict": true
   },
   "files": [
+    "index.ts",
     "hardhat.config.ts"
   ]
 }
