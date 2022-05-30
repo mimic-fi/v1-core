@@ -10,7 +10,7 @@
     "!artifacts/contracts/test/*",
     "contracts/**/*",
     "!contracts/test/*",
-    "dist"
+    "dist/**/*"
   ],
   "scripts": {
     "build": "yarn compile && rm -rf dist && tsc",
