@@ -14,8 +14,8 @@
 
 pragma solidity ^0.8.0;
 
-import '../Proxy.sol';
 import './Agreement.sol';
+import '../helpers/Proxy.sol';
 
 contract AgreementFactory {
     address public immutable vault;

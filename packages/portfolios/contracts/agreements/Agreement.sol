@@ -25,16 +25,16 @@ import '@mimic-fi/v1-vault/contracts/interfaces/IStrategy.sol';
 import '@mimic-fi/v1-vault/contracts/interfaces/IVault.sol';
 import '@mimic-fi/v1-vault/contracts/libraries/VaultHelpers.sol';
 
-import '../IWETH.sol';
 import './IAgreement.sol';
-import './AgreementData.sol';
+import '../helpers/IWETH.sol';
+import '../helpers/PortfoliosData.sol';
 
 contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using Address for address;
     using SafeERC20 for IERC20;
     using VaultHelpers for bytes;
     using VaultHelpers for bytes32;
-    using AgreementData for bytes;
+    using PortfoliosData for bytes;
 
     enum Allowed {
         OnlyCustom,

@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.0;
 
-library AgreementData {
+library PortfoliosData {
     enum Type {
         None,
         Withdrawer,
