@@ -587,6 +587,15 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
 
+"@mimic-fi/v1-helpers@0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@mimic-fi/v1-helpers/-/v1-helpers-0.0.4.tgz#44287c0994edc12a4895433861f16be0742ca4c8"
+  integrity sha512-rDwfp8ePPCdcPZPD8nSm8fyl2ynI3hBYAbvL9u+JVuVL7oDnqOy4ORtyazWHVVkljDLssDon5yJpcZzIFihvww==
+  dependencies:
+    "@nomiclabs/hardhat-ethers" "^2.0.2"
+    decimal.js "^10.3.1"
+    ethers "^5.0.8"
+
 "@mimic-fi/v1-portfolios@0.0.6":
   version "0.0.7"
   dependencies:
