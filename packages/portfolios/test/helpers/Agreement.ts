@@ -2,14 +2,9 @@ import { defaultAbiCoder } from '@ethersproject/abi'
 import { BigNumberish, getArtifact, ZERO_ADDRESS, ZERO_BYTES32 } from '@mimic-fi/v1-helpers'
 import { BigNumber, Contract, utils } from 'ethers'
 
+import { encodeSlippage, encodeWithdrawer } from '../../helpers/encoding'
 import AgreementDeployer from './AgreementDeployer'
 import { Account, Allowed, RawAgreementDeployment, toAddress, toAddresses } from './types'
-
-export const AGREEMENT_DATA_TYPE = {
-  None: 0,
-  Withdrawer: 1,
-  Slippage: 2,
-}
 
 export default class Agreement {
   instance: Contract
@@ -226,10 +221,10 @@ export default class Agreement {
   }
 
   encodeWithdrawer(withdrawer: Account): string {
-    return defaultAbiCoder.encode(['uint8', 'address'], [AGREEMENT_DATA_TYPE.Withdrawer, toAddress(withdrawer)])
+    return encodeWithdrawer(toAddress(withdrawer))
   }
 
   encodeSlippage(slippage: BigNumber): string {
-    return defaultAbiCoder.encode(['uint8', 'uint256'], [AGREEMENT_DATA_TYPE.Slippage, slippage.toString()])
+    return encodeSlippage(slippage)
   }
 }
