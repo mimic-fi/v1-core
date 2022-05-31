@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { Contract } from 'ethers'
 import { Artifacts } from 'hardhat/internal/artifacts'
-import { Artifact } from 'hardhat/types'
+import { Artifact, LinkReferences } from 'hardhat/types'
 import path from 'path'
 
 import { getSigner } from './signers'
@@ -9,16 +9,23 @@ import { getSigner } from './signers'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 
+type Libraries = { [key: string]: string }
+
+type ArtifactLike = { abi: any, bytecode: string, linkReferences?: LinkReferences }
+
 export async function deploy(
-  nameOrArtifact: string | { abi: any; bytecode: string },
+  nameOrArtifact: string | ArtifactLike,
   args: Array<any> = [],
-  from?: SignerWithAddress
+  from?: SignerWithAddress,
+  libraries?: Libraries
 ): Promise<Contract> {
   if (!args) args = []
   if (!from) from = await getSigner()
 
-  const { ethers } = await import('hardhat')
   const artifact = typeof nameOrArtifact === 'string' ? await getArtifact(nameOrArtifact) : nameOrArtifact
+  if (libraries !== undefined) artifact.bytecode = linkBytecode(artifact, libraries)
+
+  const { ethers } = await import('hardhat')
   const factory = await ethers.getContractFactory(artifact.abi, artifact.bytecode)
   const instance = await factory.connect(from).deploy(...args)
   return instance.deployed()
@@ -36,4 +43,20 @@ export async function getArtifact(contractName: string): Promise<Artifact> {
     : path.dirname(require.resolve(`${contractName}.json`))
   const artifacts = new Artifacts(artifactsPath)
   return artifacts.readArtifact(contractName.split('/').slice(-1)[0])
+}
+
+function linkBytecode(artifact: ArtifactLike, libraries: Libraries): string {
+  let bytecode = artifact.bytecode
+  for (const [, fileReferences] of Object.entries(artifact.linkReferences || {})) {
+    for (const [library, fixups] of Object.entries(fileReferences)) {
+      const address = libraries[library]
+      if (address === undefined) continue
+      for (const fixup of fixups) {
+        const pre = bytecode.substring(0, fixup.start * 2)
+        const post = bytecode.substring((fixup.start + fixup.length) * 2)
+        bytecode = pre + address.replace('0x', '') + post
+      }
+    }
+  }
+  return bytecode
 }
