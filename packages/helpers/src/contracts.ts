@@ -11,7 +11,7 @@ import { getSigner } from './signers'
 
 type Libraries = { [key: string]: string }
 
-type ArtifactLike = { abi: any, bytecode: string, linkReferences?: LinkReferences }
+type ArtifactLike = { abi: any; bytecode: string; linkReferences?: LinkReferences }
 
 export async function deploy(
   nameOrArtifact: string | ArtifactLike,
