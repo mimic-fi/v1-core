@@ -113,13 +113,19 @@ function getStrategyShares(address: Address, strategy: Address): BigInt {
 
 function getStrategyValue(address: Address): BigInt {
   let strategyContract = StrategyContract.bind(address)
+  let getCurrentTotalValueCall = strategyContract.try_claimAndInvest()
+
+  if (!getCurrentTotalValueCall.reverted) {
+    return getCurrentTotalValueCall.value
+  }
+
   let getTotalValueCall = strategyContract.try_getTotalValue()
 
   if (!getTotalValueCall.reverted) {
     return getTotalValueCall.value
   }
 
-  log.warning('getTotalValue() call reverted for {}', [address.toHexString()])
+  log.warning('Both claimAndInvest() and getTotalValue() call reverted for {}', [address.toHexString()])
   return BigInt.fromI32(0)
 }
 
