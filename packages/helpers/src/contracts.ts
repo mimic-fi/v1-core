@@ -46,7 +46,7 @@ export async function getArtifact(contractName: string): Promise<Artifact> {
 }
 
 function linkBytecode(artifact: ArtifactLike, libraries: Libraries): string {
-  let bytecode = artifact.bytecode
+  let bytecode = artifact.bytecode.replace('0x', '')
   for (const [, fileReferences] of Object.entries(artifact.linkReferences || {})) {
     for (const [library, fixups] of Object.entries(fileReferences)) {
       const address = libraries[library]
@@ -58,5 +58,5 @@ function linkBytecode(artifact: ArtifactLike, libraries: Libraries): string {
       }
     }
   }
-  return bytecode
+  return `0x${bytecode}`
 }
