@@ -68,7 +68,7 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         _;
     }
 
-    constructor(IWETH _weth) {
+    constructor(IWETH _weth) initializer {
         weth = _weth;
     }
 

@@ -1,4 +1,4 @@
-import { deploy, fp, getSigners } from '@mimic-fi/v1-helpers'
+import { assertEvent, deploy, fp, getSigners, instanceAt } from '@mimic-fi/v1-helpers'
 
 import Agreement from './Agreement'
 import { AgreementDeployment, RawAgreementDeployment, toAddress, toAddresses } from './types'
@@ -28,9 +28,9 @@ const AgreementDeployer = {
       allowedStrategies,
     } = parsedParams
 
-    const agreement = await deploy('Agreement', [weth.address], params.from)
-    await agreement.initialize(
-      vault.address,
+    const agreementFactory = await deploy('AgreementFactory', [weth.address, vault.address], params.from)
+    const tx = await agreementFactory.create(
+      'test-agreement',
       toAddress(feeCollector),
       depositFee,
       withdrawFee,
@@ -43,6 +43,9 @@ const AgreementDeployer = {
       toAddresses(strategies),
       ALLOWED_STRATEGIES[allowedStrategies]
     )
+
+    const { args } = await assertEvent(tx, 'AgreementCreated', { name: 'test-agreement' })
+    const agreement = await instanceAt('Agreement', args.agreement)
 
     return new Agreement(
       agreement,
