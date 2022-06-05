@@ -1,5 +1,5 @@
 import { Agreement } from '../types/templates'
-import { AgreementCreated } from '../types/AgreementFactory/AgreementFactory'
+import { AgreementCreated } from '../types/AgreementFactoryV1/AgreementFactory'
 
 import { loadOrCreateAgreement } from './Agreement'
 

@@ -7,9 +7,9 @@ dataSources:
     name: Vault
     network: {{network}}
     source:
-      address: '{{vault}}'
+      address: '{{vaultAddress}}'
       abi: Vault
-      startBlock: {{startBlock}}
+      startBlock: {{vaultBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3
@@ -53,9 +53,9 @@ dataSources:
     name: Clock
     network: {{network}}
     source:
-      address: '{{clock}}'
+      address: '{{clockAddress}}'
       abi: ERC20
-      startBlock: {{startBlock}}
+      startBlock: {{clockBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3
@@ -76,12 +76,36 @@ dataSources:
           handler: handleTick
       file: ./src/Strategy.ts
   - kind: ethereum/contract
-    name: AgreementFactory
+    name: AgreementFactoryV1
     network: {{network}}
     source:
-      address: '{{agreementFactory}}'
+      address: '{{agreementFactoryV1Address}}'
       abi: AgreementFactory
-      startBlock: {{startBlock}}
+      startBlock: {{agreementFactoryV1Block}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - AgreementFactory
+      abis:
+        - name: AgreementFactory
+          file: ./abi/AgreementFactory.json
+        - name: Agreement
+          file: ./abi/IAgreement.json
+        - name: ERC20
+          file: ./abi/IERC20.json
+      eventHandlers:
+        - event: AgreementCreated(indexed address,string)
+          handler: handleCreate
+      file: ./src/AgreementFactory.ts
+  - kind: ethereum/contract
+    name: AgreementFactoryV2
+    network: {{network}}
+    source:
+      address: '{{agreementFactoryV2Address}}'
+      abi: AgreementFactory
+      startBlock: {{agreementFactoryV2Block}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3
