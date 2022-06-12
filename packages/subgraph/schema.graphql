@@ -15,17 +15,21 @@ type Strategy @entity {
   whitelisted: Boolean!
   lastRate: Rate
   rates: [Rate!]! # @derivedFrom(field: "strategy")
+  currentApr: BigInt!
+  lastWeekApr: BigInt!
   accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
 }
 
 type Rate @entity {
   id: ID!
   index: BigInt!
+  initialized: Boolean!
   strategy: Strategy!
   valueRate: BigInt!
   totalValue: BigInt!
   totalShares: BigInt!
   shareValue: BigInt!
+  apr: BigInt!
   accumulatedShareValue: BigInt!
   block: BigInt!
   createdAt: BigInt!
