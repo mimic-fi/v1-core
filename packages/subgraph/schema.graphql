@@ -68,6 +68,7 @@ type Portfolio @entity {
 type Agreement @entity {
   id: ID!
   name: String!
+  version: String!
   maxSlippage: BigInt!
   portfolio: Portfolio!
   withdrawers: [String!]!
