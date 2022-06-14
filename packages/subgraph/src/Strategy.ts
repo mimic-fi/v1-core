@@ -135,7 +135,7 @@ export function createLastRate(
       .minus(BigInt.fromI32(1));*/
 
     let apr: BigInt;
-    if (totalShares.isZero() || shareValue.equals(lastRate.shareValue)) {
+    if (totalShares.isZero() || shareValue.le(lastRate.shareValue)) {
       apr = lastRate.apr;
     } else {
       apr = shareValue
