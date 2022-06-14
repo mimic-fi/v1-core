@@ -16,8 +16,18 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
+/**
+ * @title IWETH
+ * @dev Part of the WETH interface required by the wallet contracts
+ */
 interface IWETH is IERC20 {
+    /**
+     * @dev Wraps msg.value into WETH
+     */
     function deposit() external payable;
 
+    /**
+     * @dev Unwraps requested amount to ETH
+     */
     function withdraw(uint256 amount) external;
 }

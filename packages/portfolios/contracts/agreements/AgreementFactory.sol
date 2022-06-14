@@ -17,18 +17,50 @@ pragma solidity ^0.8.0;
 import './Agreement.sol';
 import '../helpers/Proxy.sol';
 
+/**
+ * @title AgreementFactory
+ * @dev Factory contract to create Agreement contracts, it uses immutable proxies to make deployments cheaper
+ */
 contract AgreementFactory {
-    address public immutable vault;
-    address public immutable implementation;
-    mapping (address => bool) public isAgreement;
-
+    /**
+     * @dev Emitted every time a new agreement instance is created
+     */
     event AgreementCreated(address indexed agreement, string name);
 
+    // Mimic Vault reference
+    address public immutable vault;
+
+    // Agreement implementation
+    address public immutable implementation;
+
+    // List of agreements created by this factory contract
+    mapping (address => bool) public isAgreement;
+
+    /**
+     * @dev Initializes the agreement factory contract
+     * @param _weth WETH reference to be used
+     * @param _vault Mimic Vault reference
+     */
     constructor(IWETH _weth, address _vault) {
         vault = _vault;
         implementation = address(new Agreement(_weth));
     }
 
+    /**
+     * @dev Creates a new agreement
+     * @param _name Name to be related to the agreement
+     * @param _feeCollector Address that will receive the manager collected fees
+     * @param _depositFee Deposit fee amount
+     * @param _withdrawFee Withdraw fee amount
+     * @param _performanceFee Performance fee amount
+     * @param _maxSwapSlippage Maximum slippage allowed by the wallet owner
+     * @param _managers List of allowed managers
+     * @param _withdrawers List of allowed withdrawers
+     * @param _customTokens List of custom tokens
+     * @param _allowedTokens Allowed tokens configuration: only custom, custom and whitelisted, or any
+     * @param _customStrategies List of custom strategies
+     * @param _allowedStrategies Allowed strategies configuration: only custom, custom and whitelisted, or any
+     */
     function create(
         string memory _name,
         address _feeCollector,
