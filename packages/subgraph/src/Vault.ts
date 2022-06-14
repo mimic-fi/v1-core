@@ -96,7 +96,7 @@ export function handleMigrate(event: Migrate): void {
   let account = loadOrCreateAccount(event.params.account, event.address)
   let to = loadOrCreateAccount(event.params.to, event.address)
 
-  let balances = account.balances;
+  let balances = account.balances
   if (balances !== null) {
     for (let i: i32 = 0; i < balances.length; i++) {
       let balance = AccountBalanceEntity.load(balances![i])
@@ -107,7 +107,7 @@ export function handleMigrate(event: Migrate): void {
     }
   }
 
-  let strategies = account.strategies;
+  let strategies = account.strategies
   if (strategies !== null) {
     for (let i: i32 = 0; i < strategies.length; i++) {
       let strategy = AccountStrategyEntity.load(strategies![i])
