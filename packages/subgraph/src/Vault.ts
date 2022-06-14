@@ -5,7 +5,18 @@ import { loadOrCreateStrategy } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
-import { Deposit, Withdraw, Join, Exit, Swap, Migrate, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
+import {
+  Deposit,
+  Withdraw,
+  Join,
+  Exit,
+  Swap,
+  Migrate,
+  ProtocolFeeSet,
+  WhitelistedTokenSet,
+  WhitelistedStrategySet
+} from '../types/Vault/Vault'
+
 import {
   Vault as VaultEntity,
   Account as AccountEntity,
@@ -85,7 +96,7 @@ export function handleMigrate(event: Migrate): void {
   let account = loadOrCreateAccount(event.params.account, event.address)
   let to = loadOrCreateAccount(event.params.to, event.address)
 
-  let balances = account.balances;
+  let balances = account.balances
   if (balances !== null) {
     for (let i: i32 = 0; i < balances.length; i++) {
       let balance = AccountBalanceEntity.load(balances![i])
@@ -96,7 +107,7 @@ export function handleMigrate(event: Migrate): void {
     }
   }
 
-  let strategies = account.strategies;
+  let strategies = account.strategies
   if (strategies !== null) {
     for (let i: i32 = 0; i < strategies.length; i++) {
       let strategy = AccountStrategyEntity.load(strategies![i])
@@ -231,7 +242,10 @@ function getAccountShares(vault: Address, account: Address, strategy: Address): 
     return getAccountInvestmentCall.value.value1
   }
 
-  log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [vault.toHexString(), account.toHexString(), strategy.toHexString()])
+  log.warning(
+    'getAccountInvestment() call reverted for {} and account {} and strategy {}',
+    [vault.toHexString(), account.toHexString(), strategy.toHexString()]
+  )
   return BigInt.fromI32(0)
 }
 
@@ -243,6 +257,9 @@ function getAccountInvested(vault: Address, account: Address, strategy: Address)
     return getAccountInvestmentCall.value.value0
   }
 
-  log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [vault.toHexString(), account.toHexString(), strategy.toHexString()])
+  log.warning(
+    'getAccountInvestment() call reverted for {} and account {} and strategy {}',
+    [vault.toHexString(), account.toHexString(), strategy.toHexString()]
+  )
   return BigInt.fromI32(0)
 }

@@ -1,6 +1,12 @@
 import { BigInt, Address } from '@graphprotocol/graph-ts'
 
-import { ManagersSet, AllowedTokensSet, AllowedStrategiesSet, WithdrawersSet, ParamsSet } from '../types/templates/Agreement/Agreement'
+import {
+  ManagersSet,
+  AllowedTokensSet,
+  AllowedStrategiesSet,
+  WithdrawersSet,
+  ParamsSet
+} from '../types/templates/Agreement/Agreement'
 import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as PortfolioEntity } from '../types/schema'
 
 export function handleWithdrawersSet(event: WithdrawersSet): void {
