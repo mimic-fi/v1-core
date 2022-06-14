@@ -101,6 +101,16 @@ export function createLastRate(
     if (elapsed.lt(MIN_SAMPLE_DURATION)) return;
   }
 
+  let strategyAddress = Address.fromString(strategy.id);
+  let totalValue = getStrategyValue(strategyAddress);
+  let totalShares = getStrategyShares(
+    Address.fromString(vault.address),
+    strategyAddress
+  );
+
+  //If no investment has ever been made then apy cannot be calculated
+  if (firstRate && totalShares.isZero()) return;
+
   let requiresNewSample =
     !firstRate &&
     block.timestamp.minus(lastRate.createdAt).ge(MAX_BUFFER_ENTRY_DURATION);
@@ -111,13 +121,6 @@ export function createLastRate(
   if (requiresNewSample)
     log.warning("New sample at {}", [currentIndex.toString()]);
 
-  let strategyAddress = Address.fromString(strategy.id);
-  let totalValue = getStrategyValue(strategyAddress);
-  let totalShares = getStrategyShares(
-    Address.fromString(vault.address),
-    strategyAddress
-  );
-
   let shareValue = totalShares.isZero()
     ? BigInt.fromI32(0)
     : totalValue.times(ONE).div(totalShares);
@@ -125,19 +128,10 @@ export function createLastRate(
   let apr: BigInt;
   if (firstRate) {
     accumulatedShareValue = BigInt.fromI32(0);
-    //If no investment has ever been made then apy cannot be calculated
-    if (totalShares.isZero()) return;
   } else {
-    //TODO: review APY
-    /*let apy = BigInt.fromI32(1)
-      .plus(rate)
-      .pow( SECONDS_IN_ONE_YEAR.div(elapsed))
-      .minus(BigInt.fromI32(1));*/
-
     let apr: BigInt;
-    if (totalShares.isZero() || shareValue.le(lastRate.shareValue)) {
+    if (totalShares.isZero()) {
       apr = lastRate.apr;
-      shareValue = lastRate.shareValue;
     } else {
       apr = shareValue
         .minus(lastRate.shareValue)
@@ -152,8 +146,12 @@ export function createLastRate(
   }
 
   if (requiresNewSample) {
-    strategy.currentApr = apr;
-    strategy.lastWeekApr = calculateAPR(strategy, currentRate, lastRate);
+    strategy.currentApr = calculateLastBufferAPR(strategy, lastRate);
+    strategy.lastWeekApr = calculateLastWeekAPR(
+      strategy,
+      currentRate,
+      lastRate
+    );
   }
 
   currentRate.valueRate = getStrategyValueRate(Address.fromString(strategy.id));
@@ -250,7 +248,7 @@ function rateId(strategy: StrategyEntity, index: BigInt): string {
   return strategy.id + "#" + index.toString();
 }
 
-function calculateAPR(
+function calculateLastWeekAPR(
   strategy: StrategyEntity,
   initialRate: RateEntity | null,
   finalRate: RateEntity | null
@@ -266,4 +264,20 @@ function calculateAPR(
       .minus(initialRate.accumulatedShareValue)
       .div(finalRate.updatedAt.minus(initialRate.updatedAt));
   } else return BigInt.fromI32(0);
+}
+
+function calculateLastBufferAPR(
+  strategy: StrategyEntity,
+  lastRate: RateEntity | null
+): BigInt {
+  let previousIndex = lastRate.index.minus(BigInt.fromI32(1)).mod(BUFFER_SIZE);
+  let previousRate = RateEntity.load(rateId(strategy, previousIndex));
+
+  if (!previousRate.initialized) {
+    return BigInt.fromI32(0);
+  }
+
+  return lastRate.accumulatedShareValue
+    .minus(previousRate.accumulatedShareValue)
+    .div(lastRate.updatedAt.minus(previousRate.updatedAt));
 }
