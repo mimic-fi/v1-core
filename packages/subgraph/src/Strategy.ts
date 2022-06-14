@@ -270,7 +270,10 @@ function calculateLastBufferAPR(
   strategy: StrategyEntity,
   lastRate: RateEntity | null
 ): BigInt {
-  let previousIndex = lastRate.index.minus(BigInt.fromI32(1)).mod(BUFFER_SIZE);
+  let previousIndex = lastRate.index
+    .plus(BUFFER_SIZE)
+    .plus(BigInt.fromI32(1))
+    .mod(BUFFER_SIZE);
   let previousRate = RateEntity.load(rateId(strategy, previousIndex));
 
   if (!previousRate.initialized) {
