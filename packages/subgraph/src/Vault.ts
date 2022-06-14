@@ -5,7 +5,18 @@ import { loadOrCreateStrategy } from './Strategy'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Portfolio as PortfolioContract } from '../types/Vault/Portfolio'
 
-import { Deposit, Withdraw, Join, Exit, Swap, Migrate, ProtocolFeeSet, WhitelistedTokenSet, WhitelistedStrategySet } from '../types/Vault/Vault'
+import {
+  Deposit,
+  Withdraw,
+  Join,
+  Exit,
+  Swap,
+  Migrate,
+  ProtocolFeeSet,
+  WhitelistedTokenSet,
+  WhitelistedStrategySet
+} from '../types/Vault/Vault'
+
 import {
   Vault as VaultEntity,
   Account as AccountEntity,
@@ -231,7 +242,10 @@ function getAccountShares(vault: Address, account: Address, strategy: Address): 
     return getAccountInvestmentCall.value.value1
   }
 
-  log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [vault.toHexString(), account.toHexString(), strategy.toHexString()])
+  log.warning(
+    'getAccountInvestment() call reverted for {} and account {} and strategy {}',
+    [vault.toHexString(), account.toHexString(), strategy.toHexString()]
+  )
   return BigInt.fromI32(0)
 }
 
@@ -243,6 +257,9 @@ function getAccountInvested(vault: Address, account: Address, strategy: Address)
     return getAccountInvestmentCall.value.value0
   }
 
-  log.warning('getAccountInvestment() call reverted for {} and account {} and strategy {}', [vault.toHexString(), account.toHexString(), strategy.toHexString()])
+  log.warning(
+    'getAccountInvestment() call reverted for {} and account {} and strategy {}',
+    [vault.toHexString(), account.toHexString(), strategy.toHexString()]
+  )
   return BigInt.fromI32(0)
 }
