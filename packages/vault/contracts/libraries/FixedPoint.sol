@@ -14,32 +14,52 @@
 
 pragma solidity ^0.8.0;
 
+/**
+ * @title FixedPoint
+ * @dev Math library to operate with fixed point values with 18 decimals
+ */
 library FixedPoint {
-    uint256 internal constant ONE = 1e18; // 18 decimal places
+    // 1 in fixed point value: 18 decimal places
+    uint256 internal constant ONE = 1e18;
 
+    /**
+     * @dev Adds two fixed point numbers
+     */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
         require(c >= a, 'ADD_OVERFLOW');
         return c;
     }
 
+    /**
+     * @dev Subtracts two fixed point numbers
+     */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, 'SUB_OVERFLOW');
         return a - b;
     }
 
+    /**
+     * @dev Multiplies two fixed point numbers rounding down
+     */
     function mulDown(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
         require(a == 0 || product / a == b, 'MUL_OVERFLOW');
         return product / ONE;
     }
 
+    /**
+     * @dev Multiplies two fixed point numbers rounding up
+     */
     function mulUp(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
         require(a == 0 || product / a == b, 'MUL_OVERFLOW');
         return product == 0 ? 0 : (((product - 1) / ONE) + 1);
     }
 
+    /**
+     * @dev Divides two fixed point numbers rounding down
+     */
     function divDown(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, 'ZERO_DIVISION');
         uint256 aInflated = a * ONE;
@@ -47,6 +67,9 @@ library FixedPoint {
         return aInflated / b;
     }
 
+    /**
+     * @dev Divides two fixed point numbers rounding up
+     */
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, 'ZERO_DIVISION');
         if (a == 0) return 0;
@@ -55,10 +78,16 @@ library FixedPoint {
         return ((aInflated - 1) / b) + 1;
     }
 
+    /**
+     * @dev Finds the maximum between two two fixed point numbers
+     */
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a >= b ? a : b;
     }
 
+    /**
+     * @dev Finds the minimum between two two fixed point numbers
+     */
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }

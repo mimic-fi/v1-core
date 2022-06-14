@@ -38,30 +38,66 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
     using BytesHelpers for bytes4;
     using Accounts for Accounts.Data;
 
+    // Precision value used to avoid rounding errors
     uint256 public constant override EXIT_RATIO_PRECISION = 1e18;
 
-    uint256 internal constant MAX_SLIPPAGE = 2e17; // 20%
-    uint256 internal constant MAX_PROTOCOL_FEE = 2e17; // 20%
+    // Maximum value to cap the maxSlippage value: 20%
+    uint256 internal constant MAX_SLIPPAGE = 2e17;
 
+    // Maximum value to cap the protocol fee: 20%
+    uint256 internal constant MAX_PROTOCOL_FEE = 2e17;
+
+    /**
+     * @dev Accounting structure used for accounts
+     * @param balance List of token balances indexed per token address
+     * @param balance List of strategy shares indexed per strategy address
+     * @param balance List of strategy invested value indexed per strategy address
+     */
     struct Accounting {
         mapping (address => uint256) balance;
         mapping (address => uint256) shares;
         mapping (address => uint256) invested;
     }
 
+    // Max slippage used as a hard cap for swaps: 100% = 1e18
     uint256 public immutable override maxSlippage;
 
+    // Protocol fee percentage: 100% = 1e18
     uint256 public override protocolFee;
+
+    // Reference to price oracle
     address public override priceOracle;
+
+    // Reference to swap connector
     address public override swapConnector;
+
+    // List of whitelisted tokens indexed per address
     mapping (address => bool) public override isTokenWhitelisted;
+
+    // List of whitelisted strategies indexed per address
     mapping (address => bool) public override isStrategyWhitelisted;
+
+    // List of total shares indexed per strategy address
     mapping (address => uint256) public override getStrategyShares;
 
+    // Last account ID used, 0 is not valid
     uint256 public lastAccountId;
+
+    // List of account IDs indexed by account address
     mapping (address => uint256) public accountsId;
+
+    // List of accounting data structures indexed by ID
     mapping (uint256 => Accounting) internal accountings;
 
+    /**
+     * @dev Initializes the vault contract
+     * @param _maxSlippage Max slippage constant to be used for swaps
+     * @param _protocolFee Initial protocol fee value to be set: 100% = 1e18
+     * @param _priceOracle Price oracle reference
+     * @param _swapConnector Swap connector reference
+     * @param _whitelistedTokens List of tokens to be whitelisted initially
+     * @param _whitelistedStrategies List of strategies to be whitelisted initially
+     */
     constructor(
         uint256 _maxSlippage,
         uint256 _protocolFee,
@@ -80,11 +116,23 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         setWhitelistedStrategies(_whitelistedStrategies, VaultHelpers.trues(_whitelistedStrategies.length));
     }
 
+    /**
+     * @dev Tells the token balance of an account
+     * @param addr Address of the account being queried
+     * @param token Address of the token being queried
+     */
     function getAccountBalance(address addr, address token) external view override returns (uint256) {
         Accounting storage accounting = accountings[accountsId[addr]];
         return accounting.balance[token];
     }
 
+    /**
+     * @dev Tells the strategy investment information of an account
+     * @param addr Address of the account being queried
+     * @param strategy Address of the strategy being queried
+     * @return invested Value invested in the strategy by the requested account
+     * @return shares Shared held by the requested account of the strategy
+     */
     function getAccountInvestment(address addr, address strategy)
         external
         view
@@ -96,6 +144,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         shares = accounting.shares[strategy];
     }
 
+    /**
+     * @dev Tells the current value invested by an account in a strategy
+     * @param addr Address of the account being queried
+     * @param strategy Address of the strategy being queried
+     * @custom:deprecated This method will be deprecated
+     */
     function getAccountCurrentValue(address addr, address strategy) external view override returns (uint256) {
         Accounting storage accounting = accountings[accountsId[addr]];
         uint256 accountShares = accounting.shares[strategy];
@@ -108,12 +162,24 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         return SafeMath.div(SafeMath.mul(totalValue, accountShares), totalShares);
     }
 
+    /**
+     * @dev Tells the current value corresponding to each share of a strategy
+     * @param strategy Address of the strategy being queried
+     * @custom:deprecated This method will be deprecated
+     */
     function getStrategyShareValue(address strategy) external view override returns (uint256) {
         uint256 totalShares = getStrategyShares[strategy];
         uint256 totalValue = IStrategy(strategy).getTotalValue();
         return totalValue.divDown(totalShares);
     }
 
+    /**
+     * @dev Query the outcome of a set of actions. This call reverts to make sure the actions are not committed.
+     *      This method should not be used on-chain, only to simulate a set of actions and read their results.
+     * @param data List of encoded calls to execute in the Vault
+     * @param readsOutput List of conditions to tell whether each call in the list should read the output produced
+     *        by its previous call
+     */
     function query(bytes[] memory data, bool[] memory readsOutput)
         public
         override(IVault, VaultQuery)
@@ -122,24 +188,41 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         return VaultQuery.query(data, readsOutput);
     }
 
+    /**
+     * @dev Sets a new protocol fee
+     * @param newProtocolFee New protocol fee to be set
+     */
     function setProtocolFee(uint256 newProtocolFee) public override nonReentrant onlyOwner {
         require(newProtocolFee <= MAX_PROTOCOL_FEE, 'PROTOCOL_FEE_TOO_HIGH');
         protocolFee = newProtocolFee;
         emit ProtocolFeeSet(newProtocolFee);
     }
 
+    /**
+     * @dev Sets a new price oracle
+     * @param newPriceOracle New price oracle to be set
+     */
     function setPriceOracle(address newPriceOracle) public override nonReentrant onlyOwner {
         require(newPriceOracle != address(0), 'PRICE_ORACLE_ZERO_ADDRESS');
         priceOracle = newPriceOracle;
         emit PriceOracleSet(newPriceOracle);
     }
 
+    /**
+     * @dev Sets a new swap connector
+     * @param newSwapConnector New swap connector to be set
+     */
     function setSwapConnector(address newSwapConnector) public override nonReentrant onlyOwner {
         require(newSwapConnector != address(0), 'SWAP_CONNECTOR_ZERO_ADDRESS');
         swapConnector = newSwapConnector;
         emit SwapConnectorSet(newSwapConnector);
     }
 
+    /**
+     * @dev Updates the whitelisted condition for a set of tokens
+     * @param tokens List of tokens to update their whitelisted condition
+     * @param whitelisted List of whitelisted conditions to be set for each token in the list
+     */
     function setWhitelistedTokens(address[] memory tokens, bool[] memory whitelisted)
         public
         override
@@ -155,6 +238,11 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
     }
 
+    /**
+     * @dev Updates the whitelisted condition for a set of strategies
+     * @param strategies List of strategies to update their whitelisted condition
+     * @param whitelisted List of whitelisted conditions to be set for each strategy in the list
+     */
     function setWhitelistedStrategies(address[] memory strategies, bool[] memory whitelisted)
         public
         override
@@ -170,6 +258,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
     }
 
+    /**
+     * @dev Execute a set of actions
+     * @param data List of encoded calls to execute in the Vault
+     * @param readsOutput List of conditions to tell whether each call in the list should read the output produced
+     *        by its previous call
+     */
     function batch(bytes[] memory data, bool[] memory readsOutput) external override returns (bytes[] memory results) {
         require(readsOutput.length == data.length || readsOutput.length == 0, 'BATCH_INVALID_READS_OUTPUT_VALUE');
         bool requiresOutput = readsOutput.length == data.length;
@@ -182,6 +276,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         }
     }
 
+    /**
+     * @dev Migrates an account's positions to another one
+     * @param addr Address of the account migrating positions from
+     * @param to Address of the account migrating positions to
+     * @param data Arbitrary data
+     */
     function migrate(address addr, address to, bytes memory data) external override nonReentrant {
         Accounts.Data memory account = _authorize(addr, abi.encode(to, data));
         account.beforeMigrate(msg.sender, to, data);
@@ -189,6 +289,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterMigrate(msg.sender, to, data);
     }
 
+    /**
+     * @dev Deposits tokens for an account
+     * @param addr Address of the account depositing tokens to
+     * @param token Address of the token being deposited
+     * @param amount Amount of tokens being deposited
+     * @param data Arbitrary data
+     */
     function deposit(address addr, address token, uint256 amount, bytes memory data)
         external
         override
@@ -201,6 +308,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterDeposit(msg.sender, token, amount, data);
     }
 
+    /**
+     * @dev Withdraws tokens from an account
+     * @param addr Address of the account withdrawing tokens from
+     * @param token Address of the token being withdrawn
+     * @param amount Amount of tokens being withdrawn
+     * @param recipient Address of the account withdrawing tokens to
+     * @param data Arbitrary data
+     */
     function withdraw(address addr, address token, uint256 amount, address recipient, bytes memory data)
         external
         override
@@ -213,6 +328,15 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterWithdraw(msg.sender, token, amount, recipient, data);
     }
 
+    /**
+     * @dev Swaps two tokens
+     * @param addr Address of the account swapping tokens
+     * @param tokenIn Token to be sent
+     * @param tokenOut Token to received
+     * @param amountIn Amount of tokenIn being swapped
+     * @param slippage Accepted slippage compared to the price queried externally
+     * @param data Arbitrary extra data
+     */
     function swap(
         address addr,
         address tokenIn,
@@ -227,6 +351,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterSwap(msg.sender, tokenIn, tokenOut, amountIn, slippage, data);
     }
 
+    /**
+     * @dev Joins a strategy
+     * @param addr Address of the account joining the strategy
+     * @param strategy Address of the strategy to join
+     * @param amount Amount of strategy tokens joining with
+     * @param data Arbitrary extra data
+     */
     function join(address addr, address strategy, uint256 amount, bytes memory data)
         external
         override
@@ -239,6 +370,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterJoin(msg.sender, strategy, amount, data);
     }
 
+    /**
+     * @dev Exits a strategy
+     * @param addr Address of the account exiting the strategy
+     * @param strategy Address of the strategy to exit
+     * @param ratio Ratio of strategy shares to exit with
+     * @param emergency Whether the exit is an emergency exit or not
+     * @param data Arbitrary extra data
+     */
     function exit(address addr, address strategy, uint256 ratio, bool emergency, bytes memory data)
         external
         override
@@ -251,6 +390,12 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         account.afterExit(msg.sender, strategy, ratio, emergency, data);
     }
 
+    /**
+     * @dev Internal method to migrate an account's positions to another one
+     * @param account Internal data structure of the account being migrated
+     * @param to Address of the account migrating positions to
+     * @param data Arbitrary data
+     */
     function _migrate(Accounts.Data memory account, address to, bytes memory data) internal {
         require(accountsId[to] == 0, 'TARGET_ALREADY_INITIALIZED');
         accountsId[to] = account.id;
@@ -258,6 +403,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         emit Migrate(account.addr, to, data);
     }
 
+    /**
+     * @dev Internal method to deposit tokens for an account
+     * @param account Internal data structure of the account depositing the tokens to
+     * @param token Address of the token being deposited
+     * @param amount Amount of tokens being deposited
+     * @param data Arbitrary data
+     */
     function _deposit(Accounts.Data memory account, address token, uint256 amount, bytes memory data)
         internal
         returns (uint256 deposited)
@@ -276,6 +428,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         emit Deposit(account.addr, token, amount, depositFeeAmount, data);
     }
 
+    /**
+     * @dev Internal method to withdraw the tokens from
+     * @param account Internal data structure of the account withdrawing the tokens from
+     * @param token Address of the token being withdrawn
+     * @param amount Amount of tokens being withdrawn
+     * @param recipient Address of the account withdrawing tokens to
+     * @param data Arbitrary data
+     */
     function _withdraw(
         Accounts.Data memory account,
         address token,
@@ -308,6 +468,15 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         emit Withdraw(account.addr, token, amount, fromVault, withdrawFeeAmount, recipient, data);
     }
 
+    /**
+     * @dev Internal method to swap tokens for an account
+     * @param account Internal data structure of the account swapping tokens
+     * @param tokenIn Token to be sent
+     * @param tokenOut Token to received
+     * @param amountIn Amount of tokenIn being swapped
+     * @param slippage Accepted slippage compared to the price queried externally
+     * @param data Arbitrary extra data
+     */
     function _swap(
         Accounts.Data memory account,
         address tokenIn,
@@ -351,6 +520,13 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         emit Swap(account.addr, tokenIn, tokenOut, amountIn, remainingIn, amountOut, data);
     }
 
+    /**
+     * @dev Internal method to join a strategy
+     * @param account Internal data structure of the account joining the strategy
+     * @param strategy Address of the strategy to join
+     * @param amount Amount of strategy tokens joining with
+     * @param data Arbitrary extra data
+     */
     function _join(Accounts.Data memory account, address strategy, uint256 amount, bytes memory data)
         internal
         returns (uint256 shares)
@@ -376,6 +552,14 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         emit Join(account.addr, strategy, amount, data);
     }
 
+    /**
+     * @dev Internal method to exit a strategy
+     * @param account Internal data structure of the account exiting the strategy
+     * @param strategy Address of the strategy to exit
+     * @param ratio Ratio of strategy shares to exit with
+     * @param emergency Whether the exit is an emergency exit or not
+     * @param data Arbitrary extra data
+     */
     function _exit(Accounts.Data memory account, address strategy, uint256 ratio, bool emergency, bytes memory data)
         internal
         returns (uint256 received)
@@ -431,6 +615,17 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         emit Exit(account.addr, strategy, amount, protocolFeeAmount, performanceFeeAmount, data);
     }
 
+    /**
+     * @dev Internal method to pay fees related to an exit. In case there are gains, performance fees must be paid to
+     *      the wallet fee collector if applies, and protocol fees must be charged on top of that.
+     * @param account Internal data structure of the account exiting the strategy
+     * @param strategy Address of the strategy to exit
+     * @param token Token used as the entry point by the strategy
+     * @param amount Amount of tokens received after the exit
+     * @param exitingValue Strategy value representing the amount received after the exit
+     * @param investedValue Strategy value invested in the strategy
+     * @param currentValue Strategy value held by the account right before the exit
+     */
     function _payExitFees(
         Accounts.Data memory account,
         address strategy,
@@ -460,18 +655,36 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
         _safeTransfer(token, feeCollector, performanceFeeAmount);
     }
 
+    /**
+     * @dev Internal method to transfer ERC20 tokens from Mimic's Vault
+     * @param token Address of the ERC20 token to transfer
+     * @param to Address transferring the tokens to
+     * @param amount Amount of tokens to transfer
+     */
     function _safeTransfer(address token, address to, uint256 amount) internal {
         if (amount > 0) {
             IERC20(token).safeTransfer(to, amount);
         }
     }
 
+    /**
+     * @dev Internal method to transfer ERC20 tokens from another account using Mimic's Vault allowance
+     * @param token Address of the ERC20 token to transfer
+     * @param from Address transferring the tokens from
+     * @param to Address transferring the tokens to
+     * @param amount Amount of tokens to transfer
+     */
     function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
         if (amount > 0) {
             IERC20(token).safeTransferFrom(from, to, amount);
         }
     }
 
+    /**
+     * @dev Internal method to check an authorization call for an account. It reverts in case it is not allowed.
+     * @param addr Address of the account being authorized
+     * @param params Encoded calldata params based on the function call being authorized
+     */
     function _authorize(address addr, bytes memory params) internal returns (Accounts.Data memory account) {
         // Initialize account, assign an ID if it's the first time operating
         uint256 accountId = accountsId[addr];
