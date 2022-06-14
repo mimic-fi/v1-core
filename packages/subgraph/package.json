@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "license": "GPL-3.0",
   "scripts": {
-    "lint": "echo 'No linter for now'",
+    "lint": "eslint . --ext .ts",
     "test": "echo 'No tests for now'",
     "build": "yarn build:mainnet",
     "build:localhost": "NETWORK=localhost ./scripts/build.sh",
@@ -20,6 +20,9 @@
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.20.1",
-    "@graphprotocol/graph-ts": "^0.20.0"
+    "@graphprotocol/graph-ts": "^0.20.0",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "eslint": "^7.9.0"
   }
 }
