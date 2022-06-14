@@ -168,6 +168,9 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         } else if (what.isDeposit()) {
             VaultHelpers.DepositParams memory params = how.decodeDeposit();
             return params.data.isEmpty();
+        } else if (what.isMigrate()) {
+            VaultHelpers.MigrateParams memory params = how.decodeMigrate();
+            return isWithdrawer[who] && params.data.isEmpty();
         } else {
             return false;
         }

@@ -454,11 +454,11 @@ describe('Agreement', () => {
         beforeEach('set target', () => (where = vault.address))
 
         context('deposit', () => {
-          it('accepts any deposit', async () => {
+          it('accepts any deposit without extra data', async () => {
             expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1))).to.be.true
           })
 
-          it('does not accept a deposit with data', async () => {
+          it('does not accept a deposit with extra data', async () => {
             expect(await agreement.canDeposit(who, where, ZERO_ADDRESS, fp(1), '0xab')).to.be.false
           })
         })
@@ -594,7 +594,7 @@ describe('Agreement', () => {
 
           it('accepts exiting strategies on emergency only if also a withdrawer', async () => {
             const emergency = true
-            const onlyManager = agreement.managers[1] // third manager is also a withdrawer
+            const onlyManager = agreement.managers[1] // second manager is only manager
             const alsoWithdrawer = agreement.managers[2] // third manager is also a withdrawer
 
             const unknownStrategy = await deploy('StrategyMock')
@@ -641,13 +641,25 @@ describe('Agreement', () => {
         })
 
         context('migrate', () => {
-          it('does not accept migrations', async () => {
-            expect(await agreement.canMigrate(who, where)).to.be.false
-            expect(await agreement.canMigrate(who, where, who)).to.be.false
-            expect(await agreement.canMigrate(who, where, who, '0x')).to.be.false
+          it('accepts migrations when the sender is a withdrawer and there is no extra data', async () => {
+            const onlyManager = agreement.managers[1] // second manager is only manager
+            expect(await agreement.canMigrate(onlyManager, where, ZERO_ADDRESS)).to.be.false
+
+            const alsoWithdrawer = agreement.managers[2] // third manager is also a withdrawer
+            expect(await agreement.canMigrate(alsoWithdrawer, where, ZERO_ADDRESS)).to.be.true
           })
 
-          it('does not accept any other action', async () => {
+          it('does not accept a migration with extra data', async () => {
+            const onlyManager = agreement.managers[1] // second manager is only manager
+            expect(await agreement.canMigrate(onlyManager, where, ZERO_ADDRESS, '0xaa')).to.be.false
+
+            const alsoWithdrawer = agreement.managers[2] // third manager is also a withdrawer
+            expect(await agreement.canMigrate(alsoWithdrawer, where, ZERO_ADDRESS, '0xaa')).to.be.false
+          })
+        })
+
+        context('any other', () => {
+          it('rejects it', async () => {
             expect(await agreement.canPerform(who, where)).to.be.false
           })
         })
