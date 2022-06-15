@@ -171,7 +171,7 @@ function loadOrCreateAccount(accountAddress: Address, vaultAddress: Address): Ac
 }
 
 function loadOrCreateAccountBalance(accountAddress: Address, tokenAddress: Address): AccountBalanceEntity {
-  let id = accountAddress.toHexString() + "-" + tokenAddress.toHexString()
+  let id = accountAddress.toHexString() + '-' + tokenAddress.toHexString()
   let accountBalance = AccountBalanceEntity.load(id)
 
   if (accountBalance === null) {
@@ -186,7 +186,7 @@ function loadOrCreateAccountBalance(accountAddress: Address, tokenAddress: Addre
 }
 
 function loadOrCreateAccountStrategy(accountAddress: Address, strategyAddress: Address): AccountStrategyEntity {
-  let id = accountAddress.toHexString() + "-" + strategyAddress.toHexString()
+  let id = accountAddress.toHexString() + '-' + strategyAddress.toHexString()
   let accountStrategy = AccountStrategyEntity.load(id)
 
   if (accountStrategy === null) {
