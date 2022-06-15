@@ -125,7 +125,6 @@ export function createLastRate(
     ? BigInt.fromI32(0)
     : totalValue.times(ONE).div(totalShares)
   let accumulatedShareValue: BigInt
-  let apr: BigInt
   if (firstRate) {
     accumulatedShareValue = BigInt.fromI32(0)
   } else {
@@ -145,8 +144,9 @@ export function createLastRate(
     )
   }
 
+  let currentApr = calculateLastBufferAPR(strategy, lastRate)
   if (requiresNewSample) {
-    strategy.currentApr = calculateLastBufferAPR(strategy, lastRate)
+    strategy.currentApr = currentApr
     strategy.lastWeekApr = calculateLastWeekAPR(
       strategy,
       currentRate,
@@ -159,7 +159,7 @@ export function createLastRate(
   currentRate.totalValue = totalValue
   currentRate.totalShares = totalShares
   currentRate.shareValue = shareValue
-  currentRate.apr = apr
+  currentRate.apr = currentApr
   currentRate.accumulatedShareValue = accumulatedShareValue
   currentRate.strategy = strategy.id
   currentRate.block = block.number
@@ -272,7 +272,7 @@ function calculateLastBufferAPR(
 ): BigInt {
   let previousIndex = lastRate.index
     .plus(BUFFER_SIZE)
-    .plus(BigInt.fromI32(1))
+    .minus(BigInt.fromI32(1))
     .mod(BUFFER_SIZE)
   let previousRate = RateEntity.load(rateId(strategy, previousIndex))
 
