@@ -190,7 +190,7 @@ function getStrategyValue(address: Address): BigInt {
     return getCurrentTotalValueCall.value
   }
 
-  log.warning("ClaimAndInvest() call reverted for {}", [address.toHexString()])
+  log.warning('ClaimAndInvest() call reverted for {}', [address.toHexString()])
 
   let getTotalValueCall = strategyContract.try_getTotalValue()
 
@@ -244,7 +244,7 @@ export function getStrategyToken(address: Address): Address {
 
 function rateId(strategy: StrategyEntity, index: BigInt): string {
   return strategy.id + '#' + index.toString()
-}
+y}
 
 function calculateLastWeekAPR(
   strategy: StrategyEntity,
