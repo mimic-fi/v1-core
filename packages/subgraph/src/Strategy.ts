@@ -1,18 +1,18 @@
-import { Address, BigInt, ethereum, log } from "@graphprotocol/graph-ts"
+import { Address, BigInt, ethereum, log } from '@graphprotocol/graph-ts'
 
-import { VAULT_ID } from "./Vault"
-import { loadOrCreateERC20 } from "./ERC20"
-import { Vault as VaultContract } from "../types/Vault/Vault"
-import { Strategy as StrategyContract } from "../types/Vault/Strategy"
+import { VAULT_ID } from './Vault'
+import { loadOrCreateERC20 } from './ERC20'
+import { Vault as VaultContract } from '../types/Vault/Vault'
+import { Strategy as StrategyContract } from '../types/Vault/Strategy'
 import {
   Strategy as StrategyEntity,
   Rate as RateEntity,
   Vault as VaultEntity,
-} from "../types/schema"
+} from '../types/schema'
 
-let ONE = BigInt.fromString("1000000000000000000")
+let ONE = BigInt.fromString('1000000000000000000')
 
-let SECONDS_IN_ONE_YEAR = BigInt.fromString("31536000")
+let SECONDS_IN_ONE_YEAR = BigInt.fromString('31536000')
 
 let BUFFER_SIZE = BigInt.fromI32(1000) // ~7 days
 let BUFFER_FOUR_HOURS_LENGTH = BigInt.fromI32(24) // ~4 hours
@@ -118,7 +118,7 @@ export function createLastRate(
     : lastRate.index
   let currentRate = RateEntity.load(rateId(strategy, currentIndex))
   if (requiresNewSample)
-    log.warning("New sample at {}", [currentIndex.toString()])
+    log.warning('New sample at {}', [currentIndex.toString()])
 
   let shareValue = totalShares.isZero()
     ? BigInt.fromI32(0)
@@ -175,7 +175,7 @@ function getStrategyShares(address: Address, strategy: Address): BigInt {
     return getStrategySharesCall.value
   }
 
-  log.warning("getStrategyShares() call reverted for {} and strategy", [
+  log.warning('getStrategyShares() call reverted for {} and strategy', [
     address.toHexString(),
     strategy.toHexString(),
   ])
@@ -199,7 +199,7 @@ function getStrategyValue(address: Address): BigInt {
   }
 
   log.warning(
-    "Both claimAndInvest() and getTotalValue() call reverted for {}",
+    'Both claimAndInvest() and getTotalValue() call reverted for {}',
     [address.toHexString()]
   )
   return BigInt.fromI32(0)
@@ -213,7 +213,7 @@ function getStrategyValueRate(address: Address): BigInt {
     return getValueRateCall.value
   }
 
-  log.warning("getValueRate() call reverted for {}", [address.toHexString()])
+  log.warning('getValueRate() call reverted for {}', [address.toHexString()])
   return BigInt.fromI32(0)
 }
 
@@ -225,8 +225,8 @@ export function getStrategyMetadata(address: Address): string {
     return metadataCall.value
   }
 
-  log.warning("getMetadataURI() call reverted for {}", [address.toHexString()])
-  return "Unknown"
+  log.warning('getMetadataURI() call reverted for {}', [address.toHexString()])
+  return 'Unknown'
 }
 
 export function getStrategyToken(address: Address): Address {
@@ -238,12 +238,12 @@ export function getStrategyToken(address: Address): Address {
     return tokenCall.value
   }
 
-  log.warning("getToken() call reverted for {}", [address.toHexString()])
-  return Address.fromString("0x0000000000000000000000000000000000000000")
+  log.warning('getToken() call reverted for {}', [address.toHexString()])
+  return Address.fromString('0x0000000000000000000000000000000000000000')
 }
 
 function rateId(strategy: StrategyEntity, index: BigInt): string {
-  return strategy.id + "#" + index.toString()
+  return strategy.id + '#' + index.toString()
 }
 
 function calculateLastWeekAPR(
