@@ -95,7 +95,7 @@ interface IAgreement is IPortfolio {
     function isWithdrawer(address account) external view returns (bool);
 
     /**
-     * @dev Tells if a given strategy is allowed or not based on the allowed tokens configuration
+     * @dev Tells if a given strategy is allowed or not based on the allowed strategies configuration
      * @param strategy Address of the strategy being queried
      */
     function isStrategyAllowed(address strategy) external view returns (bool);
