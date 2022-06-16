@@ -1,17 +1,13 @@
 import { BigInt, Address } from '@graphprotocol/graph-ts'
 
+import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as PortfolioEntity } from '../types/schema'
 import {
   ManagersSet,
   AllowedTokensSet,
   AllowedStrategiesSet,
   WithdrawersSet,
-  ParamsSet,
+  ParamsSet
 } from '../types/templates/Agreement/Agreement'
-import {
-  Agreement as AgreementEntity,
-  Manager as ManagerEntity,
-  Portfolio as PortfolioEntity,
-} from '../types/schema'
 
 export function handleWithdrawersSet(event: WithdrawersSet): void {
   let agreement = loadOrCreateAgreement(event.address)
@@ -85,10 +81,7 @@ export function handleParamsSet(event: ParamsSet): void {
   portfolio.save()
 }
 
-export function loadOrCreateAgreement(
-  address: Address,
-  version: string = ''
-): AgreementEntity {
+export function loadOrCreateAgreement(address: Address, version: string = ''): AgreementEntity {
   let id = address.toHexString()
   let agreement = AgreementEntity.load(id)
 
@@ -124,8 +117,7 @@ function loadOrCreateManager(managerAddress: Address): ManagerEntity {
 
 function parseAllowed(allowedStrategies: BigInt): string {
   if (allowedStrategies.equals(BigInt.fromI32(0))) return 'OnlyCustom'
-  if (allowedStrategies.equals(BigInt.fromI32(1)))
-    return 'CustomAndWhitelisted'
+  if (allowedStrategies.equals(BigInt.fromI32(1))) return 'CustomAndWhitelisted'
   if (allowedStrategies.equals(BigInt.fromI32(2))) return 'Any'
   return 'unknown'
 }
