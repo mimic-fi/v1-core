@@ -20,6 +20,7 @@ import './VaultHelpers.sol';
 import '../interfaces/IVault.sol';
 
 /**
+ * @title VaultQuery
  * @dev Answering specific queries to the like the result of a join or an exit may be too difficult.
  * Then, a very simple way to do that is to 'simulate' the action being queried.
  * To guarantee the simulation won't perform any changes, it forces a revert at the end of the call.
@@ -32,7 +33,7 @@ contract VaultQuery {
     using VaultHelpers for bytes;
 
     /**
-     * @dev Calls `batchRevert` and decodes the result
+     * @dev Calls `batchRevert` and decodes the result. This method should only be used off-chain.
      */
     function query(bytes[] memory data, bool[] memory readsOutput) public virtual returns (bytes[] memory) {
         // solhint-disable avoid-low-level-calls
@@ -65,7 +66,7 @@ contract VaultQuery {
     }
 
     /**
-     * @dev Calls `batch` function and reverts immediately after
+     * @dev Calls `batch` function and reverts immediately after with the following selector: QueryError(bytes[])
      */
     function batchRevert(bytes[] memory data, bool[] memory readsOutput) external returns (bytes[] memory) {
         bytes memory batchData = abi.encodeWithSelector(IVault.batch.selector, data, readsOutput);

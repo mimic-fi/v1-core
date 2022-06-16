@@ -13,7 +13,7 @@ task(TASK_COMPILE).setAction(overrideFunctions(['query']))
 export default {
   localNetworksConfig: path.join(homedir(), '/.hardhat/networks.mimic.json'),
   solidity: {
-    version: '0.8.0',
+    version: '0.8.3',
     settings: {
       optimizer: {
         enabled: true,

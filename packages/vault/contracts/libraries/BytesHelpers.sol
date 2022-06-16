@@ -14,21 +14,38 @@
 
 pragma solidity ^0.8.0;
 
+/**
+ * @title BytesHelpers
+ * @dev Helper methods to operate bytes-related types
+ */
 library BytesHelpers {
+    /**
+     * @dev Casts a bytes32 word into bytes4 grabbing the four most significant bytes
+     */
     function toBytes4(bytes32 self) internal pure returns (bytes4) {
         return bytes4(self);
     }
 
+    /**
+     * @dev Casts a bytes array into bytes4 grabbing the four most significant bytes
+     */
     function toBytes4(bytes memory self) internal pure returns (bytes4) {
         return bytes4(self[0]) | (bytes4(self[1]) >> 8) | (bytes4(self[2]) >> 16) | (bytes4(self[3]) >> 24);
     }
 
+    /**
+     * @dev Casts a bytes4 into bytes32 filling with zeros the least significant bytes
+     */
     function toBytes32(bytes4 self) internal pure returns (bytes32 result) {
         assembly {
             result := self
         }
     }
 
+    /**
+     * @dev Tells whether a bit is set in a bytes2 bitmap
+     * @param pos Least significant bit to be checked
+     */
     function isBitSet(bytes2 self, uint256 pos) internal pure returns (bool) {
         return (uint16(self) & (1 << pos)) != 0;
     }
