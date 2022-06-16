@@ -15,6 +15,7 @@ let ONE = BigInt.fromString("1000000000000000000")
 let SECONDS_IN_ONE_YEAR = BigInt.fromString("31536000")
 
 let BUFFER_SIZE = BigInt.fromI32(1000) // ~7 days
+let BUFFER_FOUR_HOURS_LENGTH = BigInt.fromI32(24) // ~4 hours
 let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(608) // ~10 min
 let MIN_SAMPLE_DURATION = BigInt.fromI32(30) // 30 seconds
 
@@ -58,7 +59,6 @@ export function loadOrCreateStrategy(
       rate.totalValue = BigInt.fromI32(0)
       rate.totalShares = BigInt.fromI32(0)
       rate.shareValue = BigInt.fromI32(0)
-      rate.apr = BigInt.fromI32(0)
       rate.accumulatedShareValue = BigInt.fromI32(0)
       rate.updatedAt = event.block.timestamp
       rate.createdAt = event.block.timestamp
@@ -67,8 +67,7 @@ export function loadOrCreateStrategy(
       rate.save()
       rates.push(i.toString())
     }
-
-    //TODO: why this?
+    
     strategy.rates = rates
     strategy.save()
   }
@@ -128,25 +127,23 @@ export function createLastRate(
   if (firstRate) {
     accumulatedShareValue = BigInt.fromI32(0)
   } else {
-    let apr: BigInt
     if (totalShares.isZero()) {
-      apr = lastRate.apr
+      accumulatedShareValue = lastRate.accumulatedShareValue
     } else {
-      apr = shareValue
+      let apr = shareValue
         .minus(lastRate.shareValue)
         .times(ONE)
         .div(lastRate.shareValue)
         .times(SECONDS_IN_ONE_YEAR)
         .div(elapsed)
+      accumulatedShareValue = lastRate.accumulatedShareValue.plus(
+        apr.times(elapsed)
+      )
     }
-    accumulatedShareValue = lastRate.accumulatedShareValue.plus(
-      apr.times(elapsed)
-    )
   }
 
-  let currentApr = calculateLastBufferAPR(strategy, lastRate)
   if (requiresNewSample) {
-    strategy.currentApr = currentApr
+    strategy.currentApr = calculateCurrentAPR(strategy, lastRate)
     strategy.lastWeekApr = calculateLastWeekAPR(
       strategy,
       currentRate,
@@ -159,7 +156,6 @@ export function createLastRate(
   currentRate.totalValue = totalValue
   currentRate.totalShares = totalShares
   currentRate.shareValue = shareValue
-  currentRate.apr = currentApr
   currentRate.accumulatedShareValue = accumulatedShareValue
   currentRate.strategy = strategy.id
   currentRate.block = block.number
@@ -193,6 +189,8 @@ function getStrategyValue(address: Address): BigInt {
   if (!getCurrentTotalValueCall.reverted) {
     return getCurrentTotalValueCall.value
   }
+
+  log.warning("ClaimAndInvest() call reverted for {}", [address.toHexString()])
 
   let getTotalValueCall = strategyContract.try_getTotalValue()
 
@@ -266,13 +264,13 @@ function calculateLastWeekAPR(
   } else return BigInt.fromI32(0)
 }
 
-function calculateLastBufferAPR(
+function calculateCurrentAPR(
   strategy: StrategyEntity,
   lastRate: RateEntity | null
 ): BigInt {
   let previousIndex = lastRate.index
     .plus(BUFFER_SIZE)
-    .minus(BigInt.fromI32(1))
+    .minus(BUFFER_FOUR_HOURS_LENGTH)
     .mod(BUFFER_SIZE)
   let previousRate = RateEntity.load(rateId(strategy, previousIndex))
 

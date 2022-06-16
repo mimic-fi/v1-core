@@ -29,7 +29,6 @@ type Rate @entity {
   totalValue: BigInt!
   totalShares: BigInt!
   shareValue: BigInt!
-  apr: BigInt!
   accumulatedShareValue: BigInt!
   block: BigInt!
   createdAt: BigInt!
