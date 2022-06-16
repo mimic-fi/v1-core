@@ -27,6 +27,16 @@ library VaultHelpers {
     using BytesHelpers for bytes32;
 
     /**
+     * @dev Internal struct to encode the calldata of a migrate action
+     * @param to Address of the account migrating to
+     * @param data Arbitrary extra data
+     */
+    struct MigrateParams {
+        address to;
+        bytes data;
+    }
+
+    /** 
      * @dev Internal struct to encode the calldata of a deposit action
      * @param token Address of the token being deposited
      * @param amount Amount of tokens being deposited
@@ -95,6 +105,14 @@ library VaultHelpers {
     }
 
     /**
+     * @dev Decodes a bytes array into the expected calldata value of a migrate action
+     */
+    function decodeMigrate(bytes memory self) internal pure returns (MigrateParams memory) {
+        (address to, bytes memory data) = abi.decode(self, (address, bytes));
+        return MigrateParams({ to: to, data: data });
+    }
+
+    /** 
      * @dev Decodes a bytes array into the expected calldata value of a deposit action
      */
     function decodeDeposit(bytes memory self) internal pure returns (DepositParams memory) {
@@ -141,6 +159,20 @@ library VaultHelpers {
             (address, uint256, bool, bytes)
         );
         return ExitParams({ strategy: strategy, ratio: ratio, emergency: emergency, data: data });
+    }
+
+    /**
+     * @dev Tells whether the four most significant bytes of a word are equal to the migrate selector
+     */
+    function isMigrate(bytes32 self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.migrate.selector;
+    }
+
+    /**
+     * @dev Tells whether the four most significant bytes of a bytes array are equal to the migrate selector
+     */
+    function isMigrate(bytes memory self) internal pure returns (bool) {
+        return self.toBytes4() == IVault.migrate.selector;
     }
 
     /**
