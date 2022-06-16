@@ -59,7 +59,7 @@ interface IStrategy {
 
     /**
      * @dev Exit hook
-     * @param ratio Ratio of shares to exit with
+     * @param ratio Ratio of shares to exit with. Note that this value is upscaled using 18 extra decimals.
      * @param emergency Whether the exit is an emergency exit or not
      * @param data Arbitrary extra data
      * @return token Address of the strategy token exited with

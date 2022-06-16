@@ -79,14 +79,14 @@ library FixedPoint {
     }
 
     /**
-     * @dev Finds the maximum between two two fixed point numbers
+     * @dev Finds the maximum between two fixed point numbers
      */
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a >= b ? a : b;
     }
 
     /**
-     * @dev Finds the minimum between two two fixed point numbers
+     * @dev Finds the minimum between two fixed point numbers
      */
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;

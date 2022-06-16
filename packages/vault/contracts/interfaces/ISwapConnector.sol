@@ -18,13 +18,13 @@ pragma solidity >=0.8.0;
  * @title ISwapConnector
  * @dev Mimic's Vault relies on a connector used to interact with AMMs. This allows Mimic to update the swap logic
  *      without having to update the Vault. It is mainly used to allow users swapping their tokens, but it is also
- *      used by many strategies to swap their earned rewards in order to reinvest them.
+ *      used by many strategies to swap their earned rewards in order to reinvest them or calculate minimum amounts when entering or exiting instruments.
  */
 interface ISwapConnector {
     /**
      * @dev Quotes the amount out for a swap
      * @param tokenIn Token to be sent
-     * @param tokenOut Token to received
+     * @param tokenOut Token to be received
      * @param amountIn Amount of tokenIn being swapped
      * @custom:deprecated This method will be deprecated
      */
@@ -36,7 +36,7 @@ interface ISwapConnector {
     /**
      * @dev Swaps two tokens
      * @param tokenIn Token to be sent
-     * @param tokenOut Token to received
+     * @param tokenOut Token to be received
      * @param amountIn Amount of tokenIn being swapped
      * @param minAmountOut Minimum amount of tokenOut willing to receive
      * @param deadline Expiration timestamp to be used for the swap request

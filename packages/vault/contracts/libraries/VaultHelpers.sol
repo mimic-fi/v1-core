@@ -42,7 +42,7 @@ library VaultHelpers {
      * @dev Internal struct to encode the calldata of a withdraw action
      * @param token Address of the token to be withdrawn
      * @param amount Amount of tokens to be withdrawn
-     * @param recipient Address where the tokens are being transferred
+     * @param recipient Address where the tokens are being transferred to
      * @param data Arbitrary extra data
      */
     struct WithdrawParams {
@@ -55,7 +55,7 @@ library VaultHelpers {
     /**
      * @dev Internal struct to encode the calldata of a swap action
      * @param tokenIn Token to be sent
-     * @param tokenOut Token to receive
+     * @param tokenOut Token to be received
      * @param amountIn Amount of tokenIn to be swapped
      * @param slippage Accepted slippage for the swap
      * @param data Arbitrary extra data

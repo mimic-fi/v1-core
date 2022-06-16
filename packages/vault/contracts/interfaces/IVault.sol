@@ -50,12 +50,12 @@ interface IVault {
     event Migrate(address indexed account, address indexed to, bytes data);
 
     /**
-     * @dev Emitted every time an account deposits some tokens
+     * @dev Emitted every time an account deposits a token
      */
     event Deposit(address indexed account, address indexed token, uint256 amount, uint256 depositFee, bytes data);
 
     /**
-     * @dev Emitted every time an account withdraws some tokens
+     * @dev Emitted every time an account withdraws a token
      */
     event Withdraw(
         address indexed account,
@@ -107,7 +107,7 @@ interface IVault {
     function maxSlippage() external view returns (uint256);
 
     /**
-     * @dev Tells the protocol fee charged on top of the management fees.
+     * @dev Tells the fee charged by the protocol
      */
     function protocolFee() external view returns (uint256);
 
@@ -158,7 +158,7 @@ interface IVault {
      * @param account Address of the account being queried
      * @param strategy Address of the strategy being queried
      * @return invested Value invested in the strategy by the requested account
-     * @return shares Shared held by the requested account of the strategy
+     * @return shares Shares held by the requested account of the strategy
      */
     function getAccountInvestment(address account, address strategy)
         external
@@ -225,7 +225,7 @@ interface IVault {
      * @dev Swaps two tokens
      * @param account Address of the account swapping tokens
      * @param tokenIn Token to be sent
-     * @param tokenOut Token to received
+     * @param tokenOut Token to be received
      * @param amountIn Amount of tokenIn being swapped
      * @param slippage Accepted slippage compared to the price queried externally
      * @param data Arbitrary extra data

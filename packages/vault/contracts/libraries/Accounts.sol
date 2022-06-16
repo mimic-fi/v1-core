@@ -164,7 +164,7 @@ library Accounts {
      * @param sender Account calling the withdraw action
      * @param token Address of the token to be withdrawn
      * @param amount Amount of tokens to be withdrawn
-     * @param recipient Address where the tokens are being transferred
+     * @param recipient Address where the tokens are being transferred to
      * @param data Arbitrary extra data
      */
     function beforeWithdraw(
@@ -186,7 +186,7 @@ library Accounts {
      * @param sender Account calling the withdraw action
      * @param token Address of the token to be withdrawn
      * @param amount Amount of tokens to be withdrawn
-     * @param recipient Address where the tokens are being transferred
+     * @param recipient Address where the tokens are being transferred to
      * @param data Arbitrary extra data
      */
     function afterWithdraw(
@@ -207,7 +207,7 @@ library Accounts {
      * @param self Internal data structure of the account that will receive the call in case it supports it
      * @param sender Account calling the swap action
      * @param tokenIn Token to be sent
-     * @param tokenOut Token to receive
+     * @param tokenOut Token to be received
      * @param amountIn Amount of tokenIn to be swapped
      * @param slippage Accepted slippage for the swap
      * @param data Arbitrary extra data
@@ -231,7 +231,7 @@ library Accounts {
      * @param self Internal data structure of the account that will receive the call in case it supports it
      * @param sender Account calling the swap action
      * @param tokenIn Token to be sent
-     * @param tokenOut Token to receive
+     * @param tokenOut Token to be received
      * @param amountIn Amount of tokenIn to be swapped
      * @param slippage Accepted slippage for the swap
      * @param data Arbitrary extra data

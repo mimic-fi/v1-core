@@ -18,7 +18,7 @@ pragma solidity >=0.8.0;
  * @title IPriceOracle
  * @dev Mimic's Vault relies on an external price oracle used to compute expected amounts out before committing swaps,
  *      it is mainly used with the SwapConnector (see ISwapConnector). Additionally, there are many strategies that
- *      rely on the price oracle as well since these need to swap their earned rewards in order to reinvest them.
+ *      rely on the price oracle as well since these need to swap their earned rewards in order to reinvest them or calculate minimum amounts when entering or exiting instruments.
  */
 interface IPriceOracle {
     /**
