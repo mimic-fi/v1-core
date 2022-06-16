@@ -4,11 +4,7 @@ import { VAULT_ID } from './Vault'
 import { loadOrCreateERC20 } from './ERC20'
 import { Vault as VaultContract } from '../types/Vault/Vault'
 import { Strategy as StrategyContract } from '../types/Vault/Strategy'
-import {
-  Strategy as StrategyEntity,
-  Rate as RateEntity,
-  Vault as VaultEntity,
-} from '../types/schema'
+import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } from '../types/schema'
 
 let ONE = BigInt.fromString('1000000000000000000')
 
@@ -30,11 +26,9 @@ export function handleTick(event: ethereum.Event): void {
   }
 }
 
-export function loadOrCreateStrategy(
-  strategyAddress: Address,
-  vault: VaultEntity,
-  event: ethereum.Event
-): StrategyEntity {
+export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event):
+  StrategyEntity
+{
   let id = strategyAddress.toHexString()
   let strategy = StrategyEntity.load(id)
 
@@ -80,14 +74,8 @@ export function loadOrCreateStrategy(
   return strategy!
 }
 
-export function createLastRate(
-  vault: VaultEntity,
-  strategy: StrategyEntity,
-  block: ethereum.Block
-): void {
-  let lastRate = RateEntity.load(
-    strategy.lastRate || rateId(strategy, BigInt.fromI32(0))
-  )
+export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, block: ethereum.Block): void {
+  let lastRate = RateEntity.load(strategy.lastRate || rateId(strategy, BigInt.fromI32(0)))
   if (block.number.equals(lastRate.block)) return
 
   //First rate treated as a special case because apr cannot be calculated  yet
@@ -102,27 +90,19 @@ export function createLastRate(
 
   let strategyAddress = Address.fromString(strategy.id)
   let totalValue = getStrategyValue(strategyAddress)
-  let totalShares = getStrategyShares(
-    Address.fromString(vault.address),
-    strategyAddress
-  )
+  let totalShares = getStrategyShares(Address.fromString(vault.address), strategyAddress)
 
   //If no investment has ever been made then apy cannot be calculated
   if (firstRate && totalShares.isZero()) return
 
-  let requiresNewSample =
-    !firstRate &&
-    block.timestamp.minus(lastRate.createdAt).ge(MAX_BUFFER_ENTRY_DURATION)
+  let requiresNewSample = !firstRate && block.timestamp.minus(lastRate.createdAt).ge(MAX_BUFFER_ENTRY_DURATION)
   let currentIndex = requiresNewSample
     ? lastRate.index.plus(BigInt.fromI32(1)).mod(BUFFER_SIZE)
     : lastRate.index
   let currentRate = RateEntity.load(rateId(strategy, currentIndex))
-  if (requiresNewSample)
-    log.warning('New sample at {}', [currentIndex.toString()])
+  if (requiresNewSample) log.warning('New sample at {}', [currentIndex.toString()])
 
-  let shareValue = totalShares.isZero()
-    ? BigInt.fromI32(0)
-    : totalValue.times(ONE).div(totalShares)
+  let shareValue = totalShares.isZero() ? BigInt.fromI32(0) : totalValue.times(ONE).div(totalShares)
   let accumulatedShareValue: BigInt
   if (firstRate) {
     accumulatedShareValue = BigInt.fromI32(0)
@@ -175,10 +155,7 @@ function getStrategyShares(address: Address, strategy: Address): BigInt {
     return getStrategySharesCall.value
   }
 
-  log.warning('getStrategyShares() call reverted for {} and strategy', [
-    address.toHexString(),
-    strategy.toHexString(),
-  ])
+  log.warning('getStrategyShares() call reverted for {} and strategy', [address.toHexString(), strategy.toHexString()])
   return BigInt.fromI32(0)
 }
 
@@ -190,7 +167,7 @@ function getStrategyValue(address: Address): BigInt {
     return getCurrentTotalValueCall.value
   }
 
-  log.warning('ClaimAndInvest() call reverted for {}', [address.toHexString()])
+  log.warning('claimAndInvest() call reverted for {}', [address.toHexString()])
 
   let getTotalValueCall = strategyContract.try_getTotalValue()
 
@@ -198,10 +175,7 @@ function getStrategyValue(address: Address): BigInt {
     return getTotalValueCall.value
   }
 
-  log.warning(
-    'Both claimAndInvest() and getTotalValue() call reverted for {}',
-    [address.toHexString()]
-  )
+  log.warning('Both claimAndInvest() and getTotalValue() call reverted for {}', [address.toHexString()])
   return BigInt.fromI32(0)
 }
 
@@ -244,13 +218,11 @@ export function getStrategyToken(address: Address): Address {
 
 function rateId(strategy: StrategyEntity, index: BigInt): string {
   return strategy.id + '#' + index.toString()
-y}
+}
 
-function calculateLastWeekAPR(
-  strategy: StrategyEntity,
-  initialRate: RateEntity | null,
-  finalRate: RateEntity | null
-): BigInt {
+function calculateLastWeekAPR(strategy: StrategyEntity, initialRate: RateEntity | null, finalRate: RateEntity | null):
+  BigInt
+{
   //Check if it did never make one buffer round
   if (!initialRate.initialized) {
     initialRate = RateEntity.load(rateId(strategy, BigInt.fromI32(0)))
@@ -264,10 +236,7 @@ function calculateLastWeekAPR(
   } else return BigInt.fromI32(0)
 }
 
-function calculateCurrentAPR(
-  strategy: StrategyEntity,
-  lastRate: RateEntity | null
-): BigInt {
+function calculateCurrentAPR(strategy: StrategyEntity, lastRate: RateEntity | null): BigInt {
   let previousIndex = lastRate.index
     .plus(BUFFER_SIZE)
     .minus(BUFFER_FOUR_HOURS_LENGTH)
