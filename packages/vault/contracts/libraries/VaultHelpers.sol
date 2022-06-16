@@ -36,7 +36,7 @@ library VaultHelpers {
         bytes data;
     }
 
-    /** 
+    /**
      * @dev Internal struct to encode the calldata of a deposit action
      * @param token Address of the token being deposited
      * @param amount Amount of tokens being deposited
@@ -112,7 +112,7 @@ library VaultHelpers {
         return MigrateParams({ to: to, data: data });
     }
 
-    /** 
+    /**
      * @dev Decodes a bytes array into the expected calldata value of a deposit action
      */
     function decodeDeposit(bytes memory self) internal pure returns (DepositParams memory) {
