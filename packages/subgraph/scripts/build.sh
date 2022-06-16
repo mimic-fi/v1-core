@@ -40,8 +40,8 @@ agreement_factory_v1_address_matic=0xe0E1faB5b3F46366fC92a0a0ed3fdDA5EeF094a8
 agreement_factory_v1_block_matic=25933113
 
 # Agreement Factory V2
-agreement_factory_v2_address_matic=
-agreement_factory_v2_block_matic=
+agreement_factory_v2_address_matic=0x327321f8bDfb313D7d872401bB508836E027F0C9
+agreement_factory_v2_block_matic=29395816
 
 #################################################################
 #####                       KOVAN                          ######

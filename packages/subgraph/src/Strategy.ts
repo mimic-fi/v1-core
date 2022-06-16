@@ -23,7 +23,9 @@ export function handleTick(event: ethereum.Event): void {
   }
 }
 
-export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event): StrategyEntity {
+export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntity, event: ethereum.Event):
+  StrategyEntity
+{
   let id = strategyAddress.toHexString()
   let strategy = StrategyEntity.load(id)
 
