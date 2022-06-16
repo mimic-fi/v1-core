@@ -29,6 +29,10 @@ import './IAgreement.sol';
 import '../helpers/IWETH.sol';
 import '../helpers/PortfoliosData.sol';
 
+/**
+ * @title Agreement
+ * @dev Immutable version of a Mimic wallet. It is intended when managers have to create wallets for third parties.
+ */
 contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using Address for address;
     using SafeERC20 for IERC20;
@@ -36,42 +40,94 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
     using VaultHelpers for bytes32;
     using PortfoliosData for bytes;
 
+    /**
+     * @dev Enum used to specify tokens and strategies configuration
+     */
     enum Allowed {
         OnlyCustom,
         CustomAndWhitelisted,
         Any
     }
 
-    uint256 internal constant MAX_DEPOSIT_FEE = 1e18; // 100%
-    uint256 internal constant MAX_WITHDRAW_FEE = 1e18; // 100%
-    uint256 internal constant MAX_PERFORMANCE_FEE = 1e18; // 100%
+    // Maximum value allowed for deposit fees: 100%
+    uint256 internal constant MAX_DEPOSIT_FEE = 1e18;
 
+    // Maximum value allowed for withdraw fees: 100%
+    uint256 internal constant MAX_WITHDRAW_FEE = 1e18;
+
+    // Maximum value allowed for performance fees: 100%
+    uint256 internal constant MAX_PERFORMANCE_FEE = 1e18;
+
+    // WETH reference
     IWETH public immutable weth;
+
+    // Mimic Vault reference
     address public override vault;
+
+    // Address that will receive the manager collected fees
     address public override feeCollector;
+
+    // Deposit fee amount: 1e18 = 100%
     uint256 public override depositFee;
+
+    // Withdraw fee amount: 1e18 = 100%
     uint256 public override withdrawFee;
+
+    // Performance fee amount: 1e18 = 100%
     uint256 public override performanceFee;
+
+    // Maximum slippage allowed by the wallet owner
     uint256 public override maxSwapSlippage;
 
+    // List of allowed managers indexed by address
     mapping (address => bool) public override isManager;
+
+    // List of allowed withdrawers indexed by address
     mapping (address => bool) public override isWithdrawer;
 
+    // Allowed tokens configuration: only custom, custom and whitelisted, or any
     Allowed public allowedTokens;
+
+    // List of custom tokens
     mapping (address => bool) public isCustomToken;
 
+    // Allowed strategies configuration: only custom, custom and whitelisted, or any
     Allowed public allowedStrategies;
+
+    // List of custom strategies
     mapping (address => bool) public isCustomStrategy;
 
+    /**
+     * @dev Used to mark functions that can only be called by the protocol vault
+     */
     modifier onlyVault() {
         require(msg.sender == vault, 'SENDER_NOT_VAULT');
         _;
     }
 
+    /**
+     * @dev Initializes the agreement implementation contract
+     * @param _weth WETH reference to be used
+     */
     constructor(IWETH _weth) initializer {
         weth = _weth;
     }
 
+    /**
+     * @dev Initializes the agreement instance contract, it can only be called once
+     * @param _vault Mimic Vault reference
+     * @param _feeCollector Address that will receive the manager collected fees
+     * @param _depositFee Deposit fee amount
+     * @param _withdrawFee Withdraw fee amount
+     * @param _performanceFee Performance fee amount
+     * @param _maxSwapSlippage Maximum slippage allowed by the wallet owner
+     * @param _managers List of allowed managers
+     * @param _withdrawers List of allowed withdrawers
+     * @param _customTokens List of custom tokens
+     * @param _allowedTokens Allowed tokens configuration: only custom, custom and whitelisted, or any
+     * @param _customStrategies List of custom strategies
+     * @param _allowedStrategies Allowed strategies configuration: only custom, custom and whitelisted, or any
+     */
     function initialize(
         address _vault,
         address _feeCollector,
@@ -94,22 +150,42 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         _setAllowedStrategies(_customStrategies, _allowedStrategies);
     }
 
+    /**
+     * @dev Tells the token balance of the agreement
+     * @param token Address of the token being queried
+     */
     function getTokenBalance(address token) public view override returns (uint256) {
         return IERC20(token).balanceOf(address(this));
     }
 
+    /**
+     * @dev Tells the deposit fee configured in the agreement.
+     *      Note that it does not depend on the token being deposited.
+     */
     function getDepositFee(address) external view override returns (uint256, address) {
         return (depositFee, feeCollector);
     }
 
+    /**
+     * @dev Tells the withdraw fee configured in the agreement.
+     *      Note that it does not depend on the token being withdrawn.
+     */
     function getWithdrawFee(address) external view override returns (uint256, address) {
         return (withdrawFee, feeCollector);
     }
 
+    /**
+     * @dev Tells the performance fee configured in the agreement.
+     *      Note that it does not depend on the strategy interacted with.
+     */
     function getPerformanceFee(address) external view override returns (uint256, address) {
         return (performanceFee, feeCollector);
     }
 
+    /**
+     * @dev Tells if a given token is allowed or not based on the allowed tokens configuration
+     * @param token Address of the token being queried
+     */
     function isTokenAllowed(address token) public view override returns (bool) {
         if (allowedTokens == Allowed.Any || isCustomToken[token]) {
             return true;
@@ -118,6 +194,10 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         return allowedTokens == Allowed.CustomAndWhitelisted && IVault(vault).isTokenWhitelisted(token);
     }
 
+    /**
+     * @dev Tells if a given strategy is allowed or not based on the allowed tokens configuration
+     * @param strategy Address of the strategy being queried
+     */
     function isStrategyAllowed(address strategy) public view override returns (bool) {
         if (allowedStrategies == Allowed.Any || isCustomStrategy[strategy]) {
             return true;
@@ -126,6 +206,33 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         return allowedStrategies == Allowed.CustomAndWhitelisted && IVault(vault).isStrategyWhitelisted(strategy);
     }
 
+    /**
+     * @dev Tells if a certain action is allowed by the agreement
+     * @param who Who is trying to perform the action: only managers are allowed
+     * @param where What's the contract being called to perform the action: only Mimic's vault is allowed
+     * @param what What's the action being performed
+     * @param how The details of the action being performed
+     * @notice The following scenarios are allowed by this agreement, any other not mentioned here is not allowed:
+     *
+     * 1. Swap: Only when the token out is allowed by the allowed tokens configuration, when the requested slippage
+     * is lower than or equal to the max slippage value set in the agreement, and when the extra data is empty.
+     *
+     * 2. Join: Only when the requested strategy is allowed by the allowed strategies configuration, when the extra
+     * data has a slippage value encoded and it is lower than or equal to the max slippage value set in the agreement.
+     *
+     * 3. Exit: If an emergency exit is requested it only allows requests when there is a slippage value encoded in
+     * the extra data field and the sender is an allowed withdrawer. Otherwise, it only allows requests when the extra
+     * data has a slippage value encoded and it is lower than or equal to the max slippage value set in the agreement.
+     *
+     * 4. Withdraw: If there is no data encoded, it only allows withdrawing tokens when the recipient is a withdrawer.
+     * If there is data encoded, it must have an encoded withdrawer, the recipient must be the agreement itself, and
+     * the token must be WETH. The latter allows requesting an ETH withdraw instead, WETH will be unwrapped in the
+     * `afterWithdraw` callback.
+     *
+     * 5. Deposit: Only when there is no data encoded.
+     *
+     * 6. Migrate: Only when there is no data encoded.
+     */
     function canPerform(address who, address where, bytes32 what, bytes memory how)
         external
         view
@@ -172,19 +279,29 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
             VaultHelpers.MigrateParams memory params = how.decodeMigrate();
             return isWithdrawer[who] && params.data.isEmpty();
         } else {
+            // Migrations are not supported
             return false;
         }
     }
 
+    /**
+     * @dev Tells the supported callbacks by the wallet.
+     * This wallet version only supports 'before deposit', 'before withdraw', and 'after withdraw': 0000001101 (0x000D).
+     */
     function getSupportedCallbacks() external pure override returns (bytes2) {
-        // Supported callbacks are 'before deposit', 'before withdraw', and 'after withdraw': 0000001101 (0x000D).
         return bytes2(0x000D);
     }
 
+    /**
+     * @dev It allows receiving ETH
+     */
     receive() external payable {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev Before deposit callback. It allows the user working with ETH, this will be wrapped to WETH.
+     */
     function beforeDeposit(address, address token, uint256 amount, bytes memory) external override onlyVault {
         if (token == address(weth) && address(this).balance > 0) {
             weth.deposit{ value: address(this).balance }();
@@ -192,14 +309,23 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         _safeApprove(token, amount);
     }
 
+    /**
+     * @dev After deposit callback, not supported
+     */
     function afterDeposit(address, address, uint256, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev Before withdraw callback, not supported
+     */
     function beforeWithdraw(address, address token, uint256 amount, address, bytes memory) external override onlyVault {
         _safeApprove(token, Math.min(amount, getTokenBalance(token)));
     }
 
+    /**
+     * @dev After withdraw callback. It allows the user withdrawing ETH directly unwrapping any requested WETH amound.
+     */
     function afterWithdraw(address, address token, uint256 amount, address recipient, bytes memory data)
         external
         override
@@ -211,44 +337,78 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         }
     }
 
+    /**
+     * @dev Before swap callback, not supported
+     */
     function beforeSwap(address, address, address, uint256, uint256, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev After swap callback, not supported
+     */
     function afterSwap(address, address, address, uint256, uint256, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev Before join callback, not supported
+     */
     function beforeJoin(address, address, uint256, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev After join callback, not supported
+     */
     function afterJoin(address, address, uint256, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev Before exit callback, not supported
+     */
     function beforeExit(address, address, uint256, bool, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev After exit callback, not supported
+     */
     function afterExit(address, address, uint256, bool, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev Before migrate callback, not supported
+     */
     function beforeMigrate(address, address, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev After migrate callback, not supported
+     */
     function afterMigrate(address, address, bytes memory) external override onlyVault {
         // solhint-disable-previous-line no-empty-blocks
     }
 
+    /**
+     * @dev Internal method to approve ERC20 tokens to Mimic's Vault
+     * @param token Address of the ERC20 token to approve
+     * @param amount Amount of tokens to approve
+     */
     function _safeApprove(address token, uint256 amount) internal {
         if (amount > 0) {
             IERC20(token).safeApprove(vault, amount);
         }
     }
 
+    /**
+     * @dev Internal method to set the allowed tokens configuration. Only used in constructor.
+     * @param tokens List of custom tokens to be allowed
+     * @param allowed Allowed tokens configuration: only custom, custom and whitelisted, or any
+     */
     function _setAllowedTokens(address[] memory tokens, Allowed allowed) private {
         allowedTokens = allowed;
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -258,6 +418,11 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         emit AllowedTokensSet(uint256(allowed), tokens);
     }
 
+    /**
+     * @dev Internal method to set the allowed strategies configuration. Only used in constructor.
+     * @param strategies List of custom strategies to be allowed
+     * @param allowed Allowed strategies configuration: only custom, custom and whitelisted, or any
+     */
     function _setAllowedStrategies(address[] memory strategies, Allowed allowed) private {
         allowedStrategies = allowed;
         for (uint256 i = 0; i < strategies.length; i++) {
@@ -267,6 +432,10 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         emit AllowedStrategiesSet(uint256(allowed), strategies);
     }
 
+    /**
+     * @dev Internal method to set the list of allowed managers. Only used in constructor.
+     * @param managers List of managers to be allowed
+     */
     function _setManagers(address[] memory managers) private {
         require(managers.length > 0, 'MISSING_MANAGERS');
         for (uint256 i = 0; i < managers.length; i++) {
@@ -276,6 +445,10 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         emit ManagersSet(managers);
     }
 
+    /**
+     * @dev Internal method to set the list of allowed withdrawers. Only used in constructor.
+     * @param withdrawers List of withdrawers to be allowed
+     */
     function _setWithdrawers(address[] memory withdrawers) private {
         require(withdrawers.length > 0, 'MISSING_WITHDRAWERS');
         for (uint256 i = 0; i < withdrawers.length; i++) {
@@ -285,6 +458,14 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         emit WithdrawersSet(withdrawers);
     }
 
+    /**
+     * @dev Internal method to set fee-related params. Only used in constructor.
+     * @param _feeCollector Address that will receive the manager collected fees
+     * @param _depositFee Deposit fee amount
+     * @param _withdrawFee Withdraw fee amount
+     * @param _performanceFee Performance fee amount
+     * @param _maxSwapSlippage Maximum slippage allowed by the wallet owner
+     */
     function _setParams(
         address _feeCollector,
         uint256 _depositFee,
@@ -310,6 +491,10 @@ contract Agreement is IAgreement, ReentrancyGuard, Initializable {
         emit ParamsSet(_feeCollector, _depositFee, _withdrawFee, _performanceFee, _maxSwapSlippage);
     }
 
+    /**
+     * @dev Internal method to set the reference to the Mimic's Vault. Only used in constructor.
+     * @param _vault Mimic's vault reference to be set
+     */
     function _setVault(address _vault) private {
         require(vault == address(0), 'ALREADY_INIT');
         require(_vault.isContract(), 'VAULT_NOT_CONTRACT');

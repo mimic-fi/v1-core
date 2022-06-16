@@ -14,21 +14,39 @@
 
 pragma solidity ^0.8.0;
 
+/**
+ * @title Proxy
+ * @dev Proxy contract used to make Agreements deployments cheaper
+ */
 contract Proxy {
+    // Address to delegates calls to
     address public immutable implementation;
 
+    /**
+     * @dev Initializes the proxy contract
+     * @param _implementation Address to delegates calls to
+     */
     constructor(address _implementation) {
         implementation = _implementation;
     }
 
+    /**
+     * @dev Delegates calls to the implementation address
+     */
     fallback() external payable {
         _fallback();
     }
 
+    /**
+     * @dev Accepts ETH and delegates its handling to the implementation address
+     */
     receive() external payable {
         _fallback();
     }
 
+    /**
+     * @dev Delegates calls to the implementation address
+     */
     function _fallback() internal {
         // solhint-disable-previous-line no-complex-fallback
         // solhint-disable-next-line no-inline-assembly
