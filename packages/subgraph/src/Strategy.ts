@@ -48,13 +48,12 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
       let index = BigInt.fromI32(i)
       let rate = new RateEntity(rateId(strategy!, index))
       rate.index = index
-      rate.initialized = false
       rate.valueRate = BigInt.fromI32(0)
       rate.totalValue = BigInt.fromI32(0)
       rate.totalShares = BigInt.fromI32(0)
       rate.shareValue = BigInt.fromI32(0)
       rate.accumulatedShareValue = BigInt.fromI32(0)
-      rate.updatedAt = event.block.timestamp
+      rate.updatedAt = BigInt.fromI32(0)
       rate.createdAt = event.block.timestamp
       rate.block = event.block.number
       rate.strategy = strategy.id
@@ -81,7 +80,7 @@ export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, blo
   //First rate treated as a special case because apr cannot be calculated  yet
   let firstRate = false
   let elapsed: BigInt
-  if (!lastRate.initialized && lastRate.index.equals(BigInt.fromI32(0))) {
+  if (isNotInitialized(lastRate) && lastRate.index.equals(BigInt.fromI32(0))) {
     firstRate = true
   } else {
     elapsed = block.timestamp.minus(lastRate.updatedAt)
@@ -132,7 +131,6 @@ export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, blo
   }
 
   currentRate.valueRate = getStrategyValueRate(Address.fromString(strategy.id))
-  currentRate.initialized = true
   currentRate.totalValue = totalValue
   currentRate.totalShares = totalShares
   currentRate.shareValue = shareValue
@@ -220,11 +218,15 @@ function rateId(strategy: StrategyEntity, index: BigInt): string {
   return strategy.id + '#' + index.toString()
 }
 
+function isNotInitialized(rate: RateEntity | null): boolean {
+  return rate.updatedAt.equals(BigInt.fromI32(0))
+}
+
 function calculateLastWeekAPR(strategy: StrategyEntity, initialRate: RateEntity | null, finalRate: RateEntity | null):
   BigInt
 {
-  //Check if it did never make one buffer round
-  if (!initialRate.initialized) {
+  // Check if it did never make one buffer round
+  if (isNotInitialized(initialRate)) {
     initialRate = RateEntity.load(rateId(strategy, BigInt.fromI32(0)))
   }
 
@@ -243,7 +245,7 @@ function calculateCurrentAPR(strategy: StrategyEntity, lastRate: RateEntity | nu
     .mod(BUFFER_SIZE)
   let previousRate = RateEntity.load(rateId(strategy, previousIndex))
 
-  if (!previousRate.initialized) {
+  if (isNotInitialized(previousRate)) {
     return BigInt.fromI32(0)
   }
 

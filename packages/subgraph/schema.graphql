@@ -23,7 +23,6 @@ type Strategy @entity {
 type Rate @entity {
   id: ID!
   index: BigInt!
-  initialized: Boolean!
   strategy: Strategy!
   valueRate: BigInt!
   totalValue: BigInt!
