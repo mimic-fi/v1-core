@@ -1,12 +1,16 @@
 import { BigInt, Address } from '@graphprotocol/graph-ts'
 
-import { Agreement as AgreementEntity, Manager as ManagerEntity, Portfolio as PortfolioEntity } from '../types/schema'
+import {
+  Agreement as AgreementEntity,
+  Manager as ManagerEntity,
+  Portfolio as PortfolioEntity,
+} from '../types/schema'
 import {
   ManagersSet,
   AllowedTokensSet,
   AllowedStrategiesSet,
   WithdrawersSet,
-  ParamsSet
+  ParamsSet,
 } from '../types/templates/Agreement/Agreement'
 
 export function handleWithdrawersSet(event: WithdrawersSet): void {
@@ -81,7 +85,10 @@ export function handleParamsSet(event: ParamsSet): void {
   portfolio.save()
 }
 
-export function loadOrCreateAgreement(address: Address, version: string = ''): AgreementEntity {
+export function loadOrCreateAgreement(
+  address: Address,
+  version: string = 'undefined'
+): AgreementEntity {
   let id = address.toHexString()
   let agreement = AgreementEntity.load(id)
 
@@ -94,9 +101,12 @@ export function loadOrCreateAgreement(address: Address, version: string = ''): A
     agreement.managers = []
     agreement.withdrawers = []
     agreement.customTokens = []
-    agreement.allowedTokens = 'Custom'
+    agreement.allowedTokens = 'OnlyCustom'
     agreement.customStrategies = []
-    agreement.allowedStrategies = 'Custom'
+    agreement.allowedStrategies = 'OnlyCustom'
+    agreement.save()
+  } else if (version != 'undefined') {
+    agreement.version = version
     agreement.save()
   }
 
@@ -117,7 +127,8 @@ function loadOrCreateManager(managerAddress: Address): ManagerEntity {
 
 function parseAllowed(allowedStrategies: BigInt): string {
   if (allowedStrategies.equals(BigInt.fromI32(0))) return 'OnlyCustom'
-  if (allowedStrategies.equals(BigInt.fromI32(1))) return 'CustomAndWhitelisted'
+  if (allowedStrategies.equals(BigInt.fromI32(1)))
+    return 'CustomAndWhitelisted'
   if (allowedStrategies.equals(BigInt.fromI32(2))) return 'Any'
   return 'unknown'
 }
