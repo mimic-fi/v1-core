@@ -105,8 +105,6 @@ export function loadOrCreateAgreement(
     agreement.customStrategies = []
     agreement.allowedStrategies = 'OnlyCustom'
     agreement.save()
-  } else if (version != 'undefined') {
-    agreement.version = version
     agreement.save()
   }
 
