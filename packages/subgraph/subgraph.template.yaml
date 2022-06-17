@@ -97,7 +97,7 @@ dataSources:
           file: ./abi/IERC20.json
       eventHandlers:
         - event: AgreementCreated(indexed address,string)
-          handler: handleCreate
+          handler: handleCreateV1
       file: ./src/AgreementFactory.ts
   - kind: ethereum/contract
     name: AgreementFactoryV2
@@ -121,7 +121,7 @@ dataSources:
           file: ./abi/IERC20.json
       eventHandlers:
         - event: AgreementCreated(indexed address,string)
-          handler: handleCreate
+          handler: handleCreateV2
       file: ./src/AgreementFactory.ts
 templates:
   - kind: ethereum/contract

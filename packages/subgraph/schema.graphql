@@ -70,6 +70,7 @@ type Portfolio @entity {
 type Agreement @entity {
   id: ID!
   name: String!
+  version: AgreementVersion!
   maxSlippage: BigInt!
   portfolio: Portfolio!
   withdrawers: [String!]!
@@ -89,6 +90,12 @@ enum Allowed {
   OnlyCustom
   CustomAndWhitelisted
   Any
+}
+
+enum AgreementVersion {
+  v1_0_0
+  v2_0_0
+  undefined
 }
 
 type ERC20 @entity {
