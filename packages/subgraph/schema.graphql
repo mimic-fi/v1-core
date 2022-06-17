@@ -15,6 +15,8 @@ type Strategy @entity {
   whitelisted: Boolean!
   lastRate: Rate
   rates: [Rate!]! # @derivedFrom(field: "strategy")
+  currentApr: BigInt!
+  lastWeekApr: BigInt!
   accounts: [AccountStrategy!] @derivedFrom(field: "strategy")
 }
 

@@ -8,8 +8,11 @@ import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } 
 
 let ONE = BigInt.fromString('1000000000000000000')
 
-let BUFFER_SIZE = BigInt.fromI32(1000) // ~41 days
-let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(60 * 60) // 1 hour
+let SECONDS_IN_ONE_YEAR = BigInt.fromString('31536000')
+
+let BUFFER_SIZE = BigInt.fromI32(1000) // ~7 days
+let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(60 * 10) // 10 minutes
+let BUFFER_FOUR_HOURS_LENGTH = BigInt.fromI32(24) // 4 hours = 24 samples
 let MIN_SAMPLE_DURATION = BigInt.fromI32(30) // 30 seconds
 
 export function handleTick(event: ethereum.Event): void {
@@ -36,6 +39,8 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
     strategy.metadata = getStrategyMetadata(strategyAddress)
     strategy.whitelisted = false
     strategy.rates = []
+    strategy.currentApr = BigInt.fromI32(0)
+    strategy.lastWeekApr = BigInt.fromI32(0)
     strategy.save()
 
     let rates = strategy.rates
@@ -48,14 +53,14 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
       rate.totalShares = BigInt.fromI32(0)
       rate.shareValue = BigInt.fromI32(0)
       rate.accumulatedShareValue = BigInt.fromI32(0)
-      rate.updatedAt = event.block.timestamp
+      rate.updatedAt = BigInt.fromI32(0)
       rate.createdAt = event.block.timestamp
       rate.block = event.block.number
       rate.strategy = strategy.id
       rate.save()
       rates.push(i.toString())
     }
-
+    
     strategy.rates = rates
     strategy.save()
   }
@@ -69,22 +74,50 @@ export function loadOrCreateStrategy(strategyAddress: Address, vault: VaultEntit
 }
 
 export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, block: ethereum.Block): void {
-  let lastRate = RateEntity.load(strategy.lastRate || rateId(strategy, BigInt.fromI32(0)))
+  let lastRate = strategy.lastRate ? RateEntity.load(strategy.lastRate)! : firstRate(strategy)
   if (block.number.equals(lastRate.block)) return
-
-  let elapsed = block.timestamp.minus(lastRate.updatedAt)
-  if (elapsed.lt(MIN_SAMPLE_DURATION)) return
-
-  let requiresNewSample = block.timestamp.minus(lastRate.createdAt).ge(MAX_BUFFER_ENTRY_DURATION)
-  let currentIndex = requiresNewSample ? lastRate.index.plus(BigInt.fromI32(1)).mod(BUFFER_SIZE) : lastRate.index
-  let currentRate = RateEntity.load(rateId(strategy, currentIndex))
-  if (requiresNewSample) log.warning('New sample at {}', [currentIndex.toString()])
 
   let strategyAddress = Address.fromString(strategy.id)
   let totalValue = getStrategyValue(strategyAddress)
   let totalShares = getStrategyShares(Address.fromString(vault.address), strategyAddress)
   let shareValue = totalShares.isZero() ? BigInt.fromI32(0) : totalValue.times(ONE).div(totalShares)
-  let accumulatedShareValue = lastRate.accumulatedShareValue.plus(lastRate.shareValue.times(elapsed))
+
+  let currentRate: RateEntity
+  let accumulatedShareValue: BigInt
+
+  // The first time a rate is tracked, the current APR cannot be tracked with the previous historic values
+  if (isNotInitialized(lastRate) && lastRate.index.equals(BigInt.fromI32(0))) {
+    // If there were no investments made, APR cannot be calculated
+    if (totalShares.isZero()) return
+
+    currentRate = lastRate
+    accumulatedShareValue = BigInt.fromI32(0)
+  } else {
+    // If the current tick does not cover the minimum time window between samples, skip it
+    let elapsed = block.timestamp.minus(lastRate.updatedAt)
+    if (elapsed.lt(MIN_SAMPLE_DURATION)) return
+
+    let requiresNewSample = block.timestamp.minus(lastRate.createdAt).ge(MAX_BUFFER_ENTRY_DURATION)
+    let currentIndex = requiresNewSample ? lastRate.index.plus(BigInt.fromI32(1)).mod(BUFFER_SIZE) : lastRate.index
+    currentRate = RateEntity.load(rateId(strategy, currentIndex))!
+
+    // If shares went to zero, simply keep the old accumulated share value
+    if (totalShares.isZero()) {
+      accumulatedShareValue = lastRate.accumulatedShareValue
+    } else {
+      let increaseRatio = shareValue.minus(lastRate.shareValue).times(ONE).div(lastRate.shareValue)
+      let apr = increaseRatio.times(SECONDS_IN_ONE_YEAR).div(elapsed)
+      accumulatedShareValue = lastRate.accumulatedShareValue.plus(apr.times(elapsed))
+    }
+
+    // If we are writing a new sample in the buffer we can start calculating the current and weekly APRs
+    if (requiresNewSample) {
+      log.warning('New sample at {}', [currentIndex.toString()])
+      currentRate.createdAt = block.timestamp
+      strategy.currentApr = calculateCurrentAPR(strategy, lastRate)
+      strategy.lastWeekApr = calculateLastWeekAPR(strategy, currentRate, lastRate)
+    }
+  }
 
   currentRate.valueRate = getStrategyValueRate(Address.fromString(strategy.id))
   currentRate.totalValue = totalValue
@@ -94,7 +127,6 @@ export function createLastRate(vault: VaultEntity, strategy: StrategyEntity, blo
   currentRate.strategy = strategy.id
   currentRate.block = block.number
   currentRate.updatedAt = block.timestamp
-  if (requiresNewSample) currentRate.createdAt = block.timestamp
   currentRate.save()
 
   strategy.lastRate = currentRate.id
@@ -120,6 +152,8 @@ function getStrategyValue(address: Address): BigInt {
   if (!getCurrentTotalValueCall.reverted) {
     return getCurrentTotalValueCall.value
   }
+
+  log.warning('claimAndInvest() call reverted for {}', [address.toHexString()])
 
   let getTotalValueCall = strategyContract.try_getTotalValue()
 
@@ -170,4 +204,42 @@ export function getStrategyToken(address: Address): Address {
 
 function rateId(strategy: StrategyEntity, index: BigInt): string {
   return strategy.id + '#' + index.toString()
+}
+
+function firstRate(strategy: StrategyEntity): RateEntity {
+  return RateEntity.load(rateId(strategy, BigInt.fromI32(0)))!
+}
+
+function isNotInitialized(rate: RateEntity | null): boolean {
+  return rate.updatedAt.equals(BigInt.fromI32(0))
+}
+
+function calculateLastWeekAPR(strategy: StrategyEntity, currentRate: RateEntity | null, newestRate: RateEntity | null):
+  BigInt
+{
+  // If the buffer is not completed, the oldest rate is the one at index 0, otherwise it will be the rate
+  // stored at the index we are about to overwrite, then we can use it before updating it
+  let oldestRate = isNotInitialized(currentRate) ? firstRate(strategy) : currentRate
+
+  // If both the oldest and newest rates are the same, we cannot calculate the weekly APR
+  if (oldestRate.index == newestRate.index) return BigInt.fromI32(0)
+
+  return newestRate.accumulatedShareValue
+    .minus(oldestRate.accumulatedShareValue)
+    .div(newestRate.updatedAt.minus(oldestRate.updatedAt))
+}
+
+function calculateCurrentAPR(strategy: StrategyEntity, lastRate: RateEntity | null): BigInt {
+  let fourHoursBeforeIndex = lastRate.index.plus(BUFFER_SIZE).minus(BUFFER_FOUR_HOURS_LENGTH).mod(BUFFER_SIZE)
+  let fourHoursBeforeRate = RateEntity.load(rateId(strategy, fourHoursBeforeIndex))
+
+  // If the sample four hours before is not initialized, we can pick the first sample of the buffer instead
+  fourHoursBeforeRate = isNotInitialized(fourHoursBeforeRate) ? firstRate(strategy) : fourHoursBeforeRate
+
+  // If the sample picked is the last rate, we cannot calculate the current APR
+  if (fourHoursBeforeRate.index == lastRate.index) return BigInt.fromI32(0)
+
+  return lastRate.accumulatedShareValue
+    .minus(fourHoursBeforeRate.accumulatedShareValue)
+    .div(lastRate.updatedAt.minus(fourHoursBeforeRate.updatedAt))
 }
