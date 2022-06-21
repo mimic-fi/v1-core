@@ -20,8 +20,8 @@ agreement_factory_v1_address_mainnet=0xD0b393744c71f6627F2B94da223c1b785b9D130c
 agreement_factory_v1_block_mainnet=14384724
 
 # Agreement Factory V2
-agreement_factory_v2_address_mainnet=0x3989BaFcB0858c82e0BbDB010EcD6882BD0041cc
-agreement_factory_v2_block_mainnet=14900728
+agreement_factory_v2_address_mainnet=0x25dD7450BedE90Cfe08467C297e71bb6D24a633e
+agreement_factory_v2_block_mainnet=15002411
 
 #################################################################
 #####                     POLYGON                          ######
@@ -40,8 +40,8 @@ agreement_factory_v1_address_matic=0xe0E1faB5b3F46366fC92a0a0ed3fdDA5EeF094a8
 agreement_factory_v1_block_matic=25933113
 
 # Agreement Factory V2
-agreement_factory_v2_address_matic=0x327321f8bDfb313D7d872401bB508836E027F0C9
-agreement_factory_v2_block_matic=29395816
+agreement_factory_v2_address_matic=0x3989BaFcB0858c82e0BbDB010EcD6882BD0041cc
+agreement_factory_v2_block_matic=29829138
 
 #################################################################
 #####                       KOVAN                          ######
