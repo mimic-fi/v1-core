@@ -1,5 +1,6 @@
 import { Address, BigInt, ethereum, log } from '@graphprotocol/graph-ts'
 
+import { NOW } from './now'
 import { VAULT_ID } from './Vault'
 import { loadOrCreateERC20 } from './ERC20'
 import { Vault as VaultContract } from '../types/Vault/Vault'
@@ -7,15 +8,20 @@ import { Strategy as StrategyContract } from '../types/Vault/Strategy'
 import { Strategy as StrategyEntity, Rate as RateEntity, Vault as VaultEntity } from '../types/schema'
 
 let ONE = BigInt.fromString('1000000000000000000')
-
 let SECONDS_IN_ONE_YEAR = BigInt.fromString('31536000')
 
-let BUFFER_SIZE = BigInt.fromI32(1000) // ~7 days
+let BUFFER_SIZE = BigInt.fromI32(1000) // 1000 entries
 let MAX_BUFFER_ENTRY_DURATION = BigInt.fromI32(60 * 10) // 10 minutes
-let BUFFER_FOUR_HOURS_LENGTH = BigInt.fromI32(24) // 4 hours = 24 samples
+let MAX_TOTAL_BUFFER_DURATION = BUFFER_SIZE.times(MAX_BUFFER_ENTRY_DURATION) // ~7 days
+
 let MIN_SAMPLE_DURATION = BigInt.fromI32(30) // 30 seconds
+let BUFFER_FOUR_HOURS_LENGTH = BigInt.fromI32(24) // 4 hours = 24 samples
 
 export function handleTick(event: ethereum.Event): void {
+  // Skip if current block timestamp is before one week in the past
+  let threshold = BigInt.fromString(NOW).minus(MAX_TOTAL_BUFFER_DURATION)
+  if (event.block.timestamp.lt(threshold)) return
+
   let vault = VaultEntity.load(VAULT_ID)
   if (vault !== null && vault.strategies !== null) {
     let strategies = vault.strategies

@@ -1,3 +1,4 @@
 build
 types
 subgraph.yaml
+/src/now.ts

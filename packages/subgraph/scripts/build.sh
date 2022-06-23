@@ -205,6 +205,10 @@ sed -i -e "s/{{agreementFactoryV2Address}}/${AGREEMENT_FACTORY_V2_ADDRESS}/g" su
 sed -i -e "s/{{agreementFactoryV2Block}}/${AGREEMENT_FACTORY_V2_BLOCK}/g" subgraph.yaml
 rm -f subgraph.yaml-e
 
+# Export current timestamp
+echo "Exporting current timestamp"
+node ./scripts/export-current-timestamp.js
+
 # Run codegen and build
 rm -rf ./types && yarn graph codegen -o types
 yarn graph build
