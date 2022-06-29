@@ -8,8 +8,8 @@
   <a href="https://github.com/mimic-fi/core/actions/workflows/ci.yml">
     <img src="https://github.com/mimic-fi/core/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
-  <a href="https://badge.fury.io/js/@mimic-fi%2Fv1-vault">
-    <img src="https://badge.fury.io/js/@mimic-fi%2Fv1-vault.svg" alt="NPM">
+  <a href="https://badge.fury.io/js/@mimic-fi%2Fv1-portfolios">
+    <img src="https://badge.fury.io/js/@mimic-fi%2Fv1-portfolios.svg" alt="NPM">
   </a>
   <a href="https://discord.gg/zN2QkTB3">
     <img src="https://img.shields.io/discourse/status?server=https%3A%2F%2Fmeta.discourse.org" alt="Discord">
@@ -30,13 +30,7 @@
 
 ## Content 
 
-This monorepo holds the key components of the Mimic protocol:
-
-- [Vault](./packages/vault): Nexus between Mimic wallets and strategies – orchestrator of the protocol rules.
-- [Portfolios](./packages/portfolios): Custom implementation of a Mimic wallet to interact with the Vault.
-- [Benchmark](./packages/benchmark): Benchmark scripts to perform integration and gas-cost tests.
-- [Helpers](./packages/helpers): Library of typescript helpers used among all Mimic repositories.
-- [Subgraph](./packages/subgraph): Mimic subgraph mainly used to populate information for the UI.
+This package contains a custom implementation of a Mimic wallet to interact with the Vault.
 
 ## Setup
 
@@ -48,10 +42,13 @@ From your command line:
 $ git clone https://github.com/mimic-fi/core
 
 # Go into the repository
-$ cd core
+$ cd core/packages/portfolios
 
 # Install dependencies
 $ yarn
+
+# Run tests to make sure everything is set up correctly
+$ yarn test
 ```
 
 ## Security

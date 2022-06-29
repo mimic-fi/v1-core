@@ -30,13 +30,7 @@
 
 ## Content 
 
-This monorepo holds the key components of the Mimic protocol:
-
-- [Vault](./packages/vault): Nexus between Mimic wallets and strategies – orchestrator of the protocol rules.
-- [Portfolios](./packages/portfolios): Custom implementation of a Mimic wallet to interact with the Vault.
-- [Benchmark](./packages/benchmark): Benchmark scripts to perform integration and gas-cost tests.
-- [Helpers](./packages/helpers): Library of typescript helpers used among all Mimic repositories.
-- [Subgraph](./packages/subgraph): Mimic subgraph mainly used to populate information for the UI.
+This package contains all the smart contracts of the Mimic Vault.
 
 ## Setup
 
@@ -48,10 +42,13 @@ From your command line:
 $ git clone https://github.com/mimic-fi/core
 
 # Go into the repository
-$ cd core
+$ cd core/packages/vault
 
 # Install dependencies
 $ yarn
+
+# Run tests to make sure everything is set up correctly
+$ yarn test
 ```
 
 ## Security
