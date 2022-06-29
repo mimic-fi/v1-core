@@ -5,8 +5,8 @@
 <h4 align="center">An automated treasury management protocol.</h4>
 
 <p align="center">
-  <a href="https://github.com/mimic-fi/chainlink-price-oracle/actions/workflows/ci.yml">
-    <img src="https://github.com/mimic-fi/chainlink-price-oracle/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <a href="https://github.com/mimic-fi/core/actions/workflows/ci.yml">
+    <img src="https://github.com/mimic-fi/core/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <a href="https://badge.fury.io/js/@mimic-fi%2Fv1-vault">
     <img src="https://badge.fury.io/js/@mimic-fi%2Fv1-vault.svg" alt="NPM">
