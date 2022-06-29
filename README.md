@@ -22,6 +22,7 @@
 <p align="center">
   <a href="#content">Content</a> •
   <a href="#setup">Setup</a> •
+  <a href="#security">Security</a> •
   <a href="#license">License</a>
 </p>
 
@@ -39,7 +40,8 @@ This monorepo holds the key components of the Mimic protocol:
 
 ## Setup
 
-To set up this project you'll need [git](https://git-scm.com) and [yarn](https://classic.yarnpkg.com) installed. From your command line:
+To set up this project you'll need [git](https://git-scm.com) and [yarn](https://classic.yarnpkg.com) installed. 
+From your command line:
 
 ```bash
 # Clone this repository
@@ -51,6 +53,21 @@ $ cd core
 # Install dependencies
 $ yarn
 ```
+
+## Security
+
+<blockquote style="background: rgba(197,127,66,0.34); border: #ffffff6b; text: #f5fffa">
+  <h5 style="color: rgba(225,111,12,0.82)">⚠️ Auditing</h5>
+  <p>The status of our contracts are considered as experimental and should be used at your own risk.</p>
+</blockquote>
+
+Even though all our smart contracts have been reviewed and supervised with security researchers, currently we are going
+through a formal audit process with one of the top firms in the industry. We will disclose the results and takeovers as 
+soon as we finish the process.
+
+Hopefully soon we will be able to communicate a bug bounty program for the hacker community. However, if you found any 
+potential issue in any of our smart contracts or in any piece of code you consider critical for the safety of the 
+protocol, please contact us through <a href="mailto:security@mimic.fi">security@mimic.fi</a>.
 
 ## License
 
