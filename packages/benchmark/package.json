@@ -17,7 +17,7 @@
     "benchmark:simulation": "hardhat run ./scripts/benchmark-simulation.ts"
   },
   "dependencies": {
-    "@mimic-fi/v1-vault": "0.0.11",
+    "@mimic-fi/v1-vault": "0.0.12",
     "@mimic-fi/v1-portfolios": "0.0.11",
     "@openzeppelin/contracts": "4.1.0"
   },
