@@ -110,10 +110,10 @@ describe('Vault', () => {
           context('when the sender did not approve enough tokens', async () => {
             it('reverts', async () => {
               await expect(vault.deposit(account, token, amount, { from })).to.be.revertedWith(
-                'ERC20: transfer amount exceeds allowance'
+                'ERC20: insufficient allowance'
               )
               await expect(vault.getDepositAmount(account, token, amount, { from })).to.be.revertedWith(
-                'ERC20: transfer amount exceeds allowance'
+                'ERC20: insufficient allowance'
               )
             })
           })
@@ -122,10 +122,10 @@ describe('Vault', () => {
         context('when the sender does not have enough tokens', async () => {
           it('reverts', async () => {
             await expect(vault.deposit(account, token, fp(10), { from })).to.be.revertedWith(
-              'ERC20: transfer amount exceeds balance'
+              'ERC20: insufficient allowance'
             )
             await expect(vault.getDepositAmount(account, token, fp(10), { from })).to.be.revertedWith(
-              'ERC20: transfer amount exceeds balance'
+              'ERC20: insufficient allowance'
             )
           })
         })
@@ -320,7 +320,7 @@ describe('Vault', () => {
           context('when the portfolio did not approve enough tokens', async () => {
             it('reverts', async () => {
               await expect(vault.deposit(portfolio, token, amount, { from })).to.be.revertedWith(
-                'ERC20: transfer amount exceeds allowance'
+                'ERC20: insufficient allowance'
               )
             })
           })
@@ -603,10 +603,10 @@ describe('Vault', () => {
           context('when the portfolio did not allow the corresponding amount', async () => {
             it('reverts', async () => {
               await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith(
-                'ERC20: transfer amount exceeds allowance'
+                'ERC20: insufficient allowance'
               )
               await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith(
-                'ERC20: transfer amount exceeds allowance'
+                'ERC20: insufficient allowance'
               )
             })
           })
@@ -702,10 +702,10 @@ describe('Vault', () => {
 
               it('reverts', async () => {
                 await expect(vault.withdraw(portfolio, token, amount, other, { from })).to.be.revertedWith(
-                  'ERC20: transfer amount exceeds allowance'
+                  'ERC20: insufficient allowance'
                 )
                 await expect(vault.getWithdrawAmount(portfolio, token, amount, other, { from })).to.be.revertedWith(
-                  'ERC20: transfer amount exceeds allowance'
+                  'ERC20: insufficient allowance'
                 )
               })
             })
