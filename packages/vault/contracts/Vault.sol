@@ -53,7 +53,9 @@ contract Vault is IVault, Ownable, ReentrancyGuard, VaultQuery {
      * @param balance List of strategy shares indexed per strategy address
      * @param balance List of strategy invested value indexed per strategy address
      */
-    struct Accounting {
+    struct
+        Accounting
+    {
         mapping (address => uint256) balance;
         mapping (address => uint256) shares;
         mapping (address => uint256) invested;
